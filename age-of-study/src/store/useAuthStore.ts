@@ -1,15 +1,18 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { supabase, type Profile } from '@/lib/supabase'
+import { getSupabaseBrowserClient, type Profile } from '@/lib/supabase'
 
 interface AuthState {
   user: Profile | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (username: string, role: 'student' | 'teacher') => Promise<void>
-  logout: () => void
+  error: string | null
+  login: (username: string, password: string) => Promise<void>
+  signUp: (username: string, password: string, fullName: string) => Promise<void>  // Removed email param
+  logout: () => Promise<void>
   checkAuth: () => Promise<void>
-  updateUserPoints: (points: number) => void
+  updateUserXP: (xp: number) => void
+  clearError: () => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -18,52 +21,146 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      error: null,
 
-      login: async (username: string, role: 'student' | 'teacher') => {
-        set({ isLoading: true })
+      login: async (username: string, password: string) => {
+        set({ isLoading: true, error: null })
         try {
-          // In a real app, this would be a proper authentication call
-          // For now, we'll create a mock user
-          const mockUser: Profile = {
-            id: Math.random().toString(36).substr(2, 9),
-            username,
-            role,
-            total_points: 0,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
+          const supabase = getSupabaseBrowserClient()
           
-          set({ user: mockUser, isAuthenticated: true, isLoading: false })
-        } catch (error) {
+          // Tạo email giả từ username
+          const fakeEmail = `${username}@ageofstudy.local`
+          
+          // Sign in với Supabase Auth
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: fakeEmail,
+            password,
+          })
+
+          if (authError) throw new Error('Tên đăng nhập hoặc mật khẩu không đúng')
+          if (!authData.user) throw new Error('Đăng nhập thất bại')
+
+          // Lấy profile từ database
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', authData.user.id)
+            .single()
+
+          if (profileError || !profile) throw new Error('Không tìm thấy thông tin người dùng')
+
+          set({ user: profile, isAuthenticated: true, isLoading: false })
+        } catch (error: any) {
           console.error('Login error:', error)
-          set({ isLoading: false })
+          set({ 
+            error: error.message || 'Tên đăng nhập hoặc mật khẩu không đúng', 
+            isLoading: false,
+            isAuthenticated: false,
+            user: null
+          })
         }
       },
 
-      logout: () => {
-        set({ user: null, isAuthenticated: false })
+      signUp: async (username: string, password: string, fullName: string) => {
+        set({ isLoading: true, error: null })
+        try {
+          const supabase = getSupabaseBrowserClient()
+          
+          // Tạo email giả từ username
+          const fakeEmail = `${username}@ageofstudy.local`
+          
+          // Sign up với Supabase Auth
+          const { data: authData, error: authError } = await supabase.auth.signUp({
+            email: fakeEmail,
+            password,
+            options: {
+              data: {
+                username,
+                full_name: fullName,
+              }
+            }
+          })
+
+          if (authError) {
+            console.error('Sign up error:', authError)
+            throw new Error('Đăng ký thất bại. Vui lòng thử lại.')
+          }
+          if (!authData.user) throw new Error('Đăng ký thất bại')
+
+          set({ isLoading: false })
+        } catch (error: any) {
+          console.error('Sign up error:', error)
+          set({ 
+            error: error.message || 'Đăng ký thất bại. Vui lòng thử lại.', 
+            isLoading: false 
+          })
+          throw error
+        }
+      },
+
+      logout: async () => {
+        try {
+          const supabase = getSupabaseBrowserClient()
+          await supabase.auth.signOut()
+        } catch (error) {
+          console.error('Logout error:', error)
+        } finally {
+          set({ user: null, isAuthenticated: false, error: null })
+        }
       },
 
       checkAuth: async () => {
-        // Check if user exists in localStorage
-        const user = get().user
-        if (user) {
-          set({ isAuthenticated: true, isLoading: false })
-        } else {
-          set({ isLoading: false })
+        set({ isLoading: true })
+        try {
+          const supabase = getSupabaseBrowserClient()
+          
+          // Check if user is authenticated
+          const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+
+          if (authError || !authUser) {
+            set({ user: null, isAuthenticated: false, isLoading: false })
+            return
+          }
+
+          // Fetch user profile
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', authUser.id)
+            .single()
+
+          if (profileError || !profile) {
+            set({ user: null, isAuthenticated: false, isLoading: false })
+            return
+          }
+
+          set({ user: profile, isAuthenticated: true, isLoading: false })
+        } catch (error) {
+          console.error('Check auth error:', error)
+          set({ user: null, isAuthenticated: false, isLoading: false })
         }
       },
 
-      updateUserPoints: (points: number) => {
+      // NOTE: This is an optimistic local update only.
+      // XP changes are persisted to the backend separately (e.g., after completing exercises).
+      // The checkAuth method will sync the canonical XP value from the DB on page load/refresh.
+      updateUserXP: (xp: number) => {
         const user = get().user
         if (user) {
-          const updatedUser = { ...user, total_points: user.total_points + points }
+          const currentXP = typeof user.total_xp === 'number' ? user.total_xp : 0
+          const updatedUser = { ...user, total_xp: currentXP + xp }
           set({ user: updatedUser })
         }
+      },
+
+      clearError: () => {
+        set({ error: null })
       }
     }),
     {
       name: 'auth-storage',
+      // Only persist user profile, not Supabase session (Supabase manages session via cookies)
+      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated })
     }
   )
 )

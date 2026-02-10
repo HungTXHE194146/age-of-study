@@ -1,13 +1,13 @@
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import {
   BookOpen,
   Users,
   Trophy,
   Brain,
   Globe,
-  GraduationCap
-} from 'lucide-react'
+  GraduationCap,
+} from "lucide-react";
 
 export default function HomePage() {
   return (
@@ -22,25 +22,28 @@ export default function HomePage() {
         </div>
 
         <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-          ageOfStudy{' '}
-          <span className="text-primary-600">Vietnam</span>
+          ageOfStudy <span className="text-primary-600">Vietnam</span>
         </h1>
 
         <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
-          Nền tảng học tập gamified dành cho học sinh tiểu học Việt Nam.
-          Học Toán, Tiếng Anh, và Tiếng Việt thông qua các skill tree hấp dẫn
-          và các trận chiến kiến thức thú vị.
+          Nền tảng học tập gamified dành cho học sinh tiểu học Việt Nam. Học
+          Toán, Tiếng Anh, và Tiếng Việt thông qua các skill tree hấp dẫn và các
+          trận chiến kiến thức thú vị.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/dashboard">
+          <Link href="/login">
             <Button size="lg" className="btn-primary text-lg px-8">
               Bắt đầu học ngay
             </Button>
           </Link>
-          <Link href="/battle">
-            <Button size="lg" variant="outline" className="btn-secondary text-lg px-8">
-              Thách đấu bạn bè
+          <Link href="/register">
+            <Button
+              size="lg"
+              variant="outline"
+              className="btn-secondary text-lg px-8"
+            >
+              Đăng ký miễn phí
             </Button>
           </Link>
         </div>
@@ -65,8 +68,8 @@ export default function HomePage() {
           </div>
           <h3 className="text-xl font-semibold mb-2">Trận Chiến Kiến Thức</h3>
           <p className="text-gray-600 dark:text-gray-300">
-            Thi đấu trực tiếp với bạn bè, trả lời nhanh để giảm máu đối thủ
-            và giành chiến thắng.
+            Thi đấu trực tiếp với bạn bè, trả lời nhanh để giảm máu đối thủ và
+            giành chiến thắng.
           </p>
         </div>
 
@@ -109,7 +112,9 @@ export default function HomePage() {
             <div className="w-20 h-20 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">🇻🇳</span>
             </div>
-            <h3 className="text-2xl font-bold text-green-600 mb-2">Tiếng Việt</h3>
+            <h3 className="text-2xl font-bold text-green-600 mb-2">
+              Tiếng Việt
+            </h3>
             <p className="text-gray-600 dark:text-gray-300">
               Nâng cao kỹ năng đọc hiểu, chính tả và văn học
             </p>
@@ -117,5 +122,5 @@ export default function HomePage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
