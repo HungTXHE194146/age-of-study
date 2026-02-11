@@ -19,10 +19,10 @@ export default function LoginPage() {
   useEffect(() => {
     return () => {
       if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current)
+        clearTimeout(toastTimeoutRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -33,29 +33,49 @@ export default function LoginPage() {
 
   const handleForgotPassword = () => {
     if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current)
+      clearTimeout(toastTimeoutRef.current);
     }
     setShowForgotPasswordToast(true);
-    toastTimeoutRef.current = setTimeout(() => setShowForgotPasswordToast(false), 4000);
+    toastTimeoutRef.current = setTimeout(
+      () => setShowForgotPasswordToast(false),
+      4000,
+    );
   };
 
   return (
-    <div className="w-full">
-      {/* Owl Avatar */}
+    <div className="w-full relative">
+      {/* Nút về trang chủ */}
       <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="flex justify-center mb-6"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="absolute -top-4 left-0 z-10"
       >
-        <div className="relative">
-          <div className="w-32 h-32 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
-            <span className="text-6xl">🦉</span>
-          </div>
-          <div className="absolute bottom-0 right-0 bg-green-500 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white">
-            <span className="text-lg">✓</span>
-          </div>
-        </div>
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-md hover:shadow-lg hover:bg-white transition-all group border border-gray-100"
+        >
+          <span className="text-lg group-hover:scale-110 group-hover:-translate-x-0.5 transition-transform duration-300">🏠</span>
+          <span className="font-semibold text-gray-700 group-hover:text-orange-500 transition-colors text-sm">Về trang chủ</span>
+        </Link>
       </motion.div>
+
+      {/* Owl Avatar */}
+      <Link href="/" aria-label="Về trang chủ">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="flex justify-center mb-6 mt-8"
+        >
+          <div className="relative">
+            <div className="w-32 h-32 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
+              <span className="text-6xl">🦉</span>
+            </div>
+            <div className="absolute bottom-0 right-0 bg-green-500 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white">
+              <span className="text-lg">✓</span>
+            </div>
+          </div>
+        </motion.div>
+      </Link>
 
       {/* Main Card */}
       <motion.div
@@ -182,6 +202,8 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+  aria-pressed={showPassword}
               >
                 {showPassword ? (
                   <svg

@@ -100,22 +100,39 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="w-full">
-      {/* Owl Avatar */}
+    <div className="w-full relative">
+      {/* Nút về trang chủ */}
       <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="flex justify-center mb-4"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="absolute -top-4 left-0 z-10"
       >
-        <div className="relative">
-          <div className="w-28 h-28 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
-            <span className="text-5xl">📚🦉</span>
-          </div>
-          <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full border-2 border-white">
-            Bước 1/1
-          </div>
-        </div>
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-md hover:shadow-lg hover:bg-white transition-all group border border-gray-100"
+        >
+          <span className="text-lg group-hover:scale-110 group-hover:-translate-x-0.5 transition-transform duration-300">🏠</span>
+          <span className="font-semibold text-gray-700 group-hover:text-blue-500 transition-colors text-sm">Về trang chủ</span>
+        </Link>
       </motion.div>
+
+      {/* Owl Avatar */}
+      <Link href="/">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="flex justify-center mb-4 mt-8"
+        >
+          <div className="relative">
+            <div className="w-28 h-28 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
+              <span className="text-5xl">📚🦉</span>
+            </div>
+            <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full border-2 border-white">
+              Bước 1/1
+            </div>
+          </div>
+        </motion.div>
+      </Link>
 
       {/* Main Card */}
       <motion.div

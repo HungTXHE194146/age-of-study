@@ -5,6 +5,13 @@
   --foreground: #171717;
   --color-primary: #257bf4;
   --radius: 12px;
+
+  /* Game HUD tokens */
+  --color-cream: #fff8f0;
+  --color-ocean-blue: #1a4b8c;
+  --color-amber-active: #f59e0b;
+  --color-streak-red: #fee2e2;
+  --color-xp-gold: #fef9c3;
 }
 
 @theme inline {
@@ -27,4 +34,17 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-spline-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Animation delay utilities for homepage */
+.animation-delay-500 {
+  animation-delay: 500ms;
+}
+
+.animation-delay-1000 {
+  animation-delay: 1000ms;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2000ms;
 }
