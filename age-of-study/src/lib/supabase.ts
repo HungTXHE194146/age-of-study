@@ -1,16 +1,36 @@
 import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
+// Original client for backward compatibility
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// Browser client with SSR support - use this in client components
+export function getSupabaseBrowserClient() {
+  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+}
 
 // Type definitions for database tables
 export interface Profile {
   id: string
-  username: string
-  role: 'student' | 'teacher'
-  total_points: number
+  username: string | null
+  email: string | null  // Added email field to match DB and enable username-based login
+  full_name: string | null
+  avatar_url: string | null
+  role: 'system_admin' | 'teacher' | 'student'
+  
+  // Gamification core
+  total_xp: number
+  weekly_xp: number
+  current_streak: number
+  last_study_date: string | null
+  freeze_count: number
+  
+  // Safety
+  daily_limit_minutes: number
+  
   created_at: string
   updated_at: string
 }
