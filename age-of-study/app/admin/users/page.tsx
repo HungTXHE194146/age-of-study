@@ -1,17 +1,34 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
-import { Search, UserPlus, Filter } from "lucide-react";
+import {
+  Search,
+  UserPlus,
+  Filter,
+  Eye,
+  Edit,
+  Ban,
+  CheckCircle,
+} from "lucide-react";
+import UserAvatar from "@/components/admin/UserAvatar";
+import UserDetailModal from "@/components/admin/UserDetailModal";
+import UserEditModal from "@/components/admin/UserEditModal";
+import AddUserModal from "@/components/admin/AddUserModal";
 
 interface User {
   id: string;
   username: string | null;
   full_name: string | null;
+  avatar_url: string | null;
   role: string;
   created_at: string;
   total_xp: number;
   current_streak: number;
+  weekly_xp: number;
+  daily_limit_minutes: number;
+  freeze_count: number;
+  is_blocked?: boolean;
 }
 
 export default function UsersManagementPage() {
@@ -20,6 +37,12 @@ export default function UsersManagementPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+
+  // Modal states
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -34,9 +57,7 @@ export default function UsersManagementPage() {
       const supabase = getSupabaseBrowserClient();
       const { data, error } = await supabase
         .from("profiles")
-        .select(
-          "id, username, full_name, role, created_at, total_xp, current_streak",
-        )
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -68,6 +89,29 @@ export default function UsersManagementPage() {
     }
 
     setFilteredUsers(filtered);
+  };
+
+  const handleBlockUser = async (
+    userId: string,
+    currentBlockStatus: boolean,
+  ) => {
+    try {
+      const supabase = getSupabaseBrowserClient();
+
+      // Toggle block status
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_blocked: !currentBlockStatus })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      // Reload users
+      await loadUsers();
+    } catch (error) {
+      console.error("Error blocking/unblocking user:", error);
+      alert("Có lỗi xảy ra khi thực hiện thao tác");
+    }
   };
 
   const getRoleBadgeColor = (role: string) => {
@@ -160,7 +204,10 @@ export default function UsersManagementPage() {
           </div>
 
           {/* Add User Button */}
-          <button className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold flex items-center gap-2 whitespace-nowrap">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold flex items-center gap-2 whitespace-nowrap"
+          >
             <UserPlus className="w-5 h-5" />
             Thêm người dùng
           </button>
@@ -211,11 +258,12 @@ export default function UsersManagementPage() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-teal-400 rounded-full flex items-center justify-center text-white font-bold">
-                          {user.full_name?.charAt(0) ||
-                            user.username?.charAt(0) ||
-                            "?"}
-                        </div>
+                        <UserAvatar
+                          avatarUrl={user.avatar_url}
+                          name={user.full_name}
+                          username={user.username}
+                          size="md"
+                        />
                         <div>
                           <p className="font-semibold text-gray-900">
                             {user.full_name || "Chưa đặt tên"}
@@ -249,17 +297,54 @@ export default function UsersManagementPage() {
                       {formatDate(user.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full border-2 bg-green-100 text-green-700 border-green-200">
-                        Hoạt động
-                      </span>
+                      {user.is_blocked ? (
+                        <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full border-2 bg-red-100 text-red-700 border-red-200">
+                          Đã chặn
+                        </span>
+                      ) : (
+                        <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full border-2 bg-green-100 text-green-700 border-green-200">
+                          Hoạt động
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <button className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium border-2 border-blue-200">
-                          Chỉnh sửa
+                        <button
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setShowDetailModal(true);
+                          }}
+                          className="p-2 text-sm bg-teal-50 text-teal-600 rounded-lg hover:bg-teal-100 transition-colors border-2 border-teal-200"
+                          title="Xem chi tiết"
+                        >
+                          <Eye className="w-4 h-4" />
                         </button>
-                        <button className="px-3 py-1 text-sm bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors font-medium border-2 border-orange-200">
-                          Chặn
+                        <button
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setShowEditModal(true);
+                          }}
+                          className="p-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border-2 border-blue-200"
+                          title="Chỉnh sửa"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleBlockUser(user.id, user.is_blocked || false)
+                          }
+                          className={`p-2 text-sm rounded-lg transition-colors border-2 ${
+                            user.is_blocked
+                              ? "bg-green-50 text-green-600 hover:bg-green-100 border-green-200"
+                              : "bg-orange-50 text-orange-600 hover:bg-orange-100 border-orange-200"
+                          }`}
+                          title={user.is_blocked ? "Bỏ chặn" : "Chặn"}
+                        >
+                          {user.is_blocked ? (
+                            <CheckCircle className="w-4 h-4" />
+                          ) : (
+                            <Ban className="w-4 h-4" />
+                          )}
                         </button>
                       </div>
                     </td>
@@ -270,6 +355,39 @@ export default function UsersManagementPage() {
           </table>
         </div>
       </div>
+
+      {/* Modals */}
+      {showDetailModal && selectedUser && (
+        <UserDetailModal
+          user={selectedUser}
+          onClose={() => {
+            setShowDetailModal(false);
+            setSelectedUser(null);
+          }}
+        />
+      )}
+
+      {showEditModal && selectedUser && (
+        <UserEditModal
+          user={selectedUser}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedUser(null);
+          }}
+          onSuccess={() => {
+            loadUsers();
+          }}
+        />
+      )}
+
+      {showAddModal && (
+        <AddUserModal
+          onClose={() => setShowAddModal(false)}
+          onSuccess={() => {
+            loadUsers();
+          }}
+        />
+      )}
     </div>
   );
 }

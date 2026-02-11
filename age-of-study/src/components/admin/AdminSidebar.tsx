@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
+import UserAvatar from "./UserAvatar";
 
 interface NavItem {
   name: string;
@@ -98,9 +99,12 @@ export default function AdminSidebar() {
       {/* User Info & Logout */}
       <div className="p-4 border-t border-gray-200">
         <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg mb-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-            {user?.full_name?.charAt(0) || user?.username?.charAt(0) || "A"}
-          </div>
+          <UserAvatar
+            avatarUrl={user?.avatar_url}
+            name={user?.full_name}
+            username={user?.username}
+            size="md"
+          />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-900 text-sm truncate">
               {user?.full_name || user?.username}
