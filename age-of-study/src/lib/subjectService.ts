@@ -1,11 +1,8 @@
-import { createBrowserClient } from '@supabase/ssr'
+import { getSupabaseBrowserClient } from '@/lib/supabase'
 import { Subject } from '@/types/teacher'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-
 export class SubjectService {
-  private supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)
+  private supabase = getSupabaseBrowserClient()
 
   async getSubjects(): Promise<Subject[]> {
     try {

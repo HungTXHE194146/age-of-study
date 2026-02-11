@@ -15,6 +15,9 @@ interface AuthState {
   clearError: () => void
 }
 
+// Track if checkAuth is currently running to prevent concurrent calls
+let checkAuthPromise: Promise<void> | null = null
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -110,35 +113,47 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkAuth: async () => {
-        set({ isLoading: true })
-        try {
-          const supabase = getSupabaseBrowserClient()
-          
-          // Check if user is authenticated
-          const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
-
-          if (authError || !authUser) {
-            set({ user: null, isAuthenticated: false, isLoading: false })
-            return
-          }
-
-          // Fetch user profile
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', authUser.id)
-            .single()
-
-          if (profileError || !profile) {
-            set({ user: null, isAuthenticated: false, isLoading: false })
-            return
-          }
-
-          set({ user: profile, isAuthenticated: true, isLoading: false })
-        } catch (error) {
-          console.error('Check auth error:', error)
-          set({ user: null, isAuthenticated: false, isLoading: false })
+        // If checkAuth is already running, return the existing promise
+        if (checkAuthPromise) {
+          return checkAuthPromise
         }
+
+        checkAuthPromise = (async () => {
+          set({ isLoading: true })
+          try {
+            const supabase = getSupabaseBrowserClient()
+            
+            // Check if user is authenticated
+            const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+
+            if (authError || !authUser) {
+              set({ user: null, isAuthenticated: false, isLoading: false })
+              return
+            }
+
+            // Fetch user profile
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', authUser.id)
+              .single()
+
+            if (profileError || !profile) {
+              set({ user: null, isAuthenticated: false, isLoading: false })
+              return
+            }
+
+            set({ user: profile, isAuthenticated: true, isLoading: false })
+          } catch (error) {
+            console.error('Check auth error:', error)
+            set({ user: null, isAuthenticated: false, isLoading: false })
+          } finally {
+            // Clear the promise after completion
+            checkAuthPromise = null
+          }
+        })()
+
+        return checkAuthPromise
       },
 
       // NOTE: This is an optimistic local update only.
