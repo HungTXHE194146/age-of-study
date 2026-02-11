@@ -5,12 +5,10 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 
 export default function LearnPage() {
-  const { user, checkAuth, isAuthenticated, isLoading } = useAuthStore();
+  const { user, isAuthenticated, isLoading } = useAuthStore();
   const router = useRouter();
 
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+  // No need to call checkAuth here - DashboardLayout already handles it
 
   useEffect(() => {
     // Only redirect after auth has finished loading to avoid race condition

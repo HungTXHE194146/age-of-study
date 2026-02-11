@@ -7,9 +7,16 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 // Original client for backward compatibility
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+// Singleton instance for browser client
+let browserClient: ReturnType<typeof createBrowserClient> | null = null
+
 // Browser client with SSR support - use this in client components
+// Using singleton pattern to avoid "Multiple GoTrueClient instances" warning
 export function getSupabaseBrowserClient() {
-  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+  if (!browserClient) {
+    browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey)
+  }
+  return browserClient
 }
 
 // Type definitions for database tables

@@ -26,9 +26,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
+    <html lang="vi" suppressHydrationWarning>
       <body
         className={`${splineSans.variable} ${splineSansMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         {children}
       </body>
