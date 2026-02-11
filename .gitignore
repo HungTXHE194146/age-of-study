@@ -34,3 +34,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.agent/.shared/ui-ux-pro-max/scripts/__pycache__/core.cpython-313.pyc
+.agent/.shared/ui-ux-pro-max/scripts/__pycache__/design_system.cpython-313.pyc
+.agent/mcp_config.json
+/.agent
+age-of-study/package.json
+age-of-study/package-lock.json

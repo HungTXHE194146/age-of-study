@@ -1,0 +1,291 @@
+/* ============================================
+   Game HUD Header — Age Of Study
+   ============================================ */
+
+/* Bubble Text — 3D extruded fat letterforms */
+.bubble-text {
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+  color: #1a4b8c;
+  text-shadow:
+    0 1px 0 #3b6fb5,
+    0 2px 0 #2e5a9e,
+    0 3px 4px rgba(26, 75, 140, 0.25);
+  line-height: 1.1;
+}
+
+/* HUD Bar — soft 3D floating effect */
+.hud-bar {
+  background: #fff8f0;
+  box-shadow:
+    0 2px 0 0 #f0e6d6,
+    0 4px 0 0 #e8dcc8,
+    0 6px 16px -4px rgba(0, 0, 0, 0.1),
+    0 12px 32px -8px rgba(0, 0, 0, 0.06);
+  border: 2px solid #f0e6d6;
+}
+
+/* HUD Stat Badge — pill-shaped game inventory items */
+.hud-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.875rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+  box-shadow:
+    0 1px 0 0 rgba(0, 0, 0, 0.06),
+    0 2px 4px -1px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hud-badge:hover {
+  transform: scale(1.05);
+}
+
+.hud-badge--streak {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  color: #b91c1c;
+  border: 1.5px solid #fecaca;
+}
+
+.hud-badge--xp {
+  background: linear-gradient(135deg, #fef9c3, #fde68a);
+  color: #92400e;
+  border: 1.5px solid #fde68a;
+}
+
+/* Nav Item base */
+.hud-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+  user-select: none;
+  position: relative;
+}
+
+.hud-nav-item:hover {
+  background-color: rgba(245, 158, 11, 0.1);
+}
+
+.hud-nav-item--active {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: #fff;
+  box-shadow:
+    0 2px 0 0 #d97706,
+    0 4px 8px -2px rgba(245, 158, 11, 0.35);
+}
+
+.hud-nav-item--active .hud-nav-label {
+  color: #fff;
+  font-weight: 700;
+}
+
+.hud-nav-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.hud-nav-icon {
+  font-size: 1.625rem;
+  line-height: 1;
+}
+
+/* Avatar */
+.hud-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  border: 3px solid #f59e0b;
+  box-shadow:
+    0 0 0 2px #fff8f0,
+    0 2px 8px -2px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #fff;
+  font-weight: 800;
+  font-size: 1rem;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hud-avatar:hover {
+  transform: scale(1.08);
+}
+
+.hud-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Dropdown menu */
+.hud-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 180px;
+  background: #fff8f0;
+  border: 2px solid #f0e6d6;
+  border-radius: 1rem;
+  box-shadow:
+    0 4px 0 0 #e8dcc8,
+    0 8px 24px -4px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  z-index: 100;
+}
+
+.hud-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.125rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.hud-dropdown-item:hover {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.hud-dropdown-item--danger {
+  color: #dc2626;
+}
+
+.hud-dropdown-item--danger:hover {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.hud-dropdown-divider {
+  height: 1.5px;
+  background: #f0e6d6;
+  margin: 0;
+}
+
+/* ============================================
+   Mobile Bottom Bar
+   ============================================ */
+.hud-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: #fff8f0;
+  border-top: 2px solid #f0e6d6;
+  box-shadow:
+    0 -2px 0 0 #e8dcc8,
+    0 -4px 16px -4px rgba(0, 0, 0, 0.08);
+  padding: 0.5rem 0.25rem;
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.hud-bottom-bar-inner {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.hud-bottom-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 60px;
+}
+
+.hud-bottom-item--active {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  box-shadow: 0 2px 0 0 #d97706;
+}
+
+.hud-bottom-item--active .hud-bottom-label {
+  color: #fff;
+  font-weight: 700;
+}
+
+.hud-bottom-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.hud-bottom-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+/* XP Progress bar animation */
+@keyframes xp-fill {
+  from {
+    width: 0%;
+  }
+}
+
+.xp-progress-bar {
+  height: 3px;
+  border-radius: 9999px;
+  background: #f59e0b;
+  animation: xp-fill 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: left;
+}
+
+/* Wiggle keyframes */
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(12deg);
+  }
+  30% {
+    transform: rotate(-10deg);
+  }
+  45% {
+    transform: rotate(8deg);
+  }
+  60% {
+    transform: rotate(-6deg);
+  }
+  75% {
+    transform: rotate(3deg);
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .hud-badge,
+  .hud-avatar,
+  .hud-nav-item,
+  .hud-bottom-item,
+  .xp-progress-bar {
+    animation: none !important;
+    transition: none !important;
+  }
+}
