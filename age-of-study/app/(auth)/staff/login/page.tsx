@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 
 export default function StaffLoginPage() {
   const router = useRouter();
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, isLoading, error, clearError, user } = useAuthStore();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -21,6 +21,17 @@ export default function StaffLoginPage() {
     // Role is determined by the database profile, not by user selection
     await login(username, password);
   };
+
+  // Auto-navigate after successful login
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'teacher') {
+        router.push('/teacher/dashboard');
+      } else {
+        router.push('/learn');
+      }
+    }
+  }, [user, router]);
 
   return (
     <div className="min-h-screen bg-slate-900 flex">

@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, isLoading, error, clearError, user } = useAuthStore();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -30,6 +30,17 @@ export default function LoginPage() {
 
     await login(username, password);
   };
+
+  // Auto-navigate after successful login
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'teacher') {
+        router.push('/teacher/dashboard');
+      } else {
+        router.push('/learn');
+      }
+    }
+  }, [user, router]);
 
   const handleForgotPassword = () => {
     if (toastTimeoutRef.current) {
