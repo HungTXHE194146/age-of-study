@@ -4,13 +4,13 @@ import "./globals.css";
 
 const splineSans = Spline_Sans({
   variable: "--font-spline-sans",
-  subsets: ["latin", "vietnamese"],
+  subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
 });
 
 const splineSansMono = Spline_Sans_Mono({
   variable: "--font-spline-sans-mono",
-  subsets: ["latin", "vietnamese"],
+  subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
 });
 

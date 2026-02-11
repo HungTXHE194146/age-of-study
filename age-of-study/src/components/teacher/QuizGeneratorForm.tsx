@@ -1,62 +1,92 @@
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '../ui/input'
-import { Textarea } from '../ui/textarea'
-import { Label } from '../ui/label'
-import { CloudUpload, FileText, X } from 'lucide-react'
-import { GeneratorFormState, DifficultyLevel } from '@/types/teacher'
-import { difficultyOptions, questionCountOptions } from '@/constants/teacherMockData'
+"use client";
+
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
+import { Label } from "../ui/label";
+import { CloudUpload, FileText, X, Loader2 } from "lucide-react";
+import { GeneratorFormState, DifficultyLevel, Subject } from "@/types/teacher";
+import { subjectService } from "@/lib/subjectService";
+import {
+  difficultyOptions,
+  questionCountOptions,
+} from "@/constants/teacherMockData";
 
 interface QuizGeneratorFormProps {
-  onGenerate: (data: GeneratorFormState) => void
-  isLoading?: boolean
+  onGenerate: (data: GeneratorFormState) => void;
+  isLoading?: boolean;
 }
 
-export function QuizGeneratorForm({ onGenerate, isLoading = false }: QuizGeneratorFormProps) {
+export function QuizGeneratorForm({
+  onGenerate,
+  isLoading = false,
+}: QuizGeneratorFormProps) {
   const [formData, setFormData] = useState<GeneratorFormState>({
-    topic: '',
-    difficulty: 'Easy',
+    topic: "",
+    difficulty: "Easy",
     questionCount: 10,
-    file: null
-  })
-  const [isDragging, setIsDragging] = useState(false)
+    file: null,
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [isLoadingSubjects, setIsLoadingSubjects] = useState(true);
+
+  // Fetch subjects from Supabase
+  useEffect(() => {
+    async function fetchSubjects() {
+      try {
+        setIsLoadingSubjects(true);
+        const subjectList = await subjectService.getSubjects();
+        setSubjects(subjectList);
+      } catch (error) {
+        console.error("Failed to fetch subjects:", error);
+      } finally {
+        setIsLoadingSubjects(false);
+      }
+    }
+
+    fetchSubjects();
+  }, []);
 
   const handleFileUpload = (file: File) => {
-    setFormData(prev => ({ ...prev, file }))
-  }
+    setFormData((prev) => ({ ...prev, file }));
+  };
 
   const handleFileRemove = () => {
-    setFormData(prev => ({ ...prev, file: null }))
-  }
+    setFormData((prev) => ({ ...prev, file: null }));
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
+    e.preventDefault();
+    setIsDragging(true);
+  };
 
   const handleDragLeave = () => {
-    setIsDragging(false)
-  }
+    setIsDragging(false);
+  };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    const files = e.dataTransfer.files
+    e.preventDefault();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      handleFileUpload(files[0])
+      handleFileUpload(files[0]);
     }
-  }
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    onGenerate(formData)
-  }
+    e.preventDefault();
+    onGenerate(formData);
+  };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Generate Content</h2>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          Generate Content
+        </h2>
         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <CloudUpload className="w-4 h-4" />
           <span>AI-Powered</span>
@@ -68,8 +98,8 @@ export function QuizGeneratorForm({ onGenerate, isLoading = false }: QuizGenerat
         <div
           className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
             isDragging
-              ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-              : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+              ? "border-blue-400 bg-blue-50 dark:bg-blue-900/20"
+              : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
           }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -80,7 +110,9 @@ export function QuizGeneratorForm({ onGenerate, isLoading = false }: QuizGenerat
               <div className="flex items-center gap-3">
                 <FileText className="w-8 h-8 text-blue-500" />
                 <div className="text-left">
-                  <p className="font-medium text-gray-900 dark:text-white">{formData.file.name}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {formData.file.name}
+                  </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {(formData.file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
@@ -98,7 +130,9 @@ export function QuizGeneratorForm({ onGenerate, isLoading = false }: QuizGenerat
             <div className="space-y-2">
               <CloudUpload className="w-12 h-12 mx-auto text-gray-400" />
               <div>
-                <p className="font-medium text-gray-900 dark:text-white">Click to upload or drag and drop</p>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  Click to upload or drag and drop
+                </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   PDF, DOCX up to 10MB
                 </p>
@@ -107,8 +141,8 @@ export function QuizGeneratorForm({ onGenerate, isLoading = false }: QuizGenerat
                 type="file"
                 accept=".pdf,.doc,.docx"
                 onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) handleFileUpload(file)
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file);
                 }}
                 className="hidden"
                 id="file-upload"
@@ -126,35 +160,81 @@ export function QuizGeneratorForm({ onGenerate, isLoading = false }: QuizGenerat
         {/* Divider */}
         <div className="flex items-center justify-center">
           <div className="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
-          <span className="px-4 text-sm text-gray-500 dark:text-gray-400">OR USE PROMPT</span>
+          <span className="px-4 text-sm text-gray-500 dark:text-gray-400">
+            OR USE PROMPT
+          </span>
           <div className="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
         </div>
 
         {/* Topic/Instructions */}
         <div className="space-y-2">
-          <Label htmlFor="topic" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <Label
+            htmlFor="topic"
+            className="text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Topic/Instructions
           </Label>
           <Textarea
             id="topic"
             placeholder="Enter specific topics, key concepts, or instructions for the AI to generate questions..."
             value={formData.topic}
-            onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, topic: e.target.value }))
+            }
             className="min-h-[120px] resize-none"
             required
           />
         </div>
 
         {/* Controls */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="difficulty" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <Label
+              htmlFor="subject"
+              className="text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              Subject
+            </Label>
+            <select
+              id="subject"
+              value={formData.subject || ""}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  subject: e.target.value,
+                }))
+              }
+              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <option value="">Select a subject...</option>
+              {isLoadingSubjects ? (
+                <option disabled>Loading subjects...</option>
+              ) : (
+                subjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name} ({subject.code})
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label
+              htmlFor="difficulty"
+              className="text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
               Difficulty
             </Label>
             <select
               id="difficulty"
               value={formData.difficulty}
-              onChange={(e) => setFormData(prev => ({ ...prev, difficulty: e.target.value as DifficultyLevel }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  difficulty: e.target.value as DifficultyLevel,
+                }))
+              }
               className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
               {difficultyOptions.map((option) => (
@@ -166,13 +246,21 @@ export function QuizGeneratorForm({ onGenerate, isLoading = false }: QuizGenerat
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="questionCount" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <Label
+              htmlFor="questionCount"
+              className="text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
               Question Count
             </Label>
             <select
               id="questionCount"
               value={formData.questionCount.toString()}
-              onChange={(e) => setFormData(prev => ({ ...prev, questionCount: parseInt(e.target.value) }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  questionCount: parseInt(e.target.value),
+                }))
+              }
               className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
               {questionCountOptions.map((option) => (
@@ -193,11 +281,11 @@ export function QuizGeneratorForm({ onGenerate, isLoading = false }: QuizGenerat
           >
             <span className="flex items-center gap-2">
               <span>✨</span>
-              {isLoading ? 'Generating...' : 'Generate Questions with AI'}
+              {isLoading ? "Generating..." : "Generate Questions with AI"}
             </span>
           </Button>
         </div>
       </form>
     </div>
-  )
+  );
 }

@@ -1,5 +1,7 @@
-import { navigationItems, mockTeacher } from '@/constants/teacherMockData'
-import { Button } from '@/components/ui/button'
+"use client";
+
+import { navigationItems, mockTeacher } from "@/constants/teacherMockData";
+import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
   FileText,
@@ -8,40 +10,42 @@ import {
   Users,
   BookOpen,
   Brain,
-  Trophy
-} from 'lucide-react'
-import Link from 'next/link'
+  Trophy,
+} from "lucide-react";
+import Link from "next/link";
 
 interface SidebarProps {
-  className?: string
+  className?: string;
 }
 
 export function Sidebar({ className }: SidebarProps) {
   const getIconComponent = (iconName: string) => {
     switch (iconName) {
-      case 'LayoutDashboard':
-        return LayoutDashboard
-      case 'FileText':
-        return FileText
-      case 'GraduationCap':
-        return GraduationCap
-      case 'Settings':
-        return Settings
-      case 'Users':
-        return Users
-      case 'BookOpen':
-        return BookOpen
-      case 'Brain':
-        return Brain
-      case 'Trophy':
-        return Trophy
+      case "LayoutDashboard":
+        return LayoutDashboard;
+      case "FileText":
+        return FileText;
+      case "GraduationCap":
+        return GraduationCap;
+      case "Settings":
+        return Settings;
+      case "Users":
+        return Users;
+      case "BookOpen":
+        return BookOpen;
+      case "Brain":
+        return Brain;
+      case "Trophy":
+        return Trophy;
       default:
-        return LayoutDashboard
+        return LayoutDashboard;
     }
-  }
+  };
 
   return (
-    <div className={`w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 h-screen fixed left-0 top-0 z-50 ${className || ''}`}>
+    <div
+      className={`w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 h-screen fixed left-0 top-0 z-50 ${className || ""}`}
+    >
       {/* Branding */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">
@@ -49,8 +53,12 @@ export function Sidebar({ className }: SidebarProps) {
             <Brain className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white">ageOfStudy</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Teacher Dashboard</p>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white">
+              ageOfStudy
+            </h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Teacher Dashboard
+            </p>
           </div>
         </div>
       </div>
@@ -58,8 +66,8 @@ export function Sidebar({ className }: SidebarProps) {
       {/* Navigation */}
       <nav className="p-4 space-y-2">
         {navigationItems.map((item) => {
-          const IconComponent = getIconComponent(item.icon.name)
-          
+          const IconComponent = getIconComponent(item.icon.name);
+
           return (
             <Link
               key={item.id}
@@ -76,7 +84,7 @@ export function Sidebar({ className }: SidebarProps) {
                 <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
               )}
             </Link>
-          )
+          );
         })}
       </nav>
 
@@ -85,7 +93,10 @@ export function Sidebar({ className }: SidebarProps) {
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              {mockTeacher.name.split(' ').map(n => n[0]).join('')}
+              {mockTeacher.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")}
             </span>
           </div>
           <div className="flex-1 min-w-0">
@@ -96,11 +107,15 @@ export function Sidebar({ className }: SidebarProps) {
               {mockTeacher.department}
             </p>
           </div>
-          <Button variant="outline" size="sm" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          >
             <Settings className="w-4 h-4" />
           </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }

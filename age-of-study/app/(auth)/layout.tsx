@@ -20,8 +20,10 @@ export default function AuthLayout({
   useEffect(() => {
     if (isAuthenticated && user) {
       // Redirect authenticated users based on role
-      if (user.role === "teacher" || user.role === "system_admin") {
+      if (user.role === "system_admin") {
         router.push("/admin/dashboard");
+      } else if (user.role === "teacher") {
+        router.push("/teacher/dashboard");
       } else {
         router.push("/learn");
       }

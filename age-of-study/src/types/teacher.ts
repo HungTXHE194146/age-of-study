@@ -1,7 +1,7 @@
 import { LucideIcon } from 'lucide-react'
 
 export type DifficultyLevel = 'Easy' | 'Medium' | 'Hard' | 'Mixed'
-export type QuestionType = 'MULTIPLE_CHOICE' | 'TRUE_FALSE'
+export type QuestionType = 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'ESSAY'
 export type SortOption = 'relevance' | 'difficulty' | 'date'
 
 export interface QuestionOption {
@@ -49,9 +49,20 @@ export interface NavigationItem {
   isActive?: boolean
 }
 
+export interface Subject {
+  id: string
+  name: string
+  code: string
+  grade_level: string
+  description?: string
+  created_at: string
+  updated_at: string
+}
+
 export interface GeneratorFormState {
   topic: string
   difficulty: DifficultyLevel
   questionCount: number
+  subject?: string
   file?: File | null
 }
