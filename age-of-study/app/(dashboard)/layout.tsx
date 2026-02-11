@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import GameHeader from "@/components/GameHeader";
 import { useAuthStore } from "@/store/useAuthStore";

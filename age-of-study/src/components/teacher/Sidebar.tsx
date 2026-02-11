@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { navigationItems, mockTeacher } from "@/constants/teacherMockData";
 import { Button } from "@/components/ui/button";

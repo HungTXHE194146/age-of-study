@@ -1,0 +1,122 @@
+'use client';
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  Users,
+  BookOpen,
+  Settings,
+  LogOut,
+} from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useRouter } from "next/navigation";
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const navItems: NavItem[] = [
+  {
+    name: "Tổng quan",
+    href: "/admin/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    name: "Quản lý người dùng",
+    href: "/admin/users",
+    icon: Users,
+  },
+  {
+    name: "Quản lý lớp học",
+    href: "/admin/classes",
+    icon: BookOpen,
+  },
+  {
+    name: "Cài đặt",
+    href: "/admin/settings",
+    icon: Settings,
+  },
+];
+
+export default function AdminSidebar() {
+  const pathname = usePathname();
+  const { user, logout } = useAuthStore();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
+  };
+
+  return (
+    <div className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
+      {/* Logo & Title */}
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-teal-500 rounded-lg flex items-center justify-center text-white text-xl font-bold">
+            A
+          </div>
+          <div>
+            <h1 className="font-bold text-gray-900">Age of Study</h1>
+            <p className="text-xs text-gray-500">Quản trị viên</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-4">
+        <ul className="space-y-2">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
+
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={`
+                    flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+                    ${
+                      isActive
+                        ? "bg-blue-50 text-blue-600 font-semibold border-2 border-blue-200"
+                        : "text-gray-700 hover:bg-gray-50 border-2 border-transparent"
+                    }
+                  `}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span>{item.name}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      {/* User Info & Logout */}
+      <div className="p-4 border-t border-gray-200">
+        <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg mb-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+            {user?.full_name?.charAt(0) || user?.username?.charAt(0) || "A"}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-gray-900 text-sm truncate">
+              {user?.full_name || user?.username}
+            </p>
+            <p className="text-xs text-gray-500">System Admin</p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-all border-2 border-transparent hover:border-red-200"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="font-medium">Đăng xuất</span>
+        </button>
+      </div>
+    </div>
+  );
+}
