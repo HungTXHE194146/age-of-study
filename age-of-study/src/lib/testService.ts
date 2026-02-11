@@ -206,7 +206,7 @@ export class TestService {
           display_order: row.display_order,
         };
       })
-      .filter((item): item is Question & { points: number; display_order: number } => item !== null); // 5. Remove any nulls
+      .filter((item: (Question & { points: number; display_order: number }) | null): item is Question & { points: number; display_order: number } => item !== null); // 5. Remove any nulls
   }
 
   async updateQuestionOrder(
