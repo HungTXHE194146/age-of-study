@@ -43,6 +43,11 @@ export default function HomePage() {
               Thách đấu bạn bè
             </Button>
           </Link>
+          <Link href="/teacher">
+            <Button size="lg" variant="outline" className="btn-secondary text-lg px-8">
+              Quản lý giáo viên
+            </Button>
+          </Link>
         </div>
       </div>
 
