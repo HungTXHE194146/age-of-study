@@ -49,11 +49,14 @@ export default function AdminDashboard() {
       if (usersError) throw usersError;
 
       const students =
-        allUsers?.filter((u) => u.role === "student").length || 0;
+        allUsers?.filter((u: { role: string }) => u.role === "student")
+          .length || 0;
       const teachers =
-        allUsers?.filter((u) => u.role === "teacher").length || 0;
+        allUsers?.filter((u: { role: string }) => u.role === "teacher")
+          .length || 0;
       const admins =
-        allUsers?.filter((u) => u.role === "system_admin").length || 0;
+        allUsers?.filter((u: { role: string }) => u.role === "system_admin")
+          .length || 0;
 
       setStats({
         totalUsers: allUsers?.length || 0,
