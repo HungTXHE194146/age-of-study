@@ -35,6 +35,26 @@ export default function UserAvatar({
     );
   }
 
+  // Check if avatarUrl is an emoji or a URL
+  const isEmoji = !avatarUrl.startsWith("http") && !avatarUrl.startsWith("/");
+
+  // If it's an emoji, display as text
+  if (isEmoji) {
+    return (
+      <div
+        className={`${sizeClasses[size]} rounded-full flex items-center justify-center bg-gray-100`}
+      >
+        <span
+          className={
+            size === "lg" ? "text-4xl" : size === "md" ? "text-2xl" : "text-xl"
+          }
+        >
+          {avatarUrl}
+        </span>
+      </div>
+    );
+  }
+
   // Try to show actual image
   return (
     <div

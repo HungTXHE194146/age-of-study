@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -228,11 +228,17 @@ export default function GameHeader() {
                 aria-haspopup="menu"
               >
                 {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={displayName || "Avatar"}
-                    loading="lazy"
-                  />
+                  // Check if avatarUrl is an emoji (single character or emoji) or a URL
+                  avatarUrl.startsWith("http") || avatarUrl.startsWith("/") ? (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName || "Avatar"}
+                      loading="lazy"
+                    />
+                  ) : (
+                    // It's an emoji, display as text
+                    <span className="text-2xl">{avatarUrl}</span>
+                  )
                 ) : (
                   getInitials(displayName)
                 )}

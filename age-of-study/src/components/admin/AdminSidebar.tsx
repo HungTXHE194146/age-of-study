@@ -56,8 +56,8 @@ export default function AdminSidebar() {
     <div className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
       {/* Logo & Title */}
       <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <div className="w-20 h-20 rounded-lg flex items-center justify-center">
             <img
               src="/logo.svg"
               alt="Age of Study Logo"

@@ -79,7 +79,7 @@ export default function HomePage() {
           >
             <span className="text-2xl">🏫</span>
             <span className="font-bold text-lg text-gray-800">
-              Trường Tiểu Học Ninh Lai
+              Trường Tiểu học Ninh Lai
             </span>
           </motion.div>
 

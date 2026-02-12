@@ -60,7 +60,7 @@ export default function StaffLoginPage() {
                 />
               </div>
               <h1 className="text-4xl font-bold mb-3">
-                Trường Tiểu Học Ninh Lai
+                Trường Tiểu học Ninh Lai
               </h1>
               <div className="h-1 w-24 bg-blue-400 rounded-full mb-4"></div>
               <p className="text-xl text-blue-200">
@@ -185,7 +185,7 @@ export default function StaffLoginPage() {
               />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-1">
-              Trường Tiểu Học Ninh Lai
+              Trường Tiểu học Ninh Lai
             </h1>
             <p className="text-sm text-gray-600">Hệ thống quản lý</p>
           </div>
@@ -425,7 +425,7 @@ export default function StaffLoginPage() {
             transition={{ delay: 0.4 }}
             className="mt-12 pt-8 border-t border-gray-200 text-center text-xs text-gray-500"
           >
-            © {new Date().getFullYear()} Trường Tiểu Học Ninh Lai
+            © {new Date().getFullYear()} Trường Tiểu học Ninh Lai
             <br />
             Hệ thống quản lý nội bộ
           </motion.div>
