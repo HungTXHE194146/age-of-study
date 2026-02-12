@@ -8,8 +8,11 @@ import {
   Users, 
   BarChart3, 
   Settings,
-  Plus
+  Plus,
+  LogOut
 } from "lucide-react";
+import { checkRoutePermission } from "@/lib/routeMiddleware";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 export default function TeacherDashboard() {
   const { user, checkAuth, isAuthenticated, isLoading } = useAuthStore();
@@ -20,18 +23,28 @@ export default function TeacherDashboard() {
   }, [checkAuth]);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && isAuthenticated && user) {
+      // Check route permissions using centralized middleware
+      const currentPath = window.location.pathname;
+      const redirectPath = checkRoutePermission({
+        user,
+        currentPath,
+        isAuthenticated
+      });
+
+      if (redirectPath) {
+        router.push(redirectPath);
+        return;
+      }
+    } else if (!isLoading && !isAuthenticated) {
       router.push("/login");
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, user, router]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-4">📚</div>
-          <p className="text-gray-600">Đang tải...</p>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <LoadingSpinner text="Đang tải..." />
       </div>
     );
   }
@@ -47,12 +60,28 @@ export default function TeacherDashboard() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">
-          Bảng Điều Khiển Giáo Viên
-        </h1>
-        <p className="text-lg text-gray-600">
-          Chào mừng {user.full_name || user.username}! Quản lý lớp học và bài kiểm tra của bạn.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              Bảng Điều Khiển Giáo Viên
+            </h1>
+            <p className="text-lg text-gray-600">
+              Chào mừng {user.full_name || user.username}! Quản lý lớp học và bài kiểm tra của bạn.
+            </p>
+          </div>
+          <button
+            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-full font-semibold hover:bg-red-600 transition-colors"
+            onClick={() => {
+              // Gọi hàm logout từ store
+              const { logout } = useAuthStore.getState();
+              logout();
+              router.push("/login");
+            }}
+          >
+            <LogOut className="w-5 h-5" />
+            Đăng xuất
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

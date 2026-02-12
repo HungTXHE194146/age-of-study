@@ -5,6 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { TestService } from "@/lib/testService";
 import { Button } from "@/components/ui/button";
+import { checkRoutePermission } from "@/lib/routeMiddleware";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 interface Question {
   id: string;
@@ -43,7 +45,7 @@ const testService = new TestService();
 export default function StudentTestPage() {
   const router = useRouter();
   const params = useParams();
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const testId = params.testId as string;
 
   const [test, setTest] = useState<Test | null>(null);
@@ -55,6 +57,23 @@ export default function StudentTestPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submissionResult, setSubmissionResult] =
     useState<SubmissionResult | null>(null);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Check route permissions using centralized middleware
+      const currentPath = window.location.pathname;
+      const redirectPath = checkRoutePermission({
+        user,
+        currentPath,
+        isAuthenticated
+      });
+
+      if (redirectPath) {
+        router.push(redirectPath);
+        return;
+      }
+    }
+  }, [isAuthenticated, user, router]);
 
   useEffect(() => {
     if (testId) {
@@ -162,7 +181,7 @@ export default function StudentTestPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <LoadingSpinner text="Đang tải bài kiểm tra..." />
       </div>
     );
   }
@@ -190,44 +209,82 @@ export default function StudentTestPage() {
 
   if (isSubmitted && submissionResult) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50">
         <div className="ml-64 p-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6">
-              <h2 className="text-2xl font-bold text-green-800 dark:text-green-200 mb-6">
-                Test Completed!
-              </h2>
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-lg">
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Score
-                    </div>
-                    <div className="text-2xl font-bold text-green-600">
+          <div className="max-w-6xl mx-auto">
+            {/* Header */}
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                Bài kiểm tra đã hoàn thành!
+              </h1>
+              <p className="text-lg text-gray-600">
+                {test.title}
+              </p>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <div className="bg-white rounded-lg p-6 shadow-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">
+                      Điểm số
+                    </p>
+                    <p className="text-3xl font-bold text-green-600">
                       {submissionResult.score}%
-                    </div>
+                    </p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-lg">
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Correct
-                    </div>
-                    <div className="text-2xl font-bold text-green-600">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg p-6 shadow-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">
+                      Câu đúng
+                    </p>
+                    <p className="text-3xl font-bold text-green-600">
                       {submissionResult.correctAnswers}
-                    </div>
+                    </p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-lg">
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Total
-                    </div>
-                    <div className="text-2xl font-bold text-gray-600">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg p-6 shadow-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">
+                      Tổng số câu
+                    </p>
+                    <p className="text-3xl font-bold text-gray-900">
                       {submissionResult.totalQuestions}
-                    </div>
+                    </p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-lg">
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Time
-                    </div>
-                    <div className="text-2xl font-bold text-blue-600">
+                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg p-6 shadow-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">
+                      Thời gian
+                    </p>
+                    <p className="text-3xl font-bold text-blue-600">
                       {Math.floor(
                         (test.settings.time_limit * 60 - timeLeft) / 60,
                       )}
@@ -235,59 +292,136 @@ export default function StudentTestPage() {
                       {((test.settings.time_limit * 60 - timeLeft) % 60)
                         .toString()
                         .padStart(2, "0")}
-                    </div>
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                   </div>
                 </div>
+              </div>
+            </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Question Review</h3>
-                  {submissionResult.questions.map((question, index) => {
-                    const userAnswer = submissionResult.answers.find(
-                      (a) => a.question_id === question.id,
-                    );
-                    const isCorrect = userAnswer?.is_correct;
-                    return (
-                      <div
-                        key={question.id}
-                        className={`p-4 rounded-lg ${isCorrect ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"}`}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium">
-                            {index + 1}. {question.content.question}
-                          </span>
-                          <span
-                            className={`px-2 py-1 rounded text-xs ${isCorrect ? "bg-green-200 dark:bg-green-800" : "bg-red-200 dark:bg-red-800"}`}
-                          >
-                            {isCorrect ? "Correct" : "Incorrect"}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          Your answer:{" "}
-                          {
-                            question.content.options[
-                              userAnswer?.selected_option_index || 0
-                            ]
-                          }
-                          {isCorrect
-                            ? ""
-                            : ` | Correct: ${question.content.options[question.correct_option_index]}`}
+            {/* Question Review */}
+            <div className="bg-white rounded-lg p-8 shadow-md">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                Xem lại câu hỏi
+              </h3>
+              
+              <div className="space-y-6">
+                {submissionResult.questions.map((question, index) => {
+                  const userAnswer = submissionResult.answers.find(
+                    (a) => a.question_id === question.id,
+                  );
+                  const isCorrect = userAnswer?.is_correct;
+                  return (
+                    <div
+                      key={question.id}
+                      className={`p-6 rounded-lg border-2 ${
+                        isCorrect 
+                          ? "border-green-200 bg-green-50" 
+                          : "border-red-200 bg-red-50"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                              Câu {index + 1}
+                            </span>
+                            <span
+                              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                isCorrect 
+                                  ? "bg-green-200 text-green-800" 
+                                  : "bg-red-200 text-red-800"
+                              }`}
+                            >
+                              {isCorrect ? "Đúng" : "Sai"}
+                            </span>
+                          </div>
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                            {question.content.question}
+                          </h4>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div className="bg-white p-4 rounded-lg">
+                              <p className="text-sm text-gray-600 mb-2">Câu trả lời của bạn:</p>
+                              <p className="font-medium text-gray-900">
+                                {String.fromCharCode(65 + (userAnswer?.selected_option_index || 0))}. {question.content.options[userAnswer?.selected_option_index || 0]}
+                              </p>
+                            </div>
+                            {!isCorrect && (
+                              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                                <p className="text-sm text-green-600 mb-2">Đáp án đúng:</p>
+                                <p className="font-medium text-green-800">
+                                  {String.fromCharCode(65 + question.correct_option_index)}. {question.content.options[question.correct_option_index]}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Options list */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {question.content.options.map((option, optionIndex) => {
+                              const isUserAnswer = optionIndex === (userAnswer?.selected_option_index || -1);
+                              const isCorrectOption = optionIndex === question.correct_option_index;
+                              
+                              return (
+                                <div
+                                  key={optionIndex}
+                                  className={`p-3 rounded-lg border-2 ${
+                                    isCorrectOption
+                                      ? "border-green-300 bg-green-50"
+                                      : isUserAnswer && !isCorrect
+                                        ? "border-red-300 bg-red-50"
+                                        : "border-gray-200 bg-gray-50"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                      isCorrectOption
+                                        ? "bg-green-200 text-green-800"
+                                        : isUserAnswer && !isCorrect
+                                          ? "bg-red-200 text-red-800"
+                                          : "bg-gray-200 text-gray-800"
+                                    }`}>
+                                      {String.fromCharCode(65 + optionIndex)}
+                                    </span>
+                                    <span className="text-gray-900">{option}</span>
+                                    {isCorrectOption && (
+                                      <span className="ml-auto text-green-600 font-semibold">✓</span>
+                                    )}
+                                    {isUserAnswer && !isCorrectOption && (
+                                      <span className="ml-auto text-red-600 font-semibold">✗</span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
+              </div>
 
-                <div className="flex gap-4">
-                  <Button onClick={() => router.push("/learn")}>
-                    Back to Learn
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => router.push(`/learn/tests/${testId}`)}
-                  >
-                    Try Again
-                  </Button>
-                </div>
+              {/* Actions */}
+              <div className="flex gap-4 mt-8">
+                <Button 
+                  onClick={() => router.push("/learn")}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3"
+                >
+                  Quay lại học tập
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/learn/tests/${testId}`)}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3"
+                >
+                  Làm lại bài kiểm tra
+                </Button>
               </div>
             </div>
           </div>

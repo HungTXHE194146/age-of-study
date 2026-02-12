@@ -9,6 +9,7 @@ export interface Test {
   title: string
   description: string
   type: TestType
+  subject_id: number | null
   node_id: number | null
   settings: {
     time_limit: number
