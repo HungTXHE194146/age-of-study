@@ -9,14 +9,12 @@ import { Check, ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
 
 interface QuizReviewListProps {
   questions: Question[];
-  onPublish: () => void;
-  onSaveDraft: () => void;
+  onRemoveQuestion?: (id: string) => void;
 }
 
 export function QuizReviewList({
   questions,
-  onPublish,
-  onSaveDraft,
+  onRemoveQuestion,
 }: QuizReviewListProps) {
   const [sortBy, setSortBy] = useState<SortOption>("relevance");
 
@@ -68,22 +66,6 @@ export function QuizReviewList({
 
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={onSaveDraft}
-            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-          >
-            Save Draft
-          </Button>
-          <Button
-            onClick={onPublish}
-            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold"
-          >
-            Publish Quiz
-          </Button>
-        </div>
-
         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <span>Drag to reorder</span>
           <MoreHorizontal className="w-4 h-4" />
@@ -116,8 +98,21 @@ export function QuizReviewList({
                   {question.difficulty}
                 </Badge>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <span>{question.topic}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {question.topic}
+                </span>
+                {onRemoveQuestion && (
+                  <button
+                    onClick={() => onRemoveQuestion(question.id)}
+                    className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                    title="Xóa câu hỏi"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
 

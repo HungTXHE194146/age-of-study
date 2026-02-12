@@ -25,9 +25,11 @@ import {
   Link as LinkIcon,
   Settings,
   ArrowLeft,
+  Book,
 } from "lucide-react";
 import { QuizGeneratorForm } from "@/components/teacher/QuizGeneratorForm";
 import { QuizReviewList } from "@/components/teacher/QuizReviewList";
+import { QuestionBankTab } from "@/components/teacher/QuestionBankTab";
 
 // Simple UUID generator function
 const generateUUID = (): string => {
@@ -56,7 +58,7 @@ export default function TeacherTestEditPage() {
   const [test, setTest] = useState<TestWithQuestions | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<"manual" | "ai">("manual");
+  const [activeTab, setActiveTab] = useState<"manual" | "ai" | "bank">("manual");
   const [testDetails, setTestDetails] = useState({
     title: "",
     description: "",
@@ -215,7 +217,7 @@ export default function TeacherTestEditPage() {
           time_limit: testDetails.timeLimit,
           allow_retry: true,
         },
-        is_published: test?.is_published || false,
+        is_published: true, // Publish status
       });
 
       // Update questions and test_questions records
@@ -273,6 +275,95 @@ export default function TeacherTestEditPage() {
     } catch (error) {
       console.error("Error saving test:", error);
       alert("Cập nhật bài kiểm tra thất bại. Vui lòng thử lại.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!testDetails.title.trim()) {
+      alert("Vui lòng nhập tiêu đề bài kiểm tra");
+      return;
+    }
+
+    if (questions.length === 0) {
+      alert("Vui lòng thêm ít nhất một câu hỏi");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const testService = new TestService();
+
+      // Update test data in Supabase (draft version)
+      await testService.updateTest(testId, {
+        title: testDetails.title,
+        description: testDetails.description,
+        type: "practice",
+        subject_id: testDetails.subject ? parseInt(testDetails.subject) : null,
+        node_id: testDetails.node ? parseInt(testDetails.node) : null,
+        settings: {
+          time_limit: testDetails.timeLimit,
+          allow_retry: true,
+        },
+        is_published: false, // Draft status
+      });
+
+      // Update questions and test_questions records
+      const supabase = await getSupabaseBrowserClient();
+
+      // Delete existing test_questions relationships
+      await supabase.from("test_questions").delete().eq("test_id", testId);
+
+      // Update existing questions or create new ones
+      const questionsToInsert = questions.map((q: Question, index: number) => ({
+        id: q.id,
+        node_id: testDetails.node ? parseInt(testDetails.node) : null,
+        content: {
+          question: q.questionText,
+          options: q.options.map((opt) => opt.text),
+        },
+        correct_option_index:
+          q.type === "MULTIPLE_CHOICE"
+            ? q.options.findIndex((opt) => opt.isCorrect)
+            : q.type === "TRUE_FALSE"
+              ? 0 // Assume first option (True) is correct for TRUE_FALSE
+              : -1, // -1 for ESSAY questions
+        difficulty: q.difficulty.toLowerCase() as "easy" | "medium" | "hard",
+        status: "available",
+        created_by: user?.id || null,
+        created_at: new Date().toISOString(),
+      }));
+
+      // Insert or update questions
+      const { data: insertedQuestions, error: questionsError } = await supabase
+        .from("questions")
+        .upsert(questionsToInsert, { onConflict: "id" })
+        .select();
+
+      if (questionsError) throw questionsError;
+
+      // Insert test_questions relationships
+      const testQuestionsToInsert = insertedQuestions.map(
+        (q: { id: string }, index: number) => ({
+          test_id: testId,
+          question_id: q.id,
+          points: 10, // Default points
+          display_order: index,
+        }),
+      );
+
+      const { error: testQuestionsError } = await supabase
+        .from("test_questions")
+        .insert(testQuestionsToInsert);
+
+      if (testQuestionsError) throw testQuestionsError;
+
+      alert("Bài kiểm tra đã được lưu nháp thành công!");
+      router.push(`/teacher/tests/${testId}`);
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      alert("Lưu nháp bài kiểm tra thất bại. Vui lòng thử lại.");
     } finally {
       setSaving(false);
     }
@@ -509,6 +600,17 @@ export default function TeacherTestEditPage() {
               >
                 <LinkIcon className="w-4 h-4" />
                 AI Generator
+              </button>
+              <button
+                onClick={() => setActiveTab("bank")}
+                className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === "bank"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <Book className="w-4 h-4" />
+                Question Bank
               </button>
             </nav>
           </div>
@@ -907,6 +1009,39 @@ export default function TeacherTestEditPage() {
               </div>
             )}
 
+            {activeTab === "bank" && (
+              <div>
+                <QuestionBankTab
+                  onAddQuestions={(newQuestions) => {
+                    // Filter out questions that already exist in the current list
+                    const existingQuestionIds = new Set(questions.map(q => q.id));
+                    const uniqueQuestions = newQuestions.filter(q => !existingQuestionIds.has(q.id));
+                    
+                    if (uniqueQuestions.length === 0) {
+                      alert("Tất cả câu hỏi đã được thêm vào danh sách!");
+                      return;
+                    }
+
+                    // Transform questions to match the expected format
+                    const transformedQuestions = uniqueQuestions.map((q, index) => ({
+                      ...q,
+                      number: questions.length + index + 1,
+                    }));
+                    
+                    transformedQuestions.forEach((q) => handleAddQuestion(q));
+                    
+                    if (uniqueQuestions.length < newQuestions.length) {
+                      const duplicateCount = newQuestions.length - uniqueQuestions.length;
+                      alert(`Đã thêm ${uniqueQuestions.length} câu hỏi mới. ${duplicateCount} câu hỏi đã tồn tại trong danh sách.`);
+                    }
+                  }}
+                  selectedSubjectId={testDetails.subject}
+                  selectedNodeId={testDetails.node}
+                  existingQuestionIds={new Set(questions.map(q => q.id))}
+                />
+              </div>
+            )}
+
             {/* Questions List */}
             {questions.length > 0 && (
               <div>
@@ -915,8 +1050,7 @@ export default function TeacherTestEditPage() {
                 </h3>
                 <QuizReviewList
                   questions={questions}
-                  onPublish={() => handleSaveTest()}
-                  onSaveDraft={() => alert("Bài kiểm tra đã được lưu nháp")}
+                  onRemoveQuestion={handleRemoveQuestion}
                 />
               </div>
             )}
@@ -925,7 +1059,15 @@ export default function TeacherTestEditPage() {
       </div>
 
       {/* Save Button */}
-      <div className="mt-8 flex justify-end">
+      <div className="mt-8 flex justify-end gap-4">
+        <button
+          onClick={handleSaveDraft}
+          disabled={isSaving}
+          className="px-8 py-4 bg-gray-500 text-white rounded-full font-semibold hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          <Save className="w-5 h-5" />
+          {isSaving ? "Đang lưu..." : "Lưu nháp"}
+        </button>
         <button
           onClick={handleSaveTest}
           disabled={isSaving}

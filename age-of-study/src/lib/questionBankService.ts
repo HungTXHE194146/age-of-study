@@ -29,6 +29,7 @@ interface SupabaseQuestionData {
   status: string;
   created_by: string;
   created_at: string;
+  q_type: string;
   nodes: {
     id: number;
     title: string;
@@ -58,6 +59,7 @@ export class QuestionBankService {
           created_by,
           created_at,
           subject_id,
+          q_type,
           nodes (
             id,
             title,
@@ -74,7 +76,7 @@ export class QuestionBankService {
       // Apply filters based on new logic:
       // - If only "Subject" is selected -> Query: WHERE subject_id = X
       // - If "Subject" AND "Topic" are selected -> Query: WHERE node_id = Y
-      
+
       if (filter.nodeId && filter.nodeId !== "0") {
         // If a specific node is selected, filter by node_id (this overrides subject filter)
         query = query.eq("node_id", parseInt(filter.nodeId));
@@ -88,16 +90,21 @@ export class QuestionBankService {
       }
 
       if (filter.type) {
-        // For now, we'll filter by content structure
-        // This is a simplified approach - in a real app you might want to store question type separately
-        query = query.not("content", "is", null);
+        // Filter by question type using the q_type column
+        const qTypeMap: Record<QuestionType, string> = {
+          MULTIPLE_CHOICE: "multiple_choice",
+          TRUE_FALSE: "true_false",
+          ESSAY: "essay",
+        };
+        const dbQuestionType = qTypeMap[filter.type];
+        if (dbQuestionType) {
+          query = query.eq("q_type", dbQuestionType);
+        }
       }
 
       if (filter.search) {
-        const searchPattern = `%${filter.search}%`;
-        query = query.or(
-          `content.ilike.${searchPattern},nodes.title.ilike.${searchPattern}`,
-        );
+        // Search specifically in the question text within the content JSON field
+        query = query.ilike("content->>question", `%${filter.search}%`);
       }
 
       // Apply pagination
@@ -127,7 +134,7 @@ export class QuestionBankService {
         id: q.id,
         createdAt: new Date(q.created_at).getTime(),
         number: 0, // Will be set when added to test
-        type: this.detectQuestionType(q.content),
+        type: this.mapQuestionType(q.q_type),
         questionText: q.content.question || "",
         options: this.parseOptions(q.content.options || []),
         difficulty: this.mapDifficulty(q.difficulty),
@@ -154,7 +161,7 @@ export class QuestionBankService {
       // Apply filters based on new logic:
       // - If only "Subject" is selected -> Query: WHERE subject_id = X
       // - If "Subject" AND "Topic" are selected -> Query: WHERE node_id = Y
-      
+
       if (filter.nodeId && filter.nodeId !== "0") {
         // If a specific node is selected, filter by node_id (this overrides subject filter)
         query = query.eq("node_id", parseInt(filter.nodeId));
@@ -167,11 +174,23 @@ export class QuestionBankService {
         query = query.eq("difficulty", filter.difficulty.toLowerCase());
       }
 
+      if (filter.type) {
+        // Filter by question type using the q_type column
+        const qTypeMap: Record<QuestionType, string> = {
+          MULTIPLE_CHOICE: "multiple_choice",
+          TRUE_FALSE: "true_false",
+          ESSAY: "essay",
+        };
+        const dbQuestionType = qTypeMap[filter.type];
+        if (dbQuestionType) {
+          query = query.eq("q_type", dbQuestionType);
+        }
+      }
+
       if (filter.search) {
         const searchPattern = `%${filter.search}%`;
-        query = query.or(
-          `content.ilike.${searchPattern},nodes.title.ilike.${searchPattern}`,
-        );
+        // Search specifically in the question text within the content JSON field
+        query = query.ilike("content->>question", searchPattern);
       }
 
       const { count, error } = await query;
@@ -235,7 +254,10 @@ export class QuestionBankService {
     }
   }
 
-  private detectQuestionType(content: { question: string; options: string[] }): QuestionType {
+  private detectQuestionType(content: {
+    question: string;
+    options: string[];
+  }): QuestionType {
     // Simple heuristic based on content structure
     if (content && content.options && content.options.length === 2) {
       return "TRUE_FALSE";
@@ -266,6 +288,19 @@ export class QuestionBankService {
         return "Hard";
       default:
         return "Easy";
+    }
+  }
+
+  private mapQuestionType(qType: string): QuestionType {
+    switch (qType?.toLowerCase()) {
+      case "multiple_choice":
+        return "MULTIPLE_CHOICE";
+      case "true_false":
+        return "TRUE_FALSE";
+      case "essay":
+        return "ESSAY";
+      default:
+        return "MULTIPLE_CHOICE";
     }
   }
 }

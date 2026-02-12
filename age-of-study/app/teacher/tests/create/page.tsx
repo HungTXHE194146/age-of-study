@@ -14,6 +14,7 @@ import {
 import { QuizGeneratorForm } from "@/components/teacher/QuizGeneratorForm";
 import { QuizReviewList } from "@/components/teacher/QuizReviewList";
 import { QuestionBankTab } from "@/components/teacher/QuestionBankTab";
+import { Button } from "@/components/ui/button";
 import { Question } from "@/types/teacher";
 import { subjectService } from "@/lib/subjectService";
 import { Subject } from "@/types/teacher";
@@ -161,6 +162,86 @@ export default function CreateTestPage() {
     } catch (error) {
       console.error("Error saving test:", error);
       alert("Có lỗi xảy ra khi lưu bài kiểm tra");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!testDetails.title.trim()) {
+      alert("Vui lòng nhập tiêu đề bài kiểm tra");
+      return;
+    }
+
+    if (!testDetails.subject || testDetails.subject === "" || testDetails.subject === "0") {
+      alert("Vui lòng chọn môn học liên quan cho bài kiểm tra");
+      return;
+    }
+
+    if (questions.length === 0) {
+      alert("Vui lòng thêm ít nhất một câu hỏi");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const testService = new TestService();
+
+      // Create test data for Supabase (draft version)
+      const createTestRequest: CreateTestRequest = {
+        title: testDetails.title,
+        description: testDetails.description,
+        type: "practice",
+
+        // 1. Lưu ID môn học vào cột subject_id
+        subject_id: testDetails.subject ? parseInt(testDetails.subject) : null,
+
+        // 2. node_id chỉ có dữ liệu nếu người dùng chọn cụ thể một bài học (Skill Node)
+        // Nếu chỉ chọn môn chung chung, node_id phải là null
+        node_id: testDetails.node ? parseInt(testDetails.node) : null,
+
+        settings: {
+          time_limit: testDetails.timeLimit,
+          allow_retry: true,
+        },
+        is_published: false, // Draft status
+        created_by: user?.id || "",
+      };
+
+      // Fix for foreign key violation: ensure node_id is properly null for practice tests
+      if (
+        !testDetails.subject ||
+        testDetails.subject === "" ||
+        testDetails.subject === "0"
+      ) {
+        createTestRequest.node_id = null;
+      }
+
+      // Create the test in Supabase
+      const createdTest = await testService.createTest(createTestRequest);
+
+      // Create test_questions relationships only (questions already exist in question bank)
+      const supabase = await getSupabaseBrowserClient();
+
+      // Insert test_questions relationships
+      const testQuestionsToInsert = questions.map((q: Question, index: number) => ({
+        test_id: createdTest.id,
+        question_id: q.id, // Use existing question ID from question bank
+        points: 10, // Default points
+        display_order: index
+      }));
+
+      const { error: testQuestionsError } = await supabase
+        .from("test_questions")
+        .insert(testQuestionsToInsert);
+
+      if (testQuestionsError) throw testQuestionsError;
+
+      alert("Bài kiểm tra đã được lưu nháp thành công!");
+      router.push("/teacher/tests");
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      alert("Có lỗi xảy ra khi lưu nháp bài kiểm tra");
     } finally {
       setIsSaving(false);
     }
@@ -873,8 +954,7 @@ export default function CreateTestPage() {
                 </h3>
                 <QuizReviewList
                   questions={questions}
-                  onPublish={() => handleSaveTest()}
-                  onSaveDraft={() => alert("Bài kiểm tra đã được lưu nháp")}
+                  onRemoveQuestion={handleRemoveQuestion}
                 />
               </div>
             )}
@@ -883,7 +963,15 @@ export default function CreateTestPage() {
       </div>
 
       {/* Save Button */}
-      <div className="mt-8 flex justify-end">
+      <div className="mt-8 flex justify-end gap-4">
+        <button
+          onClick={handleSaveDraft}
+          disabled={isSaving}
+          className="px-8 py-4 bg-gray-500 text-white rounded-full font-semibold hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          <Save className="w-5 h-5" />
+          {isSaving ? "Đang lưu..." : "Lưu nháp"}
+        </button>
         <button
           onClick={handleSaveTest}
           disabled={isSaving}
