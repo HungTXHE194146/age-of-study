@@ -11,7 +11,7 @@ import { subjectService } from "@/lib/subjectService";
 import {
   difficultyOptions,
   questionCountOptions,
-} from "@/constants/teacherMockData";
+} from "@/constants/teacherConstants";
 
 interface QuizGeneratorFormProps {
   onGenerate: (data: GeneratorFormState) => void;
