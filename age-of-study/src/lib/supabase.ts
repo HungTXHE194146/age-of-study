@@ -28,6 +28,11 @@ export interface Profile {
   avatar_url: string | null
   role: 'system_admin' | 'teacher' | 'student'
   
+  // Student profile fields
+  age: number | null
+  grade: number | null
+  favorite_subject: string | null
+  
   // Gamification core
   total_xp: number
   weekly_xp: number
@@ -37,6 +42,10 @@ export interface Profile {
   
   // Safety
   daily_limit_minutes: number
+  is_blocked: boolean  // Admin can block users
+  
+  // Profile completion tracking
+  profile_completed_reward_claimed: boolean
   
   created_at: string
   updated_at: string

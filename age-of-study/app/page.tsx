@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Sparkles, Rocket, Trophy, Users, BookOpen } from "lucide-react";
 
@@ -78,18 +79,24 @@ export default function HomePage() {
           >
             <span className="text-2xl">🏫</span>
             <span className="font-bold text-lg text-gray-800">
-              Trường Tiểu Học Ninh Lai
+              Trường Tiểu học Ninh Lai
             </span>
           </motion.div>
 
-          {/* Giant Owl Mascot */}
+          {/* Giant Logo */}
           <motion.div
-            className="text-9xl mb-6"
+            className="mb-6 flex justify-center"
             variants={floatVariants}
             initial="initial"
             animate="animate"
           >
-            🦉
+            <Image
+              src="/logo.svg"
+              alt="Age of Study Logo"
+              width={220}
+              height={220}
+              priority
+            />
           </motion.div>
 
           {/* Main Headline */}

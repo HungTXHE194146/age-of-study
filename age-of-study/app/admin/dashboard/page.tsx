@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import StatsCard from "@/components/admin/StatsCard";
+import UserAvatar from "@/components/admin/UserAvatar";
 import { Users, GraduationCap, UserCog, Activity } from "lucide-react";
 
 interface UserStats {
@@ -16,6 +17,7 @@ interface RecentUser {
   id: string;
   username: string | null;
   full_name: string | null;
+  avatar_url: string | null;
   role: string;
   created_at: string;
   total_xp: number;
@@ -47,11 +49,14 @@ export default function AdminDashboard() {
       if (usersError) throw usersError;
 
       const students =
-        allUsers?.filter((u: { role: string }) => u.role === "student").length || 0;
+        allUsers?.filter((u: { role: string }) => u.role === "student")
+          .length || 0;
       const teachers =
-        allUsers?.filter((u: { role: string }) => u.role === "teacher").length || 0;
+        allUsers?.filter((u: { role: string }) => u.role === "teacher")
+          .length || 0;
       const admins =
-        allUsers?.filter((u: { role: string }) => u.role === "system_admin").length || 0;
+        allUsers?.filter((u: { role: string }) => u.role === "system_admin")
+          .length || 0;
 
       setStats({
         totalUsers: allUsers?.length || 0,
@@ -60,10 +65,12 @@ export default function AdminDashboard() {
         admins,
       });
 
-      // Load recent users
+      // Load recent users (now with avatar_url)
       const { data: recent, error: recentError } = await supabase
         .from("profiles")
-        .select("id, username, full_name, role, created_at, total_xp")
+        .select(
+          "id, username, full_name, avatar_url, role, created_at, total_xp",
+        )
         .order("created_at", { ascending: false })
         .limit(5);
 
@@ -218,11 +225,12 @@ export default function AdminDashboard() {
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-teal-400 rounded-full flex items-center justify-center text-white font-bold">
-                        {user.full_name?.charAt(0) ||
-                          user.username?.charAt(0) ||
-                          "?"}
-                      </div>
+                      <UserAvatar
+                        avatarUrl={user.avatar_url}
+                        name={user.full_name}
+                        username={user.username}
+                        size="md"
+                      />
                       <div>
                         <p className="font-semibold text-gray-900">
                           {user.full_name || user.username || "Chưa đặt tên"}

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
+import UserAvatar from "./UserAvatar";
 
 interface NavItem {
   name: string;
@@ -55,9 +56,13 @@ export default function AdminSidebar() {
     <div className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
       {/* Logo & Title */}
       <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-teal-500 rounded-lg flex items-center justify-center text-white text-xl font-bold">
-            A
+        <div className="flex items-center gap-2">
+          <div className="w-20 h-20 rounded-lg flex items-center justify-center">
+            <img
+              src="/logo.svg"
+              alt="Age of Study Logo"
+              className="w-full h-full"
+            />
           </div>
           <div>
             <h1 className="font-bold text-gray-900">Age of Study</h1>
@@ -98,9 +103,12 @@ export default function AdminSidebar() {
       {/* User Info & Logout */}
       <div className="p-4 border-t border-gray-200">
         <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg mb-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-            {user?.full_name?.charAt(0) || user?.username?.charAt(0) || "A"}
-          </div>
+          <UserAvatar
+            avatarUrl={user?.avatar_url}
+            name={user?.full_name}
+            username={user?.username}
+            size="md"
+          />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-900 text-sm truncate">
               {user?.full_name || user?.username}

@@ -1,10 +1,11 @@
-'use client';
+"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Settings, LogOut } from "lucide-react";
+import Image from "next/image";
 import "./GameHeader.css";
 
 /* ─────────────────────────────────────
@@ -137,14 +138,15 @@ export default function GameHeader() {
               }
             }}
           >
-            {/* Owl mascot emoji fallback */}
-            <span
-              className="text-3xl leading-none select-none"
-              role="img"
-              aria-label="Owl mascot"
-            >
-              🦉
-            </span>
+            {/* Logo */}
+            <Image
+              src="/logo.svg"
+              alt="Age of Study Logo"
+              width={150}
+              height={150}
+              className="select-none"
+              priority
+            />
             <span className="bubble-text hidden sm:inline">Age Of Study</span>
           </div>
 
@@ -226,11 +228,17 @@ export default function GameHeader() {
                 aria-haspopup="menu"
               >
                 {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={displayName || "Avatar"}
-                    loading="lazy"
-                  />
+                  // Check if avatarUrl is an emoji (single character or emoji) or a URL
+                  avatarUrl.startsWith("http") || avatarUrl.startsWith("/") ? (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName || "Avatar"}
+                      loading="lazy"
+                    />
+                  ) : (
+                    // It's an emoji, display as text
+                    <span className="text-2xl">{avatarUrl}</span>
+                  )
                 ) : (
                   getInitials(displayName)
                 )}

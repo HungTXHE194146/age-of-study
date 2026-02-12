@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuthStore } from "@/store/useAuthStore";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -79,7 +80,13 @@ export default function LoginPage() {
         >
           <div className="relative">
             <div className="w-32 h-32 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
-              <span className="text-6xl">🦉</span>
+              <Image
+                src="/logo.svg"
+                alt="Age of Study Logo"
+                width={105}
+                height={105}
+                priority
+              />
             </div>
             <div className="absolute bottom-0 right-0 bg-green-500 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white">
               <span className="text-lg">✓</span>

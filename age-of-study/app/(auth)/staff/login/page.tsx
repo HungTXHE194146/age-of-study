@@ -53,10 +53,14 @@ export default function StaffLoginPage() {
             {/* School Logo */}
             <div className="mb-8">
               <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl mb-6 border border-white/20">
-                <span className="text-5xl">🎓</span>
+                <img
+                  src="/logo.svg"
+                  alt="Age of Study Logo"
+                  className="w-14 h-14"
+                />
               </div>
               <h1 className="text-4xl font-bold mb-3">
-                Trường Tiểu Học Ninh Lai
+                Trường Tiểu học Ninh Lai
               </h1>
               <div className="h-1 w-24 bg-blue-400 rounded-full mb-4"></div>
               <p className="text-xl text-blue-200">
@@ -174,10 +178,14 @@ export default function StaffLoginPage() {
           {/* Mobile Header (visible only on mobile) */}
           <div className="lg:hidden mb-8 text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-2xl mb-4">
-              <span className="text-4xl">🎓</span>
+              <img
+                src="/logo.svg"
+                alt="Age of Study Logo"
+                className="w-10 h-10"
+              />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-1">
-              Trường Tiểu Học Ninh Lai
+              Trường Tiểu học Ninh Lai
             </h1>
             <p className="text-sm text-gray-600">Hệ thống quản lý</p>
           </div>
@@ -417,7 +425,7 @@ export default function StaffLoginPage() {
             transition={{ delay: 0.4 }}
             className="mt-12 pt-8 border-t border-gray-200 text-center text-xs text-gray-500"
           >
-            © {new Date().getFullYear()} Trường Tiểu Học Ninh Lai
+            © {new Date().getFullYear()} Trường Tiểu học Ninh Lai
             <br />
             Hệ thống quản lý nội bộ
           </motion.div>
