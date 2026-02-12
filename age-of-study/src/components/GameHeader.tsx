@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Settings, LogOut } from "lucide-react";
+import Image from "next/image";
 import "./GameHeader.css";
 
 /* ─────────────────────────────────────
@@ -137,14 +138,15 @@ export default function GameHeader() {
               }
             }}
           >
-            {/* Owl mascot emoji fallback */}
-            <span
-              className="text-3xl leading-none select-none"
-              role="img"
-              aria-label="Owl mascot"
-            >
-              🦉
-            </span>
+            {/* Logo */}
+            <Image
+              src="/logo.svg"
+              alt="Age of Study Logo"
+              width={150}
+              height={150}
+              className="select-none"
+              priority
+            />
             <span className="bubble-text hidden sm:inline">Age Of Study</span>
           </div>
 
