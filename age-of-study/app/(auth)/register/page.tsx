@@ -2,8 +2,7 @@
 
 import { useState, useRef, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useAuthStore } from "@/store/useAuthStore";
+import Link from "next/link";import Image from "next/image";import { useAuthStore } from "@/store/useAuthStore";
 import { motion } from "framer-motion";
 
 export default function RegisterPage() {
@@ -125,7 +124,13 @@ export default function RegisterPage() {
         >
           <div className="relative">
             <div className="w-28 h-28 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
-              <span className="text-5xl">📚🦉</span>
+              <Image
+                src="/logo.svg"
+                alt="Age of Study Logo"
+                width={95}
+                height={95}
+                priority
+              />
             </div>
             <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full border-2 border-white">
               Bước 1/1

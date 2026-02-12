@@ -37,6 +37,7 @@ export interface Profile {
   
   // Safety
   daily_limit_minutes: number
+  is_blocked: boolean  // Admin can block users
   
   created_at: string
   updated_at: string
