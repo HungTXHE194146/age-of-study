@@ -1,16 +1,18 @@
-'use client';
+"use client";
 
-import { navigationItems, mockTeacher } from "@/constants/teacherMockData";
 import { Button } from "@/components/ui/button";
+import UserAvatar from "@/components/admin/UserAvatar";
+import { useAuthStore } from "@/store/useAuthStore";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FileText,
   GraduationCap,
   Settings,
-  Users,
   BookOpen,
   Brain,
   Trophy,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -18,28 +20,45 @@ interface SidebarProps {
   className?: string;
 }
 
+// Navigation items definition
+const navigationItems = [
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    href: "/teacher/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    id: "my-tests",
+    label: "My Tests",
+    href: "/teacher/tests",
+    icon: FileText,
+  },
+  {
+    id: "leaderboard",
+    label: "Bảng Xếp Hạng",
+    href: "/teacher/leaderboard",
+    icon: Trophy,
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    href: "/teacher/settings",
+    icon: Settings,
+  },
+];
+
 export function Sidebar({ className }: SidebarProps) {
-  const getIconComponent = (iconName: string) => {
-    switch (iconName) {
-      case "LayoutDashboard":
-        return LayoutDashboard;
-      case "FileText":
-        return FileText;
-      case "GraduationCap":
-        return GraduationCap;
-      case "Settings":
-        return Settings;
-      case "Users":
-        return Users;
-      case "BookOpen":
-        return BookOpen;
-      case "Brain":
-        return Brain;
-      case "Trophy":
-        return Trophy;
-      default:
-        return LayoutDashboard;
-    }
+  const { user } = useAuthStore();
+  const pathname = usePathname();
+
+  const handleLogout = () => {
+    // Clear auth cookies and redirect
+    document.cookie =
+      "sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+    document.cookie =
+      "sb-refresh-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+    window.location.href = "/login";
   };
 
   return (
@@ -66,21 +85,23 @@ export function Sidebar({ className }: SidebarProps) {
       {/* Navigation */}
       <nav className="p-4 space-y-2">
         {navigationItems.map((item) => {
-          const IconComponent = getIconComponent(item.icon.name);
+          const IconComponent = item.icon;
+          const isActive =
+            pathname === item.href || pathname?.startsWith(item.href + "/");
 
           return (
             <Link
               key={item.id}
               href={item.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                item.isActive
+                isActive
                   ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-800"
                   : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
               }`}
             >
               <IconComponent className="w-5 h-5" />
               {item.label}
-              {item.isActive && (
+              {isActive && (
                 <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
               )}
             </Link>
@@ -91,28 +112,31 @@ export function Sidebar({ className }: SidebarProps) {
       {/* User Profile */}
       <div className="absolute bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              {mockTeacher.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}
-            </span>
-          </div>
+          {/* User Avatar */}
+          <UserAvatar
+            avatarUrl={user?.avatar_url}
+            name={user?.full_name}
+            username={user?.username}
+            size="md"
+          />
+
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-              {mockTeacher.name}
+              {user?.full_name || user?.username || "Teacher"}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {mockTeacher.department}
+              {user?.role === "teacher" ? "Giáo viên" : user?.role}
             </p>
           </div>
+
           <Button
             variant="outline"
             size="sm"
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            onClick={handleLogout}
+            className="text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+            title="Đăng xuất"
           >
-            <Settings className="w-4 h-4" />
+            <LogOut className="w-4 h-4" />
           </Button>
         </div>
       </div>

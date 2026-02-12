@@ -24,7 +24,7 @@ export const navigationItems: NavigationItem[] = [
   {
     id: 'dashboard',
     label: 'Dashboard',
-    href: '/teacher',
+    href: '/teacher/dashboard',
     icon: LayoutDashboard,
     isActive: false
   },
@@ -34,6 +34,13 @@ export const navigationItems: NavigationItem[] = [
     href: '/teacher/quizzes',
     icon: FileText,
     isActive: true
+  },
+  {
+    id: 'leaderboard',
+    label: 'Bảng Xếp Hạng',
+    href: '/teacher/leaderboard',
+    icon: Trophy,
+    isActive: false
   },
   {
     id: 'student-progress',
