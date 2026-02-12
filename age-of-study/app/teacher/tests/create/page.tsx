@@ -9,9 +9,11 @@ import {
   Settings,
   Save,
   ArrowLeft,
+  Book,
 } from "lucide-react";
 import { QuizGeneratorForm } from "@/components/teacher/QuizGeneratorForm";
 import { QuizReviewList } from "@/components/teacher/QuizReviewList";
+import { QuestionBankTab } from "@/components/teacher/QuestionBankTab";
 import { Question } from "@/types/teacher";
 import { subjectService } from "@/lib/subjectService";
 import { Subject } from "@/types/teacher";
@@ -23,7 +25,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 export default function CreateTestPage() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<"manual" | "ai">("manual");
+  const [activeTab, setActiveTab] = useState<"manual" | "ai" | "bank">("manual");
   const [testDetails, setTestDetails] = useState({
     title: "",
     description: "",
@@ -90,6 +92,11 @@ export default function CreateTestPage() {
       return;
     }
 
+    if (!testDetails.subject || testDetails.subject === "" || testDetails.subject === "0") {
+      alert("Vui lòng chọn môn học liên quan cho bài kiểm tra");
+      return;
+    }
+
     if (questions.length === 0) {
       alert("Vui lòng thêm ít nhất một câu hỏi");
       return;
@@ -105,7 +112,6 @@ export default function CreateTestPage() {
         description: testDetails.description,
         type: "practice",
 
-        // SỬA Ở ĐÂY:
         // 1. Lưu ID môn học vào cột subject_id
         subject_id: testDetails.subject ? parseInt(testDetails.subject) : null,
 
@@ -133,38 +139,13 @@ export default function CreateTestPage() {
       // Create the test in Supabase
       const createdTest = await testService.createTest(createTestRequest);
 
-      // Create questions and test_questions records
+      // Create test_questions relationships only (questions already exist in question bank)
       const supabase = await getSupabaseBrowserClient();
 
-      // Insert questions
-      const questionsToInsert = questions.map((q: Question, index: number) => ({
-        node_id: createTestRequest.node_id,
-        content: {
-          question: q.questionText,
-          options: q.options.map(opt => opt.text)
-        },
-        correct_option_index: q.type === "MULTIPLE_CHOICE" 
-          ? q.options.findIndex(opt => opt.isCorrect)
-          : q.type === "TRUE_FALSE" 
-            ? 0 // Assume first option (True) is correct for TRUE_FALSE
-            : -1, // -1 for ESSAY questions
-        difficulty: q.difficulty.toLowerCase() as "easy" | "medium" | "hard",
-        status: "available",
-        created_by: user?.id || null,
-        created_at: new Date().toISOString()
-      }));
-
-      const { data: insertedQuestions, error: questionsError } = await supabase
-        .from("questions")
-        .insert(questionsToInsert)
-        .select();
-
-      if (questionsError) throw questionsError;
-
       // Insert test_questions relationships
-      const testQuestionsToInsert = insertedQuestions.map((q: { id: string }, index: number) => ({
+      const testQuestionsToInsert = questions.map((q: Question, index: number) => ({
         test_id: createdTest.id,
-        question_id: q.id,
+        question_id: q.id, // Use existing question ID from question bank
         points: 10, // Default points
         display_order: index
       }));
@@ -254,7 +235,7 @@ export default function CreateTestPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Môn học
+                Môn học <span className="text-red-500">*</span>
               </label>
               <select
                 value={testDetails.subject}
@@ -290,6 +271,7 @@ export default function CreateTestPage() {
                   }
                 }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
               >
                 <option value="">Chọn môn học</option>
                 {isLoadingSubjects ? (
@@ -397,6 +379,17 @@ export default function CreateTestPage() {
               >
                 <LinkIcon className="w-4 h-4" />
                 AI Generator
+              </button>
+              <button
+                onClick={() => setActiveTab("bank")}
+                className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === "bank"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <Book className="w-4 h-4" />
+                Question Bank
               </button>
             </nav>
           </div>
@@ -745,48 +738,129 @@ export default function CreateTestPage() {
             {activeTab === "ai" && (
               <div>
                 <QuizGeneratorForm
-                  onGenerate={(data) => {
-                    // Mock AI question generation
-                    const mockQuestions = Array.from(
-                      { length: data.questionCount },
-                      (_, i) => ({
-                        id: Date.now().toString() + i,
-                        createdAt: Date.now(),
-                        number: questions.length + i + 1,
-                        type: "MULTIPLE_CHOICE" as const,
-                        questionText: `Câu hỏi AI ${i + 1}: ${data.topic}`,
-                        options: [
-                          {
-                            id: "1",
-                            label: "A",
-                            text: "Đáp án A",
-                            isCorrect: true,
-                          },
-                          {
-                            id: "2",
-                            label: "B",
-                            text: "Đáp án B",
-                            isCorrect: false,
-                          },
-                          {
-                            id: "3",
-                            label: "C",
-                            text: "Đáp án C",
-                            isCorrect: false,
-                          },
-                          {
-                            id: "4",
-                            label: "D",
-                            text: "Đáp án D",
-                            isCorrect: false,
-                          },
-                        ],
+                  onGenerate={async (data) => {
+                    try {
+                      // Use the question bank service to get random questions
+                      // based on the selected subject or node
+                      const questionBankService = (await import("@/lib/questionBankService")).questionBankService;
+                      
+                      // Determine filter based on current test details
+                      const filter = {
+                        subjectId: testDetails.subject || undefined,
+                        nodeId: testDetails.node || undefined,
                         difficulty: data.difficulty,
-                        topic: data.topic || "AI Generated",
-                      }),
-                    );
-                    mockQuestions.forEach((q) => handleAddQuestion(q));
+                        type: "MULTIPLE_CHOICE" as const,
+                        limit: data.questionCount,
+                        offset: 0,
+                      };
+
+                      // Get random questions from the bank
+                      const randomQuestions = await questionBankService.getQuestions(filter);
+                      
+                      if (randomQuestions.length === 0) {
+                        alert("Không tìm thấy câu hỏi phù hợp trong ngân hàng câu hỏi. Vui lòng kiểm tra lại bộ lọc.");
+                        return;
+                      }
+
+                      // Transform questions to match the expected format
+                      const transformedQuestions = randomQuestions.slice(0, data.questionCount).map((q, index) => ({
+                        id: q.id,
+                        createdAt: q.createdAt,
+                        number: questions.length + index + 1,
+                        type: q.type,
+                        questionText: q.questionText,
+                        options: q.options.map(opt => ({
+                          ...opt,
+                          isCorrect: opt.isCorrect || false, // Ensure isCorrect is set
+                        })),
+                        difficulty: q.difficulty,
+                        topic: q.topic || data.topic || "AI Generated",
+                      }));
+
+                      transformedQuestions.forEach((q) => handleAddQuestion(q));
+                      
+                      if (transformedQuestions.length < data.questionCount) {
+                        alert(`Chỉ tìm thấy ${transformedQuestions.length} câu hỏi phù hợp trong ngân hàng câu hỏi.`);
+                      }
+                    } catch (error) {
+                      console.error("Error generating questions:", error);
+                      alert("Có lỗi xảy ra khi tạo câu hỏi từ ngân hàng câu hỏi. Đang sử dụng câu hỏi mẫu.");
+                      
+                      // Fallback to mock questions
+                      const mockQuestions = Array.from(
+                        { length: data.questionCount },
+                        (_, i) => ({
+                          id: Date.now().toString() + i,
+                          createdAt: Date.now(),
+                          number: questions.length + i + 1,
+                          type: "MULTIPLE_CHOICE" as const,
+                          questionText: `Câu hỏi AI ${i + 1}: ${data.topic}`,
+                          options: [
+                            {
+                              id: "1",
+                              label: "A",
+                              text: "Đáp án A",
+                              isCorrect: true,
+                            },
+                            {
+                              id: "2",
+                              label: "B",
+                              text: "Đáp án B",
+                              isCorrect: false,
+                            },
+                            {
+                              id: "3",
+                              label: "C",
+                              text: "Đáp án C",
+                              isCorrect: false,
+                            },
+                            {
+                              id: "4",
+                              label: "D",
+                              text: "Đáp án D",
+                              isCorrect: false,
+                            },
+                          ],
+                          difficulty: data.difficulty,
+                          topic: data.topic || "AI Generated",
+                        }),
+                      );
+                      mockQuestions.forEach((q) => handleAddQuestion(q));
+                    }
                   }}
+                />
+              </div>
+            )}
+
+            {activeTab === "bank" && (
+              <div>
+                <QuestionBankTab
+                  onAddQuestions={(newQuestions) => {
+                    // Filter out questions that already exist in the current list
+                    const existingQuestionIds = new Set(questions.map(q => q.id));
+                    const uniqueQuestions = newQuestions.filter(q => !existingQuestionIds.has(q.id));
+                    
+                    if (uniqueQuestions.length === 0) {
+                      alert("Tất cả câu hỏi đã được thêm vào danh sách!");
+                      return;
+                    }
+
+                    // Transform questions to match the expected format
+                    const transformedQuestions = uniqueQuestions.map((q, index) => ({
+                      ...q,
+                      number: questions.length + index + 1,
+                    }));
+                    
+                    transformedQuestions.forEach((q) => handleAddQuestion(q));
+                    
+                    if (uniqueQuestions.length < newQuestions.length) {
+                      const duplicateCount = newQuestions.length - uniqueQuestions.length;
+                      alert(`Đã thêm ${uniqueQuestions.length} câu hỏi mới. ${duplicateCount} câu hỏi đã tồn tại trong danh sách.`);
+                    }
+                  }}
+                  selectedSubjectId={testDetails.subject}
+                  selectedNodeId={testDetails.node}
+                  existingQuestionIds={new Set(questions.map(q => q.id))}
                 />
               </div>
             )}

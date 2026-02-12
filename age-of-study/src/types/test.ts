@@ -18,6 +18,7 @@ export interface Test {
   is_published: boolean
   created_by: string
   created_at: string
+  subject_name?: string
 }
 
 export interface Question {

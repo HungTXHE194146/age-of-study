@@ -18,10 +18,13 @@ import {
   ChevronRight,
   ChevronUp,
   ChevronDown,
+  BookOpen,
 } from "lucide-react";
 import { TestService } from "@/lib/testService";
 import { RouteProtectedWrapper } from "@/lib/routeMiddleware";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { subjectService } from "@/lib/subjectService";
+import { Subject } from "@/types/teacher";
 
 interface Test {
   id: string;
@@ -32,6 +35,8 @@ interface Test {
   created_at: string;
   status: "published" | "draft";
   question_count?: number;
+  subject_id?: number;
+  subject_name?: string;
 }
 
 export default function TestManagementPage() {
@@ -40,6 +45,7 @@ export default function TestManagementPage() {
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalQuestions, setTotalQuestions] = useState(0);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
 
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,6 +55,7 @@ export default function TestManagementPage() {
   const [filterStatus, setFilterStatus] = useState<
     "all" | "published" | "draft"
   >("all");
+  const [filterSubject, setFilterSubject] = useState<number>(0);
   const [sortBy, setSortBy] = useState<"date" | "title" | "questions">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
@@ -63,6 +70,7 @@ export default function TestManagementPage() {
   useEffect(() => {
     if (user?.id) {
       fetchTests(user.id);
+      fetchSubjects();
     }
   }, [user]);
 
@@ -85,6 +93,8 @@ export default function TestManagementPage() {
         created_at: test.created_at,
         status: test.is_published ? "published" : "draft",
         question_count: test.question_count || 0,
+        subject_id: test.subject_id ?? undefined,
+        subject_name: test.subject_name,
       }));
 
       setTests(mappedTests);
@@ -93,6 +103,15 @@ export default function TestManagementPage() {
       console.error("Error fetching tests:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSubjects = async () => {
+    try {
+      const subjectsData = await subjectService.getSubjects();
+      setSubjects(subjectsData);
+    } catch (error) {
+      console.error("Error fetching subjects:", error);
     }
   };
 
@@ -168,7 +187,12 @@ export default function TestManagementPage() {
       const matchesStatus =
         filterStatus === "all" || test.status === filterStatus;
 
-      return matchesSearch && matchesType && matchesStatus;
+      // Subject filter
+      const matchesSubject =
+        filterSubject === 0 ||
+        (test.subject_id !== null && test.subject_id !== undefined && test.subject_id === filterSubject);
+
+      return matchesSearch && matchesType && matchesStatus && matchesSubject;
     })
     .sort((a, b) => {
       let comparison = 0;
@@ -296,6 +320,23 @@ export default function TestManagementPage() {
             <option value="published">Đã xuất bản</option>
             <option value="draft">Nháp</option>
           </select>
+
+          {/* Filter by Subject */}
+          <select
+            value={filterSubject}
+            onChange={(e) => {
+              setFilterSubject(parseInt(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value={0}>Tất cả môn học</option>
+            {subjects.map((subject) => (
+              <option key={subject.id} value={subject.id}>
+                {subject.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Sort Controls */}
@@ -308,10 +349,15 @@ export default function TestManagementPage() {
                 {searchTerm}&quot;
               </span>
             )}
-            {(filterType !== "all" || filterStatus !== "all") && (
+            {(filterType !== "all" ||
+              filterStatus !== "all" ||
+              filterSubject !== 0) && (
               <span className="text-green-600 font-medium">
                 Đã lọc theo {filterType !== "all" ? filterType : ""}{" "}
-                {filterStatus !== "all" ? filterStatus : ""}
+                {filterStatus !== "all" ? filterStatus : ""}{" "}
+                {filterSubject !== 0
+                  ? subjects.find((s) => s.id === Number(filterSubject))?.name
+                  : ""}
               </span>
             )}
           </div>
@@ -352,6 +398,9 @@ export default function TestManagementPage() {
                   Tiêu đề
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Môn học
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Số câu hỏi
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -375,7 +424,7 @@ export default function TestManagementPage() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-6 py-4 text-center text-gray-500"
                   >
                     <LoadingSpinner text="Đang tải..." />
@@ -384,7 +433,7 @@ export default function TestManagementPage() {
               ) : filteredAndSortedTests.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-6 py-4 text-center text-gray-500"
                   >
                     Không tìm thấy bài kiểm tra nào phù hợp với tiêu chí tìm
@@ -403,6 +452,9 @@ export default function TestManagementPage() {
                           {test.description}
                         </div>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {test.subject_name || "Chưa xác định"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex items-center gap-1">
