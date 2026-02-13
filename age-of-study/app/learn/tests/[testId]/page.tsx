@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { TestService } from "@/lib/testService";
 import { Button } from "@/components/ui/button";
+import Loading from "@/components/ui/loading";
 
 interface Question {
   id: string;
@@ -162,7 +163,7 @@ export default function StudentTestPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <Loading message="Đang tải bài kiểm tra..." size="lg" />
       </div>
     );
   }

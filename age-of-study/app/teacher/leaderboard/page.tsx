@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getTeacherLeaderboardData } from "@/lib/leaderboardService";
 import UserAvatar from "@/components/admin/UserAvatar";
+import Loading, { LoadingInline } from "@/components/ui/loading";
 import { Search, Filter, Download, TrendingUp } from "lucide-react";
 
 interface StudentData {
@@ -121,11 +122,7 @@ export default function TeacherLeaderboardPage() {
   };
 
   if (isLoading || !isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl font-semibold text-gray-600">Đang tải...</div>
-      </div>
-    );
+    return <Loading message="Đang tải bảng xếp hạng..." size="lg" fullScreen />;
   }
 
   const avgXP =
@@ -271,11 +268,8 @@ export default function TeacherLeaderboardPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="px-6 py-12 text-center text-gray-500"
-                  >
-                    Đang tải...
+                  <td colSpan={6} className="px-6 py-4">
+                    <LoadingInline message="Đang tải dữ liệu học sinh..." />
                   </td>
                 </tr>
               ) : filteredStudents.length === 0 ? (

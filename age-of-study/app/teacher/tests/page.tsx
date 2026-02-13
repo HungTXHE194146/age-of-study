@@ -13,6 +13,7 @@ import {
   Tag,
   Users,
 } from "lucide-react";
+import Loading, { LoadingInline } from "@/components/ui/loading";
 import { TestService } from "@/lib/testService";
 
 interface Test {
@@ -106,14 +107,7 @@ export default function TestManagementPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-4">📚</div>
-          <p className="text-gray-600">Đang tải...</p>
-        </div>
-      </div>
-    );
+    return <Loading message="Đang tải dữ liệu giáo viên..." fullScreen />;
   }
 
   if (!isAuthenticated || !user) {
@@ -182,11 +176,8 @@ export default function TestManagementPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="px-6 py-4 text-center text-gray-500"
-                  >
-                    Đang tải...
+                  <td colSpan={6} className="px-6 py-4">
+                    <LoadingInline message="Đang tải danh sách bài kiểm tra..." />
                   </td>
                 </tr>
               ) : tests.length === 0 ? (

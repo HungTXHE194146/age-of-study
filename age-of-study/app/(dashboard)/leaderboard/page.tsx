@@ -11,6 +11,7 @@ import {
 } from "@/lib/leaderboardService";
 import RankCard from "@/components/leaderboard/RankCard";
 import PersonalProgress from "@/components/leaderboard/PersonalProgress";
+import Loading from "@/components/ui/loading";
 
 type ViewMode = "personal" | "class";
 
@@ -45,11 +46,7 @@ export default function LeaderboardPage() {
   };
 
   if (isLoading || !isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-2xl font-bold text-gray-600">Đang tải...</div>
-      </div>
-    );
+    return <Loading message="Đang tải bảng xếp hạng..." size="lg" fullScreen />;
   }
 
   const userEntry = leaderboard.find((e) => e.id === user?.id);
@@ -110,10 +107,7 @@ export default function LeaderboardPage() {
 
       {loading ? (
         <div className="text-center py-20">
-          <div className="text-6xl mb-4 animate-bounce">🏆</div>
-          <p className="text-xl font-bold text-gray-600">
-            Đang tải dữ liệu...
-          </p>
+          <Loading message="Đang tải dữ liệu bảng xếp hạng..." size="lg" />
         </div>
       ) : (
         <AnimatePresence mode="wait">

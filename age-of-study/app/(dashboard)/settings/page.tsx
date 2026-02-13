@@ -7,6 +7,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { Save, Star, Trophy, Sparkles } from "lucide-react";
 import confetti from "canvas-confetti";
+import Loading, { LoadingSpinner } from "@/components/ui/loading";
 
 // Avatar options for kids
 const AVATAR_OPTIONS = [
@@ -192,10 +193,7 @@ export default function StudentSettingsPage() {
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="text-4xl mb-4">📚</div>
-          <p className="text-gray-600">Đang tải...</p>
-        </div>
+        <Loading message="Đang tải thông tin cá nhân..." size="md" />
       </div>
     );
   }
@@ -461,9 +459,19 @@ export default function StudentSettingsPage() {
           className="w-full mt-8 px-8 py-6 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-2xl font-black rounded-3xl shadow-2xl border-4 border-white hover:from-blue-600 hover:to-cyan-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span className="flex items-center justify-center gap-3">
-            <Save className="w-8 h-8" />
-            {saving ? "Đang lưu..." : "Lưu Thay Đổi"}
-            <Save className="w-8 h-8" />
+            {saving ? (
+              <>
+                <LoadingSpinner size="sm" />
+                Đang lưu...
+                <LoadingSpinner size="sm" />
+              </>
+            ) : (
+              <>
+                <Save className="w-8 h-8" />
+                Lưu Thay Đổi
+                <Save className="w-8 h-8" />
+              </>
+            )}
           </span>
         </motion.button>
       </motion.div>
