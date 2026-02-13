@@ -23,7 +23,7 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       isAuthenticated: false,
-      isLoading: false,
+      isLoading: true,
       error: null,
 
       login: async (username: string, password: string) => {
@@ -53,10 +53,10 @@ export const useAuthStore = create<AuthState>()(
           if (profileError || !profile) throw new Error('Không tìm thấy thông tin người dùng')
 
           set({ user: profile, isAuthenticated: true, isLoading: false })
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error('Login error:', error)
           set({ 
-            error: error.message || 'Tên đăng nhập hoặc mật khẩu không đúng', 
+            error: error instanceof Error ? error.message : 'Tên đăng nhập hoặc mật khẩu không đúng', 
             isLoading: false,
             isAuthenticated: false,
             user: null
@@ -91,10 +91,10 @@ export const useAuthStore = create<AuthState>()(
           if (!authData.user) throw new Error('Đăng ký thất bại')
 
           set({ isLoading: false })
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error('Sign up error:', error)
           set({ 
-            error: error.message || 'Đăng ký thất bại. Vui lòng thử lại.', 
+            error: error instanceof Error ? error.message : 'Đăng ký thất bại. Vui lòng thử lại.', 
             isLoading: false 
           })
           throw error

@@ -133,7 +133,7 @@ export class TestService {
     const testQuestions = request.question_ids.map((questionId, index) => ({
       test_id: request.test_id,
       question_id: questionId,
-      points: request.points || 10,
+      points: request.question_points?.[questionId] || request.points || 10,
       display_order: index,
     }));
 
@@ -206,7 +206,12 @@ export class TestService {
           display_order: row.display_order,
         };
       })
-      .filter((item: (Question & { points: number; display_order: number }) | null): item is Question & { points: number; display_order: number } => item !== null); // 5. Remove any nulls
+      .filter(
+        (
+          item: (Question & { points: number; display_order: number }) | null,
+        ): item is Question & { points: number; display_order: number } =>
+          item !== null,
+      ); // 5. Remove any nulls
   }
 
   async updateQuestionOrder(
@@ -417,5 +422,53 @@ export class TestService {
 
     // Student can view if published, Teacher/Admin can view their own
     return data?.is_published || data?.created_by === userId;
+  }
+
+  // Statistics and Analytics
+
+  async getTestQuestionCount(testId: string): Promise<number> {
+    const supabase = getSupabaseBrowserClient();
+    const { count, error } = await supabase
+      .from("test_questions")
+      .select("*", { count: "exact" })
+      .eq("test_id", testId);
+
+    if (error) throw error;
+    return count || 0;
+  }
+
+  async getTeacherTotalQuestionCount(teacherId: string): Promise<number> {
+    const supabase = getSupabaseBrowserClient();
+    const { data: testIds, error: testError } = await supabase
+      .from("tests")
+      .select("id")
+      .eq("created_by", teacherId);
+
+    if (testError) throw testError;
+    if (!testIds || testIds.length === 0) return 0;
+
+    const testIdList = testIds.map((t: { id: string }) => t.id);
+    const { count, error } = await supabase
+      .from("test_questions")
+      .select("*", { count: "exact" })
+      .in("test_id", testIdList);
+
+    if (error) throw error;
+    return count || 0;
+  }
+
+  async getTestsWithQuestionCounts(
+    teacherId: string,
+  ): Promise<(Test & { question_count: number })[]> {
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase.rpc(
+      "get_tests_with_question_counts",
+      {
+        p_teacher_id: teacherId,
+      },
+    );
+
+    if (error) throw error;
+    return data || [];
   }
 }
