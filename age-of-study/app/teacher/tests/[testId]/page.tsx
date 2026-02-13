@@ -7,7 +7,6 @@ import { TestService } from "@/lib/testService";
 import { Button } from "@/components/ui/button";
 import { RouteProtectedWrapper } from "@/lib/routeMiddleware";
 import { TestWithQuestions } from "@/types/test";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import {
   Eye,
   Edit,
@@ -20,6 +19,7 @@ import {
   FileEdit,
   FileCheck,
 } from "lucide-react";
+import Loading from "@/components/ui/loading";
 
 export default function TeacherTestDetailPage() {
   const router = useRouter();
@@ -120,7 +120,7 @@ export default function TeacherTestDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <LoadingSpinner text="Đang tải bài kiểm tra..." />
+        <Loading message="Đang tải bài kiểm tra..." />
       </div>
     );
   }
@@ -152,9 +152,7 @@ export default function TeacherTestDetailPage() {
         <h1 className="text-4xl font-bold text-gray-900 mb-2">
           Tên bài kiểm tra: {test.title}
         </h1>
-        <p className="text-lg text-gray-600">
-          Mô tả: {test.description}
-        </p>
+        <p className="text-lg text-gray-600">Mô tả: {test.description}</p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
@@ -195,10 +193,15 @@ export default function TeacherTestDetailPage() {
                     </span>
                     <span
                       className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        index % 2 === 0 ? "bg-green-100 text-green-800" : "bg-purple-100 text-purple-800"
+                        index % 2 === 0
+                          ? "bg-green-100 text-green-800"
+                          : "bg-purple-100 text-purple-800"
                       }`}
                     >
                       {index % 2 === 0 ? "Trắc nghiệm" : "Tự luận"}
+                    </span>
+                    <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
+                      {question.points || 10} pts
                     </span>
                   </div>
                   <span className="text-sm text-gray-500">
@@ -315,9 +318,7 @@ export default function TeacherTestDetailPage() {
                 <Edit className="w-6 h-6 text-purple-600" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  Hành động
-                </h2>
+                <h2 className="text-2xl font-bold text-gray-900">Hành động</h2>
                 <p className="text-gray-600">Quản lý bài kiểm tra</p>
               </div>
             </div>

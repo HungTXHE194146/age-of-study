@@ -20,6 +20,7 @@ export interface Question {
   options: QuestionOption[];
   difficulty: DifficultyLevel;
   topic: string;
+  points?: number;
 }
 
 export interface Quiz {

@@ -1,16 +1,16 @@
-'use client'
+"use client";
 
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Loading from "@/components/ui/loading";
-import { 
-  ClipboardList, 
-  Users, 
-  BarChart3, 
+import {
+  ClipboardList,
+  Users,
+  BarChart3,
   Settings,
   Plus,
-  LogOut
+  LogOut,
 } from "lucide-react";
 import { checkRoutePermission } from "@/lib/routeMiddleware";
 
@@ -29,7 +29,7 @@ export default function TeacherDashboard() {
       const redirectPath = checkRoutePermission({
         user,
         currentPath,
-        isAuthenticated
+        isAuthenticated,
       });
 
       if (redirectPath) {
@@ -42,7 +42,13 @@ export default function TeacherDashboard() {
   }, [isLoading, isAuthenticated, user, router]);
 
   if (isLoading) {
-    return <Loading message="Đang tải bảng điều khiển giáo viên..." size="lg" fullScreen />;
+    return (
+      <Loading
+        message="Đang tải bảng điều khiển giáo viên..."
+        size="lg"
+        fullScreen
+      />
+    );
   }
 
   if (!isAuthenticated || !user) {
@@ -62,29 +68,18 @@ export default function TeacherDashboard() {
               Bảng Điều Khiển Giáo Viên
             </h1>
             <p className="text-lg text-gray-600">
-              Chào mừng {user.full_name || user.username}! Quản lý lớp học và bài kiểm tra của bạn.
+              Chào mừng {user.full_name || user.username}! Quản lý lớp học và
+              bài kiểm tra của bạn.
             </p>
           </div>
-          <button
-            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-full font-semibold hover:bg-red-600 transition-colors"
-            onClick={() => {
-              // Gọi hàm logout từ store
-              const { logout } = useAuthStore.getState();
-              logout();
-              router.push("/login");
-            }}
-          >
-            <LogOut className="w-5 h-5" />
-            Đăng xuất
-          </button>
         </div>
       </div>
 
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {/* Test Management Card */}
-        <div 
+        <div
           className="bg-white rounded-2xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-all border-2 border-blue-100 cursor-pointer hover:border-blue-300"
-          onClick={() => handleNavigate('/teacher/tests')}
+          onClick={() => handleNavigate("/teacher/tests")}
         >
           <div className="flex items-center justify-between mb-3 sm:mb-4">
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -167,9 +162,9 @@ export default function TeacherDashboard() {
           Hành động nhanh
         </h2>
         <div className="flex flex-wrap gap-3 sm:gap-4">
-          <button 
+          <button
             className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-500 text-white rounded-full font-semibold hover:bg-blue-600 transition-colors text-sm sm:text-base"
-            onClick={() => handleNavigate('/teacher/tests/create')}
+            onClick={() => handleNavigate("/teacher/tests/create")}
           >
             ✨ Tạo bài kiểm tra mới
           </button>

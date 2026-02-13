@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Question, QuestionType, DifficultyLevel } from "@/types/teacher";
 import { QuestionBankQuestion } from "@/lib/questionBankService";
 import { questionBankService } from "@/lib/questionBankService";
+import Loading from "../ui/loading";
 
 interface QuestionBankTabProps {
   onAddQuestions: (questions: Question[]) => void;
@@ -16,11 +16,11 @@ interface QuestionBankTabProps {
   existingQuestionIds?: Set<string>;
 }
 
-export function QuestionBankTab({ 
-  onAddQuestions, 
-  selectedSubjectId, 
+export function QuestionBankTab({
+  onAddQuestions,
+  selectedSubjectId,
   selectedNodeId,
-  existingQuestionIds
+  existingQuestionIds,
 }: QuestionBankTabProps) {
   const [questions, setQuestions] = useState<QuestionBankQuestion[]>([]);
   const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
@@ -28,7 +28,7 @@ export function QuestionBankTab({
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
   const [isLoadingNodes, setIsLoadingNodes] = useState(false);
-  
+
   // Filter state
   const [filters, setFilters] = useState({
     subjectId: selectedSubjectId || "0",
@@ -37,9 +37,11 @@ export function QuestionBankTab({
     type: "0" as QuestionType | "0",
     search: "",
   });
-  
+
   // Selection state
-  const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [totalQuestions, setTotalQuestions] = useState(0);
   const questionsPerPage = 10;
@@ -131,15 +133,18 @@ export function QuestionBankTab({
     loadQuestions();
   }, [currentPage]);
 
-  const handleFilterChange = (key: string, value: string | DifficultyLevel | QuestionType) => {
-    setFilters(prev => ({
+  const handleFilterChange = (
+    key: string,
+    value: string | DifficultyLevel | QuestionType,
+  ) => {
+    setFilters((prev) => ({
       ...prev,
       [key]: value,
     }));
   };
 
   const handleQuestionSelection = (questionId: string) => {
-    setSelectedQuestionIds(prev => {
+    setSelectedQuestionIds((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(questionId)) {
         newSet.delete(questionId);
@@ -151,7 +156,9 @@ export function QuestionBankTab({
   };
 
   const handleAddSelectedQuestions = () => {
-    const selectedQuestions = questions.filter(q => selectedQuestionIds.has(q.id));
+    const selectedQuestions = questions.filter((q) =>
+      selectedQuestionIds.has(q.id),
+    );
     if (selectedQuestions.length === 0) {
       alert("Vui lòng chọn ít nhất một câu hỏi");
       return;
@@ -178,27 +185,35 @@ export function QuestionBankTab({
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case "Easy": return "bg-green-100 text-green-800";
-      case "Medium": return "bg-yellow-100 text-yellow-800";
-      case "Hard": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "Easy":
+        return "bg-green-100 text-green-800";
+      case "Medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "Hard":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case "MULTIPLE_CHOICE": return <Plus className="w-4 h-4" />;
-      case "TRUE_FALSE": return <Check className="w-4 h-4" />;
-      case "ESSAY": return <Book className="w-4 h-4" />;
-      default: return <Clock className="w-4 h-4" />;
+      case "MULTIPLE_CHOICE":
+        return <Plus className="w-4 h-4" />;
+      case "TRUE_FALSE":
+        return <Check className="w-4 h-4" />;
+      case "ESSAY":
+        return <Book className="w-4 h-4" />;
+      default:
+        return <Clock className="w-4 h-4" />;
     }
   };
 
   const totalPages = Math.ceil(totalQuestions / questionsPerPage);
 
   // Filter out questions that already exist in the current test
-  const filteredQuestions = questions.filter(q => 
-    !existingQuestionIds?.has(q.id)
+  const filteredQuestions = questions.filter(
+    (q) => !existingQuestionIds?.has(q.id),
   );
 
   return (
@@ -207,7 +222,9 @@ export function QuestionBankTab({
       <div className="bg-white rounded-2xl p-6 shadow-md">
         <div className="flex items-center gap-3 mb-4">
           <Filter className="w-5 h-5 text-gray-600" />
-          <h2 className="text-lg font-semibold text-gray-900">Bộ lọc câu hỏi</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Bộ lọc câu hỏi
+          </h2>
         </div>
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -218,12 +235,14 @@ export function QuestionBankTab({
               </label>
               <Select
                 value={filters.subjectId}
-                onChange={(e) => handleFilterChange("subjectId", e.target.value)}
+                onChange={(e) =>
+                  handleFilterChange("subjectId", e.target.value)
+                }
                 disabled={isLoadingSubjects}
                 className="w-full"
               >
                 <option value="0">Tất cả môn học</option>
-                {subjects.map(subject => (
+                {subjects.map((subject) => (
                   <option key={subject.id} value={subject.id}>
                     {subject.name}
                   </option>
@@ -239,11 +258,15 @@ export function QuestionBankTab({
               <Select
                 value={filters.nodeId}
                 onChange={(e) => handleFilterChange("nodeId", e.target.value)}
-                disabled={isLoadingNodes || !filters.subjectId || filters.subjectId === "0"}
+                disabled={
+                  isLoadingNodes ||
+                  !filters.subjectId ||
+                  filters.subjectId === "0"
+                }
                 className="w-full"
               >
                 <option value="0">Tất cả bài học</option>
-                {nodes.map(node => (
+                {nodes.map((node) => (
                   <option key={node.id} value={node.id}>
                     {node.title}
                   </option>
@@ -258,7 +281,9 @@ export function QuestionBankTab({
               </label>
               <Select
                 value={filters.difficulty}
-                onChange={(e) => handleFilterChange("difficulty", e.target.value)}
+                onChange={(e) =>
+                  handleFilterChange("difficulty", e.target.value)
+                }
                 className="w-full"
               >
                 <option value="0">Tất cả độ khó</option>
@@ -316,7 +341,10 @@ export function QuestionBankTab({
             className="bg-green-500 hover:bg-green-600"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Thêm {selectedQuestionIds.size > 0 && `(${selectedQuestionIds.size})`} câu hỏi đã chọn
+            Thêm{" "}
+            {selectedQuestionIds.size > 0 &&
+              `(${selectedQuestionIds.size})`}{" "}
+            câu hỏi đã chọn
           </Button>
         </div>
       </div>
@@ -326,7 +354,7 @@ export function QuestionBankTab({
         <div className="space-y-4">
           {isLoading ? (
             <div className="flex justify-center p-8">
-              <LoadingSpinner />
+              <Loading />
             </div>
           ) : questions.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
@@ -344,46 +372,71 @@ export function QuestionBankTab({
                             <input
                               type="checkbox"
                               checked={selectedQuestionIds.has(question.id)}
-                              onChange={() => handleQuestionSelection(question.id)}
+                              onChange={() =>
+                                handleQuestionSelection(question.id)
+                              }
                               className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                             />
-                            <Badge variant="secondary" className={getDifficultyColor(question.difficulty)}>
+                            <Badge
+                              variant="secondary"
+                              className={getDifficultyColor(
+                                question.difficulty,
+                              )}
+                            >
                               {question.difficulty}
                             </Badge>
-                            <Badge variant="outline" className="flex items-center gap-1">
+                            <Badge
+                              variant="outline"
+                              className="flex items-center gap-1"
+                            >
                               {getTypeIcon(question.type)}
-                              {question.type === "MULTIPLE_CHOICE" ? "Trắc nghiệm" : 
-                               question.type === "TRUE_FALSE" ? "Đúng/Sai" : "Tự luận"}
+                              {question.type === "MULTIPLE_CHOICE"
+                                ? "Trắc nghiệm"
+                                : question.type === "TRUE_FALSE"
+                                  ? "Đúng/Sai"
+                                  : "Tự luận"}
                             </Badge>
                             {question.subject_name && (
-                              <Badge variant="outline" className="text-blue-600">
+                              <Badge
+                                variant="outline"
+                                className="text-blue-600"
+                              >
                                 {question.subject_name}
                               </Badge>
                             )}
                             {question.node_title && (
-                              <Badge variant="outline" className="text-green-600">
+                              <Badge
+                                variant="outline"
+                                className="text-green-600"
+                              >
                                 {question.node_title}
                               </Badge>
                             )}
                           </div>
-                          
+
                           <h3 className="font-medium text-gray-900 mb-2">
                             {question.questionText}
                           </h3>
-                          
+
                           {question.options && question.options.length > 0 && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
-                              {question.options.slice(0, 4).map((option, index) => (
-                                <div 
-                                  key={option.id} 
-                                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 shadow-sm"
-                                >
-                                  <div className="flex-shrink-0 w-8 h-8 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center">
-                                    <span className="text-sm font-semibold text-gray-700">{option.label}</span>
+                              {question.options
+                                .slice(0, 4)
+                                .map((option, index) => (
+                                  <div
+                                    key={option.id}
+                                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 shadow-sm"
+                                  >
+                                    <div className="flex-shrink-0 w-8 h-8 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center">
+                                      <span className="text-sm font-semibold text-gray-700">
+                                        {option.label}
+                                      </span>
+                                    </div>
+                                    <span className="text-sm text-gray-700 leading-relaxed">
+                                      {option.text}
+                                    </span>
                                   </div>
-                                  <span className="text-sm text-gray-700 leading-relaxed">{option.text}</span>
-                                </div>
-                              ))}
+                                ))}
                               {question.options.length > 4 && (
                                 <div className="col-span-full text-sm text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-200">
                                   +{question.options.length - 4} lựa chọn khác
@@ -391,9 +444,11 @@ export function QuestionBankTab({
                               )}
                             </div>
                           )}
-                          
+
                           <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <span>Ngày tạo: {question.created_at_formatted}</span>
+                            <span>
+                              Ngày tạo: {question.created_at_formatted}
+                            </span>
                             {question.topic && (
                               <span>Chủ đề: {question.topic}</span>
                             )}
@@ -410,19 +465,23 @@ export function QuestionBankTab({
                 <div className="flex justify-center items-center gap-2 p-4 border-t">
                   <Button
                     variant="outline"
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(1, prev - 1))
+                    }
                     disabled={currentPage === 1}
                   >
                     Trước
                   </Button>
-                  
+
                   <div className="text-sm text-gray-600">
                     Trang {currentPage} / {totalPages}
                   </div>
-                  
+
                   <Button
                     variant="outline"
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                    }
                     disabled={currentPage === totalPages}
                   >
                     Sau

@@ -19,6 +19,7 @@ export interface Test {
   created_by: string
   created_at: string
   subject_name?: string
+  max_xp?: number
 }
 
 export interface Question {
@@ -89,6 +90,7 @@ export interface AddQuestionsRequest {
   test_id: string
   question_ids: string[]
   points?: number
+  question_points?: { [question_id: string]: number }
 }
 
 export interface SubmitTestRequest {

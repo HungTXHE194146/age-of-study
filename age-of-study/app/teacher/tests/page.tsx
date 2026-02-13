@@ -36,6 +36,7 @@ interface Test {
   question_count?: number;
   subject_id?: number;
   subject_name?: string;
+  max_xp?: number;
 }
 
 export default function TestManagementPage() {
@@ -94,6 +95,7 @@ export default function TestManagementPage() {
         question_count: test.question_count || 0,
         subject_id: test.subject_id ?? undefined,
         subject_name: test.subject_name,
+        max_xp: test.max_xp || 0,
       }));
 
       setTests(mappedTests);
@@ -189,7 +191,9 @@ export default function TestManagementPage() {
       // Subject filter
       const matchesSubject =
         filterSubject === 0 ||
-        (test.subject_id !== null && test.subject_id !== undefined && test.subject_id === filterSubject);
+        (test.subject_id !== null &&
+          test.subject_id !== undefined &&
+          test.subject_id === filterSubject);
 
       return matchesSearch && matchesType && matchesStatus && matchesSubject;
     })
@@ -399,6 +403,9 @@ export default function TestManagementPage() {
                   Số câu hỏi
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tổng điểm
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Loại
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -452,6 +459,12 @@ export default function TestManagementPage() {
                       <div className="flex items-center gap-1">
                         <Tag className="w-4 h-4 text-gray-400" />
                         {test.question_count || 0} câu
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex items-center gap-1">
+                        <BookOpen className="w-4 h-4 text-gray-400" />
+                        {test.max_xp || 0} điểm
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

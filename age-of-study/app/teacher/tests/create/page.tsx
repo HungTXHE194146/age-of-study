@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -10,10 +10,13 @@ import {
   Save,
   ArrowLeft,
   Book,
+  Eye,
 } from "lucide-react";
 import { QuizGeneratorForm } from "@/components/teacher/QuizGeneratorForm";
 import { QuizReviewList } from "@/components/teacher/QuizReviewList";
 import { QuestionBankTab } from "@/components/teacher/QuestionBankTab";
+import { QuestionPointsGrid } from "@/components/teacher/QuestionPointsGrid";
+import { PaginatedQuestionPreview } from "@/components/teacher/PaginatedQuestionPreview";
 import { Button } from "@/components/ui/button";
 import { Question } from "@/types/teacher";
 import { subjectService } from "@/lib/subjectService";
@@ -26,7 +29,9 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 export default function CreateTestPage() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<"manual" | "ai" | "bank">("manual");
+  const [activeTab, setActiveTab] = useState<"manual" | "ai" | "bank">(
+    "manual",
+  );
   const [testDetails, setTestDetails] = useState({
     title: "",
     description: "",
@@ -62,6 +67,10 @@ export default function CreateTestPage() {
   });
   const [manualEssayHint, setManualEssayHint] = useState("");
 
+  // State for question management
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [points, setPoints] = useState<{ [questionId: string]: number }>({});
+
   // Fetch subjects from Supabase
   useEffect(() => {
     async function fetchSubjects() {
@@ -93,7 +102,11 @@ export default function CreateTestPage() {
       return;
     }
 
-    if (!testDetails.subject || testDetails.subject === "" || testDetails.subject === "0") {
+    if (
+      !testDetails.subject ||
+      testDetails.subject === "" ||
+      testDetails.subject === "0"
+    ) {
       alert("Vui lòng chọn môn học liên quan cho bài kiểm tra");
       return;
     }
@@ -144,12 +157,14 @@ export default function CreateTestPage() {
       const supabase = await getSupabaseBrowserClient();
 
       // Insert test_questions relationships
-      const testQuestionsToInsert = questions.map((q: Question, index: number) => ({
-        test_id: createdTest.id,
-        question_id: q.id, // Use existing question ID from question bank
-        points: 10, // Default points
-        display_order: index
-      }));
+      const testQuestionsToInsert = questions.map(
+        (q: Question, index: number) => ({
+          test_id: createdTest.id,
+          question_id: q.id, // Use existing question ID from question bank
+          points: q.points || 10, // Use question points if available, otherwise default to 10
+          display_order: index,
+        }),
+      );
 
       const { error: testQuestionsError } = await supabase
         .from("test_questions")
@@ -173,7 +188,11 @@ export default function CreateTestPage() {
       return;
     }
 
-    if (!testDetails.subject || testDetails.subject === "" || testDetails.subject === "0") {
+    if (
+      !testDetails.subject ||
+      testDetails.subject === "" ||
+      testDetails.subject === "0"
+    ) {
       alert("Vui lòng chọn môn học liên quan cho bài kiểm tra");
       return;
     }
@@ -224,12 +243,14 @@ export default function CreateTestPage() {
       const supabase = await getSupabaseBrowserClient();
 
       // Insert test_questions relationships
-      const testQuestionsToInsert = questions.map((q: Question, index: number) => ({
-        test_id: createdTest.id,
-        question_id: q.id, // Use existing question ID from question bank
-        points: 10, // Default points
-        display_order: index
-      }));
+      const testQuestionsToInsert = questions.map(
+        (q: Question, index: number) => ({
+          test_id: createdTest.id,
+          question_id: q.id, // Use existing question ID from question bank
+          points: 10, // Default points
+          display_order: index,
+        }),
+      );
 
       const { error: testQuestionsError } = await supabase
         .from("test_questions")
@@ -265,697 +286,814 @@ export default function CreateTestPage() {
         </p>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Test Details Section */}
-        <div className="bg-white rounded-2xl p-8 shadow-md">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <Settings className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">
-                Chi tiết bài kiểm tra
-              </h2>
-              <p className="text-gray-600">Cấu hình các thông số cơ bản</p>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tiêu đề bài kiểm tra
-              </label>
-              <input
-                type="text"
-                value={testDetails.title}
-                onChange={(e) =>
-                  setTestDetails((prev) => ({ ...prev, title: e.target.value }))
-                }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Nhập tiêu đề bài kiểm tra..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mô tả
-              </label>
-              <textarea
-                value={testDetails.description}
-                onChange={(e) =>
-                  setTestDetails((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Mô tả ngắn về bài kiểm tra..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Môn học <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={testDetails.subject}
-                onChange={async (e) => {
-                  const selectedSubjectId = e.target.value;
-                  setTestDetails((prev) => ({
-                    ...prev,
-                    subject: selectedSubjectId,
-                    node: "", // Reset node when subject changes
-                  }));
-                  
-                  // Fetch nodes for the selected subject
-                  if (selectedSubjectId) {
-                    try {
-                      setIsLoadingNodes(true);
-                      const supabase = (await import("@/lib/supabase")).getSupabaseBrowserClient();
-                      const { data, error } = await supabase
-                        .from("nodes")
-                        .select("id, title")
-                        .eq("subject_id", parseInt(selectedSubjectId))
-                        .order("title", { ascending: true });
-
-                      if (error) throw error;
-                      setNodes(data || []);
-                    } catch (error) {
-                      console.error("Error fetching nodes:", error);
-                      setNodes([]);
-                    } finally {
-                      setIsLoadingNodes(false);
-                    }
-                  } else {
-                    setNodes([]);
-                  }
-                }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              >
-                <option value="">Chọn môn học</option>
-                {isLoadingSubjects ? (
-                  <option disabled>Đang tải môn học...</option>
-                ) : (
-                  subjects.map((subject) => (
-                    <option key={subject.id} value={subject.id}>
-                      {subject.name}
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Chủ đề / Bài học
-              </label>
-              <select
-                value={testDetails.node}
-                onChange={(e) =>
-                  setTestDetails((prev) => ({
-                    ...prev,
-                    node: e.target.value,
-                  }))
-                }
-                disabled={!testDetails.subject || isLoadingNodes}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                <option value="">Kiểm tra tổng hợp / Luyện tập chung</option>
-                {isLoadingNodes ? (
-                  <option disabled>Đang tải bài học...</option>
-                ) : (
-                  nodes.map((node) => (
-                    <option key={node.id} value={node.id}>
-                      {node.title}
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Thời gian làm bài (phút)
-              </label>
-              <input
-                type="number"
-                value={testDetails.timeLimit}
-                onChange={(e) =>
-                  setTestDetails((prev) => ({
-                    ...prev,
-                    timeLimit: parseInt(e.target.value),
-                  }))
-                }
-                min="5"
-                max="180"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Question Management Section */}
-        <div className="bg-white rounded-2xl p-8 shadow-md lg:col-span-2">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <Plus className="w-6 h-6 text-green-600" />
+      <div className="grid gap-8">
+        {/* Row 1: Test Details (Left) and Question Management (Right) */}
+        <div className="grid gap-8 lg:grid-cols-3">
+          {/* Test Details Section */}
+          <div className="bg-white rounded-2xl p-8 shadow-md lg:col-span-1">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <Settings className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Câu hỏi</h2>
-                <p className="text-gray-600">Thêm và quản lý câu hỏi</p>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Chi tiết bài kiểm tra
+                </h2>
+                <p className="text-gray-600">Cấu hình các thông số cơ bản</p>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-2xl font-bold text-blue-600">
-                {questions.length}
-              </span>
-              <p className="text-sm text-gray-600">câu hỏi</p>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tiêu đề bài kiểm tra
+                </label>
+                <input
+                  type="text"
+                  value={testDetails.title}
+                  onChange={(e) =>
+                    setTestDetails((prev) => ({
+                      ...prev,
+                      title: e.target.value,
+                    }))
+                  }
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Nhập tiêu đề bài kiểm tra..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mô tả
+                </label>
+                <textarea
+                  value={testDetails.description}
+                  onChange={(e) =>
+                    setTestDetails((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Mô tả ngắn về bài kiểm tra..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Môn học <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={testDetails.subject}
+                  onChange={async (e) => {
+                    const selectedSubjectId = e.target.value;
+                    setTestDetails((prev) => ({
+                      ...prev,
+                      subject: selectedSubjectId,
+                      node: "", // Reset node when subject changes
+                    }));
+
+                    // Fetch nodes for the selected subject
+                    if (selectedSubjectId) {
+                      try {
+                        setIsLoadingNodes(true);
+                        const supabase = (
+                          await import("@/lib/supabase")
+                        ).getSupabaseBrowserClient();
+                        const { data, error } = await supabase
+                          .from("nodes")
+                          .select("id, title")
+                          .eq("subject_id", parseInt(selectedSubjectId))
+                          .order("title", { ascending: true });
+
+                        if (error) throw error;
+                        setNodes(data || []);
+                      } catch (error) {
+                        console.error("Error fetching nodes:", error);
+                        setNodes([]);
+                      } finally {
+                        setIsLoadingNodes(false);
+                      }
+                    } else {
+                      setNodes([]);
+                    }
+                  }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Chọn môn học</option>
+                  {isLoadingSubjects ? (
+                    <option disabled>Đang tải môn học...</option>
+                  ) : (
+                    subjects.map((subject) => (
+                      <option key={subject.id} value={subject.id}>
+                        {subject.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Chủ đề / Bài học
+                </label>
+                <select
+                  value={testDetails.node}
+                  onChange={(e) =>
+                    setTestDetails((prev) => ({
+                      ...prev,
+                      node: e.target.value,
+                    }))
+                  }
+                  disabled={!testDetails.subject || isLoadingNodes}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">Kiểm tra tổng hợp / Luyện tập chung</option>
+                  {isLoadingNodes ? (
+                    <option disabled>Đang tải bài học...</option>
+                  ) : (
+                    nodes.map((node) => (
+                      <option key={node.id} value={node.id}>
+                        {node.title}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Thời gian làm bài (phút)
+                </label>
+                <input
+                  type="number"
+                  value={testDetails.timeLimit}
+                  onChange={(e) =>
+                    setTestDetails((prev) => ({
+                      ...prev,
+                      timeLimit: parseInt(e.target.value),
+                    }))
+                  }
+                  min="5"
+                  max="180"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Tab Navigation */}
-          <div className="border-b border-gray-200 mb-6">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => setActiveTab("manual")}
-                className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "manual"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <FileText className="w-4 h-4" />
-                Nhập thủ công
-              </button>
-              <button
-                onClick={() => setActiveTab("ai")}
-                className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "ai"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <LinkIcon className="w-4 h-4" />
-                AI Generator
-              </button>
-              <button
-                onClick={() => setActiveTab("bank")}
-                className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "bank"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <Book className="w-4 h-4" />
-                Question Bank
-              </button>
-            </nav>
-          </div>
-
-          {/* Tab Content */}
-          <div className="space-y-6">
-            {activeTab === "manual" && (
-              <div className="space-y-4">
-                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                    Tạo câu hỏi thủ công
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Nhập thông tin câu hỏi và các lựa chọn trả lời
-                  </p>
+          {/* Question Management Section */}
+          <div className="bg-white rounded-2xl p-8 shadow-md lg:col-span-2">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <Plus className="w-6 h-6 text-green-600" />
                 </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Câu hỏi</h2>
+                  <p className="text-gray-600">Thêm và quản lý câu hỏi</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-2xl font-bold text-blue-600">
+                  {questions.length}
+                </span>
+                <p className="text-sm text-gray-600">câu hỏi</p>
+              </div>
+            </div>
 
-                <div className="grid gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nội dung câu hỏi
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={manualQuestionText}
-                      onChange={(e) => setManualQuestionText(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Nhập nội dung câu hỏi..."
-                    />
+            {/* Tab Navigation */}
+            <div className="border-b border-gray-200 mb-6">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => setActiveTab("manual")}
+                  className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "manual"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  Nhập thủ công
+                </button>
+                <button
+                  onClick={() => setActiveTab("ai")}
+                  className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "ai"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <LinkIcon className="w-4 h-4" />
+                  AI Generator
+                </button>
+                <button
+                  onClick={() => setActiveTab("bank")}
+                  className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "bank"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <Book className="w-4 h-4" />
+                  Question Bank
+                </button>
+              </nav>
+            </div>
+
+            {/* Tab Content */}
+            <div className="space-y-6">
+              {activeTab === "manual" && (
+                <div className="space-y-4">
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                      Tạo câu hỏi thủ công
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      Nhập thông tin câu hỏi và các lựa chọn trả lời
+                    </p>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Loại câu hỏi
-                    </label>
-                    <select
-                      value={manualQuestionType}
-                      onChange={(e) =>
-                        setManualQuestionType(
-                          e.target.value as
-                            | "MULTIPLE_CHOICE"
-                            | "TRUE_FALSE"
-                            | "ESSAY",
-                        )
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="MULTIPLE_CHOICE">Trắc nghiệm</option>
-                      <option value="TRUE_FALSE">Đúng/Sai</option>
-                      <option value="ESSAY">Tự luận</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Độ khó
-                    </label>
-                    <select
-                      value={manualDifficulty}
-                      onChange={(e) =>
-                        setManualDifficulty(
-                          e.target.value as "Easy" | "Medium" | "Hard",
-                        )
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="Easy">Dễ</option>
-                      <option value="Medium">Trung bình</option>
-                      <option value="Hard">Khó</option>
-                    </select>
-                  </div>
-
-                  {/* Multiple Choice Options */}
-                  {manualQuestionType === "MULTIPLE_CHOICE" && (
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <h4 className="font-medium text-gray-900">
-                          Lựa chọn trả lời
-                        </h4>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (manualOptions.length > 3) {
-                                setManualOptions((prev) => prev.slice(0, -1));
-                                // Update correct answer if it was the last option
-                                if (
-                                  manualCorrectAnswer ===
-                                  String.fromCharCode(64 + manualOptions.length)
-                                ) {
-                                  setManualCorrectAnswer(
-                                    String.fromCharCode(
-                                      64 + manualOptions.length - 1,
-                                    ),
-                                  );
-                                }
-                              }
-                            }}
-                            disabled={manualOptions.length <= 3}
-                            className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            - Xóa
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (manualOptions.length < 6) {
-                                const newOption = {
-                                  id: (manualOptions.length + 1).toString(),
-                                  label: String.fromCharCode(
-                                    65 + manualOptions.length,
-                                  ),
-                                  text: "",
-                                  isCorrect: false,
-                                };
-                                setManualOptions((prev) => [
-                                  ...prev,
-                                  newOption,
-                                ]);
-                              }
-                            }}
-                            disabled={manualOptions.length >= 6}
-                            className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            + Thêm
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        {manualOptions.map((option, index) => (
-                          <div key={option.id} className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Lựa chọn {option.label}
-                            </label>
-                            <input
-                              type="text"
-                              value={option.text}
-                              onChange={(e) => {
-                                const updatedOptions = [...manualOptions];
-                                updatedOptions[index] = {
-                                  ...option,
-                                  text: e.target.value,
-                                };
-                                setManualOptions(updatedOptions);
-                              }}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder={`Nhập lựa chọn ${option.label}...`}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* True/False Options */}
-                  {manualQuestionType === "TRUE_FALSE" && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Đáp án Đúng
-                        </label>
-                        <input
-                          type="text"
-                          value={manualTrueFalseContent.true}
-                          onChange={(e) =>
-                            setManualTrueFalseContent({
-                              ...manualTrueFalseContent,
-                              true: e.target.value,
-                            })
-                          }
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Nhập nội dung cho Đúng..."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Đáp án Sai
-                        </label>
-                        <input
-                          type="text"
-                          value={manualTrueFalseContent.false}
-                          onChange={(e) =>
-                            setManualTrueFalseContent({
-                              ...manualTrueFalseContent,
-                              false: e.target.value,
-                            })
-                          }
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Nhập nội dung cho Sai..."
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Essay Question */}
-                  {manualQuestionType === "ESSAY" && (
+                  <div className="grid gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Gợi ý trả lời
+                        Nội dung câu hỏi
                       </label>
                       <textarea
-                        rows={4}
-                        value={manualEssayHint}
-                        onChange={(e) => setManualEssayHint(e.target.value)}
+                        rows={3}
+                        value={manualQuestionText}
+                        onChange={(e) => setManualQuestionText(e.target.value)}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Nhập gợi ý trả lời hoặc hướng dẫn chấm điểm..."
+                        placeholder="Nhập nội dung câu hỏi..."
                       />
                     </div>
-                  )}
 
-                  {/* Multiple Choice Answer */}
-                  {manualQuestionType === "MULTIPLE_CHOICE" && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Đáp án đúng
+                        Loại câu hỏi
                       </label>
                       <select
-                        value={manualCorrectAnswer}
-                        onChange={(e) => setManualCorrectAnswer(e.target.value)}
+                        value={manualQuestionType}
+                        onChange={(e) =>
+                          setManualQuestionType(
+                            e.target.value as
+                              | "MULTIPLE_CHOICE"
+                              | "TRUE_FALSE"
+                              | "ESSAY",
+                          )
+                        }
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        {manualOptions.map((option) => (
-                          <option key={option.id} value={option.label}>
-                            {option.label}
-                          </option>
-                        ))}
+                        <option value="MULTIPLE_CHOICE">Trắc nghiệm</option>
+                        <option value="TRUE_FALSE">Đúng/Sai</option>
+                        <option value="ESSAY">Tự luận</option>
                       </select>
                     </div>
-                  )}
 
-                  {/* True/False Answer */}
-                  {manualQuestionType === "TRUE_FALSE" && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Đáp án đúng
+                        Độ khó
                       </label>
-                      <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option value="TRUE">Đúng</option>
-                        <option value="FALSE">Sai</option>
+                      <select
+                        value={manualDifficulty}
+                        onChange={(e) =>
+                          setManualDifficulty(
+                            e.target.value as "Easy" | "Medium" | "Hard",
+                          )
+                        }
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="Easy">Dễ</option>
+                        <option value="Medium">Trung bình</option>
+                        <option value="Hard">Khó</option>
                       </select>
                     </div>
-                  )}
 
-                  {/* Essay Answer (No specific answer needed) */}
-                  {manualQuestionType === "ESSAY" && (
-                    <div className="text-sm text-gray-500 italic">
-                      * Câu hỏi tự luận không cần chọn đáp án đúng
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => {
-                      // Validate required fields
-                      if (!manualQuestionText.trim()) {
-                        alert("Vui lòng nhập nội dung câu hỏi");
-                        return;
-                      }
-
-                      if (manualQuestionType === "MULTIPLE_CHOICE") {
-                        const hasEmptyOptions = manualOptions.some(
-                          (option) => !option.text.trim(),
-                        );
-                        if (hasEmptyOptions) {
-                          alert(
-                            "Vui lòng nhập đầy đủ nội dung cho tất cả các lựa chọn",
-                          );
-                          return;
-                        }
-                      }
-
-                      if (manualQuestionType === "TRUE_FALSE") {
-                        if (
-                          !manualTrueFalseContent.true.trim() ||
-                          !manualTrueFalseContent.false.trim()
-                        ) {
-                          alert("Vui lòng nhập nội dung cho cả Đúng và Sai");
-                          return;
-                        }
-                      }
-
-                      if (manualQuestionType === "ESSAY") {
-                        if (!manualEssayHint.trim()) {
-                          alert(
-                            "Vui lòng nhập gợi ý trả lời cho câu hỏi tự luận",
-                          );
-                          return;
-                        }
-                      }
-
-                      // Create question object
-                      const newQuestion: Question = {
-                        id: Date.now().toString(),
-                        createdAt: Date.now(),
-                        number: questions.length + 1,
-                        type: manualQuestionType,
-                        questionText: manualQuestionText,
-                        options:
-                          manualQuestionType === "MULTIPLE_CHOICE"
-                            ? manualOptions.map((option) => ({
-                                ...option,
-                                isCorrect: option.label === manualCorrectAnswer,
-                              }))
-                            : manualQuestionType === "TRUE_FALSE"
-                              ? [
-                                  {
-                                    id: "1",
-                                    label: "A",
-                                    text: manualTrueFalseContent.true,
-                                    isCorrect: true,
-                                  },
-                                  {
-                                    id: "2",
-                                    label: "B",
-                                    text: manualTrueFalseContent.false,
+                    {/* Multiple Choice Options */}
+                    {manualQuestionType === "MULTIPLE_CHOICE" && (
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium text-gray-900">
+                            Lựa chọn trả lời
+                          </h4>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (manualOptions.length > 3) {
+                                  setManualOptions((prev) => prev.slice(0, -1));
+                                  // Update correct answer if it was the last option
+                                  if (
+                                    manualCorrectAnswer ===
+                                    String.fromCharCode(
+                                      64 + manualOptions.length,
+                                    )
+                                  ) {
+                                    setManualCorrectAnswer(
+                                      String.fromCharCode(
+                                        64 + manualOptions.length - 1,
+                                      ),
+                                    );
+                                  }
+                                }
+                              }}
+                              disabled={manualOptions.length <= 3}
+                              className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              - Xóa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (manualOptions.length < 6) {
+                                  const newOption = {
+                                    id: (manualOptions.length + 1).toString(),
+                                    label: String.fromCharCode(
+                                      65 + manualOptions.length,
+                                    ),
+                                    text: "",
                                     isCorrect: false,
-                                  },
-                                ]
-                              : [],
-                        difficulty: manualDifficulty,
-                        topic: "Thủ công",
-                      };
+                                  };
+                                  setManualOptions((prev) => [
+                                    ...prev,
+                                    newOption,
+                                  ]);
+                                }
+                              }}
+                              disabled={manualOptions.length >= 6}
+                              className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              + Thêm
+                            </button>
+                          </div>
+                        </div>
 
-                      handleAddQuestion(newQuestion);
+                        <div className="grid grid-cols-2 gap-4">
+                          {manualOptions.map((option, index) => (
+                            <div key={option.id} className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Lựa chọn {option.label}
+                              </label>
+                              <input
+                                type="text"
+                                value={option.text}
+                                onChange={(e) => {
+                                  const updatedOptions = [...manualOptions];
+                                  updatedOptions[index] = {
+                                    ...option,
+                                    text: e.target.value,
+                                  };
+                                  setManualOptions(updatedOptions);
+                                }}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder={`Nhập lựa chọn ${option.label}...`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-                      // Reset form
-                      setManualQuestionText("");
-                      setManualOptions([
-                        { id: "1", label: "A", text: "", isCorrect: false },
-                        { id: "2", label: "B", text: "", isCorrect: false },
-                        { id: "3", label: "C", text: "", isCorrect: false },
-                        { id: "4", label: "D", text: "", isCorrect: false },
-                      ]);
-                      setManualCorrectAnswer("A");
-                      setManualTrueFalseContent({ true: "", false: "" });
-                      setManualEssayHint("");
-                    }}
-                    className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                  >
-                    Thêm câu hỏi
-                  </button>
+                    {/* True/False Options */}
+                    {manualQuestionType === "TRUE_FALSE" && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Đáp án Đúng
+                          </label>
+                          <input
+                            type="text"
+                            value={manualTrueFalseContent.true}
+                            onChange={(e) =>
+                              setManualTrueFalseContent({
+                                ...manualTrueFalseContent,
+                                true: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Nhập nội dung cho Đúng..."
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Đáp án Sai
+                          </label>
+                          <input
+                            type="text"
+                            value={manualTrueFalseContent.false}
+                            onChange={(e) =>
+                              setManualTrueFalseContent({
+                                ...manualTrueFalseContent,
+                                false: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Nhập nội dung cho Sai..."
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Essay Question */}
+                    {manualQuestionType === "ESSAY" && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Gợi ý trả lời
+                        </label>
+                        <textarea
+                          rows={4}
+                          value={manualEssayHint}
+                          onChange={(e) => setManualEssayHint(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Nhập gợi ý trả lời hoặc hướng dẫn chấm điểm..."
+                        />
+                      </div>
+                    )}
+
+                    {/* Multiple Choice Answer */}
+                    {manualQuestionType === "MULTIPLE_CHOICE" && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Đáp án đúng
+                        </label>
+                        <select
+                          value={manualCorrectAnswer}
+                          onChange={(e) =>
+                            setManualCorrectAnswer(e.target.value)
+                          }
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          {manualOptions.map((option) => (
+                            <option key={option.id} value={option.label}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* True/False Answer */}
+                    {manualQuestionType === "TRUE_FALSE" && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Đáp án đúng
+                        </label>
+                        <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                          <option value="TRUE">Đúng</option>
+                          <option value="FALSE">Sai</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Essay Answer (No specific answer needed) */}
+                    {manualQuestionType === "ESSAY" && (
+                      <div className="text-sm text-gray-500 italic">
+                        * Câu hỏi tự luận không cần chọn đáp án đúng
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        // Validate required fields
+                        if (!manualQuestionText.trim()) {
+                          alert("Vui lòng nhập nội dung câu hỏi");
+                          return;
+                        }
+
+                        if (manualQuestionType === "MULTIPLE_CHOICE") {
+                          const hasEmptyOptions = manualOptions.some(
+                            (option) => !option.text.trim(),
+                          );
+                          if (hasEmptyOptions) {
+                            alert(
+                              "Vui lòng nhập đầy đủ nội dung cho tất cả các lựa chọn",
+                            );
+                            return;
+                          }
+                        }
+
+                        if (manualQuestionType === "TRUE_FALSE") {
+                          if (
+                            !manualTrueFalseContent.true.trim() ||
+                            !manualTrueFalseContent.false.trim()
+                          ) {
+                            alert("Vui lòng nhập nội dung cho cả Đúng và Sai");
+                            return;
+                          }
+                        }
+
+                        if (manualQuestionType === "ESSAY") {
+                          if (!manualEssayHint.trim()) {
+                            alert(
+                              "Vui lòng nhập gợi ý trả lời cho câu hỏi tự luận",
+                            );
+                            return;
+                          }
+                        }
+
+                        // Create question object
+                        const newQuestion: Question = {
+                          id: Date.now().toString(),
+                          createdAt: Date.now(),
+                          number: questions.length + 1,
+                          type: manualQuestionType,
+                          questionText: manualQuestionText,
+                          options:
+                            manualQuestionType === "MULTIPLE_CHOICE"
+                              ? manualOptions.map((option) => ({
+                                  ...option,
+                                  isCorrect:
+                                    option.label === manualCorrectAnswer,
+                                }))
+                              : manualQuestionType === "TRUE_FALSE"
+                                ? [
+                                    {
+                                      id: "1",
+                                      label: "A",
+                                      text: manualTrueFalseContent.true,
+                                      isCorrect: true,
+                                    },
+                                    {
+                                      id: "2",
+                                      label: "B",
+                                      text: manualTrueFalseContent.false,
+                                      isCorrect: false,
+                                    },
+                                  ]
+                                : [],
+                          difficulty: manualDifficulty,
+                          topic: "Thủ công",
+                        };
+
+                        handleAddQuestion(newQuestion);
+
+                        // Reset form
+                        setManualQuestionText("");
+                        setManualOptions([
+                          { id: "1", label: "A", text: "", isCorrect: false },
+                          { id: "2", label: "B", text: "", isCorrect: false },
+                          { id: "3", label: "C", text: "", isCorrect: false },
+                          { id: "4", label: "D", text: "", isCorrect: false },
+                        ]);
+                        setManualCorrectAnswer("A");
+                        setManualTrueFalseContent({ true: "", false: "" });
+                        setManualEssayHint("");
+                      }}
+                      className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                      Thêm câu hỏi
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {activeTab === "ai" && (
-              <div>
-                <QuizGeneratorForm
-                  onGenerate={async (data) => {
-                    try {
-                      // Use the question bank service to get random questions
-                      // based on the selected subject or node
-                      const questionBankService = (await import("@/lib/questionBankService")).questionBankService;
-                      
-                      // Determine filter based on current test details
-                      const filter = {
-                        subjectId: testDetails.subject || undefined,
-                        nodeId: testDetails.node || undefined,
-                        difficulty: data.difficulty,
-                        type: "MULTIPLE_CHOICE" as const,
-                        limit: data.questionCount,
-                        offset: 0,
-                      };
+              {activeTab === "ai" && (
+                <div>
+                  <QuizGeneratorForm
+                    onGenerate={async (data) => {
+                      try {
+                        // Use the question bank service to get random questions
+                        // based on the selected subject or node
+                        const questionBankService = (
+                          await import("@/lib/questionBankService")
+                        ).questionBankService;
 
-                      // Get random questions from the bank
-                      const randomQuestions = await questionBankService.getQuestions(filter);
-                      
-                      if (randomQuestions.length === 0) {
-                        alert("Không tìm thấy câu hỏi phù hợp trong ngân hàng câu hỏi. Vui lòng kiểm tra lại bộ lọc.");
+                        // Determine filter based on current test details
+                        const filter = {
+                          subjectId: testDetails.subject || undefined,
+                          nodeId: testDetails.node || undefined,
+                          difficulty: data.difficulty,
+                          type: "MULTIPLE_CHOICE" as const,
+                          limit: data.questionCount,
+                          offset: 0,
+                        };
+
+                        // Get random questions from the bank
+                        const randomQuestions =
+                          await questionBankService.getQuestions(filter);
+
+                        if (randomQuestions.length === 0) {
+                          alert(
+                            "Không tìm thấy câu hỏi phù hợp trong ngân hàng câu hỏi. Vui lòng kiểm tra lại bộ lọc.",
+                          );
+                          return;
+                        }
+
+                        // Transform questions to match the expected format
+                        const transformedQuestions = randomQuestions
+                          .slice(0, data.questionCount)
+                          .map((q, index) => ({
+                            id: q.id,
+                            createdAt: q.createdAt,
+                            number: questions.length + index + 1,
+                            type: q.type,
+                            questionText: q.questionText,
+                            options: q.options.map((opt) => ({
+                              ...opt,
+                              isCorrect: opt.isCorrect || false, // Ensure isCorrect is set
+                            })),
+                            difficulty: q.difficulty,
+                            topic: q.topic || data.topic || "AI Generated",
+                          }));
+
+                        transformedQuestions.forEach((q) =>
+                          handleAddQuestion(q),
+                        );
+
+                        if (transformedQuestions.length < data.questionCount) {
+                          alert(
+                            `Chỉ tìm thấy ${transformedQuestions.length} câu hỏi phù hợp trong ngân hàng câu hỏi.`,
+                          );
+                        }
+                      } catch (error) {
+                        console.error("Error generating questions:", error);
+                        alert(
+                          "Có lỗi xảy ra khi tạo câu hỏi từ ngân hàng câu hỏi. Đang sử dụng câu hỏi mẫu.",
+                        );
+
+                        // Fallback to mock questions
+                        const mockQuestions = Array.from(
+                          { length: data.questionCount },
+                          (_, i) => ({
+                            id: Date.now().toString() + i,
+                            createdAt: Date.now(),
+                            number: questions.length + i + 1,
+                            type: "MULTIPLE_CHOICE" as const,
+                            questionText: `Câu hỏi AI ${i + 1}: ${data.topic}`,
+                            options: [
+                              {
+                                id: "1",
+                                label: "A",
+                                text: "Đáp án A",
+                                isCorrect: true,
+                              },
+                              {
+                                id: "2",
+                                label: "B",
+                                text: "Đáp án B",
+                                isCorrect: false,
+                              },
+                              {
+                                id: "3",
+                                label: "C",
+                                text: "Đáp án C",
+                                isCorrect: false,
+                              },
+                              {
+                                id: "4",
+                                label: "D",
+                                text: "Đáp án D",
+                                isCorrect: false,
+                              },
+                            ],
+                            difficulty: data.difficulty,
+                            topic: data.topic || "AI Generated",
+                          }),
+                        );
+                        mockQuestions.forEach((q) => handleAddQuestion(q));
+                      }
+                    }}
+                  />
+                </div>
+              )}
+
+              {activeTab === "bank" && (
+                <div>
+                  <QuestionBankTab
+                    onAddQuestions={(newQuestions) => {
+                      // Filter out questions that already exist in the current list
+                      const existingQuestionIds = new Set(
+                        questions.map((q) => q.id),
+                      );
+                      const uniqueQuestions = newQuestions.filter(
+                        (q) => !existingQuestionIds.has(q.id),
+                      );
+
+                      if (uniqueQuestions.length === 0) {
+                        alert("Tất cả câu hỏi đã được thêm vào danh sách!");
                         return;
                       }
 
                       // Transform questions to match the expected format
-                      const transformedQuestions = randomQuestions.slice(0, data.questionCount).map((q, index) => ({
-                        id: q.id,
-                        createdAt: q.createdAt,
-                        number: questions.length + index + 1,
-                        type: q.type,
-                        questionText: q.questionText,
-                        options: q.options.map(opt => ({
-                          ...opt,
-                          isCorrect: opt.isCorrect || false, // Ensure isCorrect is set
-                        })),
-                        difficulty: q.difficulty,
-                        topic: q.topic || data.topic || "AI Generated",
-                      }));
-
-                      transformedQuestions.forEach((q) => handleAddQuestion(q));
-                      
-                      if (transformedQuestions.length < data.questionCount) {
-                        alert(`Chỉ tìm thấy ${transformedQuestions.length} câu hỏi phù hợp trong ngân hàng câu hỏi.`);
-                      }
-                    } catch (error) {
-                      console.error("Error generating questions:", error);
-                      alert("Có lỗi xảy ra khi tạo câu hỏi từ ngân hàng câu hỏi. Đang sử dụng câu hỏi mẫu.");
-                      
-                      // Fallback to mock questions
-                      const mockQuestions = Array.from(
-                        { length: data.questionCount },
-                        (_, i) => ({
-                          id: Date.now().toString() + i,
-                          createdAt: Date.now(),
-                          number: questions.length + i + 1,
-                          type: "MULTIPLE_CHOICE" as const,
-                          questionText: `Câu hỏi AI ${i + 1}: ${data.topic}`,
-                          options: [
-                            {
-                              id: "1",
-                              label: "A",
-                              text: "Đáp án A",
-                              isCorrect: true,
-                            },
-                            {
-                              id: "2",
-                              label: "B",
-                              text: "Đáp án B",
-                              isCorrect: false,
-                            },
-                            {
-                              id: "3",
-                              label: "C",
-                              text: "Đáp án C",
-                              isCorrect: false,
-                            },
-                            {
-                              id: "4",
-                              label: "D",
-                              text: "Đáp án D",
-                              isCorrect: false,
-                            },
-                          ],
-                          difficulty: data.difficulty,
-                          topic: data.topic || "AI Generated",
+                      const transformedQuestions = uniqueQuestions.map(
+                        (q, index) => ({
+                          ...q,
+                          number: questions.length + index + 1,
                         }),
                       );
-                      mockQuestions.forEach((q) => handleAddQuestion(q));
-                    }
-                  }}
-                />
+
+                      transformedQuestions.forEach((q) => handleAddQuestion(q));
+
+                      if (uniqueQuestions.length < newQuestions.length) {
+                        const duplicateCount =
+                          newQuestions.length - uniqueQuestions.length;
+                        alert(
+                          `Đã thêm ${uniqueQuestions.length} câu hỏi mới. ${duplicateCount} câu hỏi đã tồn tại trong danh sách.`,
+                        );
+                      }
+                    }}
+                    selectedSubjectId={testDetails.subject}
+                    selectedNodeId={testDetails.node}
+                    existingQuestionIds={new Set(questions.map((q) => q.id))}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: Question Points Grid (Left) and Preview (Right) */}
+        <div className="grid gap-8 lg:grid-cols-3">
+          {/* Question Points Grid */}
+          <div className="bg-white rounded-2xl p-8 shadow-md lg:col-span-1">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-purple-600" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Điểm số câu hỏi
+                  </h2>
+                  <p className="text-gray-600">
+                    Thiết lập điểm cho từng câu hỏi
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-2xl font-bold text-blue-600">
+                  {questions.length}
+                </span>
+                <p className="text-sm text-gray-600">câu hỏi</p>
+              </div>
+            </div>
+
+            {questions.length > 0 ? (
+              <QuestionPointsGrid
+                questions={questions}
+                onPointsChange={(questionId, points) => {
+                  setQuestions((prev) =>
+                    prev.map((q) =>
+                      q.id === questionId ? { ...q, points } : q,
+                    ),
+                  );
+                  // Update points state for display
+                  setPoints(prev => ({
+                    ...prev,
+                    [questionId]: points
+                  }));
+                }}
+                onNavigateToQuestion={(index) => setCurrentQuestionIndex(index)}
+                currentQuestionIndex={currentQuestionIndex}
+                points={points}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-gray-500 mb-4">Chưa có câu hỏi nào</div>
+                <p className="text-sm text-gray-400">
+                  Hãy thêm câu hỏi để thiết lập điểm số
+                </p>
               </div>
             )}
+          </div>
 
-            {activeTab === "bank" && (
-              <div>
-                <QuestionBankTab
-                  onAddQuestions={(newQuestions) => {
-                    // Filter out questions that already exist in the current list
-                    const existingQuestionIds = new Set(questions.map(q => q.id));
-                    const uniqueQuestions = newQuestions.filter(q => !existingQuestionIds.has(q.id));
-                    
-                    if (uniqueQuestions.length === 0) {
-                      alert("Tất cả câu hỏi đã được thêm vào danh sách!");
-                      return;
-                    }
-
-                    // Transform questions to match the expected format
-                    const transformedQuestions = uniqueQuestions.map((q, index) => ({
-                      ...q,
-                      number: questions.length + index + 1,
-                    }));
-                    
-                    transformedQuestions.forEach((q) => handleAddQuestion(q));
-                    
-                    if (uniqueQuestions.length < newQuestions.length) {
-                      const duplicateCount = newQuestions.length - uniqueQuestions.length;
-                      alert(`Đã thêm ${uniqueQuestions.length} câu hỏi mới. ${duplicateCount} câu hỏi đã tồn tại trong danh sách.`);
-                    }
-                  }}
-                  selectedSubjectId={testDetails.subject}
-                  selectedNodeId={testDetails.node}
-                  existingQuestionIds={new Set(questions.map(q => q.id))}
-                />
+          {/* Paginated Question Preview */}
+          <div className="bg-white rounded-2xl p-8 shadow-md lg:col-span-2">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                  <Eye className="w-6 h-6 text-orange-600" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Xem trước câu hỏi
+                  </h2>
+                  <p className="text-gray-600">Xem chi tiết từng câu hỏi</p>
+                </div>
               </div>
-            )}
+              <div className="text-right">
+                <span className="text-2xl font-bold text-blue-600">
+                  {questions.length > 0 ? currentQuestionIndex + 1 : 0}
+                </span>
+                <p className="text-sm text-gray-600">câu hỏi hiện tại</p>
+              </div>
+            </div>
 
-            {/* Questions List */}
-            {questions.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Danh sách câu hỏi
-                </h3>
-                <QuizReviewList
-                  questions={questions}
-                  onRemoveQuestion={handleRemoveQuestion}
-                />
+            {questions.length > 0 ? (
+              <PaginatedQuestionPreview
+                questions={questions}
+                currentQuestionIndex={currentQuestionIndex}
+                onQuestionChange={setCurrentQuestionIndex}
+                points={points}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-gray-500 mb-4">Chưa có câu hỏi nào</div>
+                <p className="text-sm text-gray-400">
+                  Hãy thêm câu hỏi để xem trước
+                </p>
               </div>
             )}
           </div>
