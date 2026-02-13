@@ -122,11 +122,11 @@ export default function GameHeader() {
   return (
     <>
       {/* ────── DESKTOP / TABLET HEADER ────── */}
-      <header className="hud-bar sticky top-0 z-50 rounded-b-2xl md:rounded-b-3xl">
-        <div className="mx-auto flex items-center justify-between px-4 py-2 md:px-6 max-w-7xl">
+      <header className="hud-bar sticky top-0 z-50 rounded-b-2xl md:rounded-b-3xl overflow-visible">
+        <div className="mx-auto flex items-center justify-between px-2 sm:px-4 py-2 md:px-6 max-w-7xl min-w-0">
           {/* ── LEFT: Logo ── */}
           <div
-            className="flex items-center gap-2.5 cursor-pointer shrink-0"
+            className="flex items-center gap-1.5 sm:gap-2.5 cursor-pointer shrink-0 min-w-0"
             onClick={() => router.push("/")}
             role="button"
             tabIndex={0}
@@ -142,16 +142,16 @@ export default function GameHeader() {
             <Image
               src="/logo.svg"
               alt="Age of Study Logo"
-              width={150}
-              height={150}
-              className="select-none"
+              width={48}
+              height={48}
+              className="select-none w-10 h-10 sm:w-12 sm:h-12"
               priority
             />
-            <span className="bubble-text hidden sm:inline">Age Of Study</span>
+            <span className="bubble-text hidden lg:inline text-lg sm:text-xl">Age Of Study</span>
           </div>
 
           {/* ── CENTER: Desktop Nav ── */}
-          <nav className="hidden md:flex items-center gap-1.5 bg-white/60 rounded-full px-2 py-1.5 border border-gray-100">
+          <nav className="hidden md:flex items-center gap-1.5 bg-white/60 rounded-full px-2 py-1.5 border border-gray-100 flex-shrink min-w-0">
             {NAV_ITEMS.map((item) => {
               const isActive =
                 pathname === item.href ||
@@ -190,17 +190,17 @@ export default function GameHeader() {
           </nav>
 
           {/* ── RIGHT: Stats + Avatar ── */}
-          <div className="flex items-center gap-2 md:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0 min-w-0">
             {/* Streak Badge */}
             <motion.div
               className="hud-badge hud-badge--streak"
               whileHover={{ scale: 1.08 }}
               transition={SPRING}
             >
-              <span role="img" aria-label="Streak">
+              <span role="img" aria-label="Streak" className="text-base sm:text-lg">
                 🔥
               </span>
-              <span>{streak} Ngày</span>
+              <span className="whitespace-nowrap text-xs sm:text-sm">{streak}<span className="hidden xs:inline"> Ngày</span></span>
             </motion.div>
 
             {/* XP Badge */}
@@ -209,14 +209,14 @@ export default function GameHeader() {
               whileHover={{ scale: 1.08 }}
               transition={SPRING}
             >
-              <span role="img" aria-label="XP">
+              <span role="img" aria-label="XP" className="text-base sm:text-lg">
                 ⭐
               </span>
-              <span>{formatXP(xp)} XP</span>
+              <span className="whitespace-nowrap text-xs sm:text-sm">{formatXP(xp)}<span className="hidden xs:inline"> XP</span></span>
             </motion.div>
 
             {/* Avatar + Dropdown */}
-            <div className="relative" ref={dropdownRef}>
+            <div className="relative z-50" ref={dropdownRef}>
               <motion.button
                 className="hud-avatar"
                 onClick={() => setDropdownOpen((prev) => !prev)}

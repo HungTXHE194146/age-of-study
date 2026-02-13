@@ -85,22 +85,23 @@ export default function AddUserModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-lg w-full">
+      <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">
+        <div className="border-b border-gray-200 px-4 sm:px-6 py-4 flex items-center justify-between flex-shrink-0">
+          <h2 className="text-lg sm:text-2xl font-bold text-gray-900">
             Thêm người dùng mới
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+            aria-label="Đóng"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        {/* Form - Scrollable */}
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
           {error && (
             <div className="p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 text-sm">
               {error}
@@ -118,7 +119,7 @@ export default function AddUserModal({
               onChange={(e) =>
                 setFormData({ ...formData, username: e.target.value })
               }
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors text-sm sm:text-base"
               placeholder="username"
               required
             />
@@ -135,7 +136,7 @@ export default function AddUserModal({
               onChange={(e) =>
                 setFormData({ ...formData, password: e.target.value })
               }
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors text-sm sm:text-base"
               placeholder="Tối thiểu 6 ký tự"
               required
               minLength={6}
@@ -153,7 +154,7 @@ export default function AddUserModal({
               onChange={(e) =>
                 setFormData({ ...formData, full_name: e.target.value })
               }
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors text-sm sm:text-base"
               placeholder="Nhập họ và tên (tùy chọn)"
             />
           </div>
@@ -168,7 +169,7 @@ export default function AddUserModal({
               onChange={(e) =>
                 setFormData({ ...formData, role: e.target.value as any })
               }
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors bg-white"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors bg-white text-sm sm:text-base"
             >
               <option value="student">Học sinh</option>
               <option value="teacher">Giáo viên</option>
@@ -190,7 +191,7 @@ export default function AddUserModal({
                   daily_limit_minutes: parseInt(e.target.value) || 0,
                 })
               }
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors text-sm sm:text-base"
               min="0"
               max="1440"
             />

@@ -4,9 +4,6 @@ import { createBrowserClient } from '@supabase/ssr'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-// Original client for backward compatibility
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
 // Singleton instance for browser client
 let browserClient: ReturnType<typeof createBrowserClient> | null = null
 
@@ -18,6 +15,10 @@ export function getSupabaseBrowserClient() {
   }
   return browserClient
 }
+
+// @deprecated Use getSupabaseBrowserClient() instead to avoid multiple client instances
+// Original client kept for backward compatibility only
+export const supabase = getSupabaseBrowserClient()
 
 // Type definitions for database tables
 export interface Profile {

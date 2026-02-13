@@ -199,20 +199,22 @@ export default function StudentSettingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 max-w-4xl">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
+        className="text-center mb-6 sm:mb-8"
       >
-        <h1 className="text-4xl font-black text-gray-900 mb-2">
+        <h1 className="text-3xl sm:text-4xl font-black text-gray-900 mb-2">
           ⚙️ Cài Đặt Của Bạn
         </h1>
-        <p className="text-lg text-gray-600">
-          Hãy hoàn thiện thông tin để nhận{" "}
-          <span className="font-bold text-green-600">100 XP</span>! 🎉
-        </p>
+        {!hasReceivedXP && (
+          <p className="text-base sm:text-lg text-gray-600">
+            Hãy hoàn thiện thông tin để nhận{" "}
+            <span className="font-bold text-green-600">100 XP</span>! 🎉
+          </p>
+        )}
       </motion.div>
 
       {/* XP Reward Banner */}
@@ -220,67 +222,69 @@ export default function StudentSettingsPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-3xl p-6 mb-8 border-4 border-white shadow-2xl"
+          className="bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 mb-6 sm:mb-8 border-2 sm:border-4 border-white shadow-2xl"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Trophy className="w-12 h-12" />
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <Trophy className="w-8 h-8 sm:w-12 sm:h-12" />
               <div>
-                <h3 className="text-2xl font-black">Phần Thưởng Đặc Biệt!</h3>
-                <p className="text-lg">Hoàn thành hồ sơ để nhận 100 XP</p>
+                <h3 className="text-lg sm:text-2xl font-black">Phần Thưởng Đặc Biệt!</h3>
+                <p className="text-sm sm:text-lg">Hoàn thành hồ sơ để nhận 100 XP</p>
               </div>
             </div>
-            <div className="text-5xl font-black">+100 XP</div>
+            <div className="text-3xl sm:text-5xl font-black">+100 XP</div>
           </div>
         </motion.div>
       )}
 
       {/* Progress Bar */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="bg-white rounded-2xl p-6 shadow-lg mb-8 border-2 border-blue-200"
-      >
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-lg font-bold text-gray-800">
-            Tiến Độ Hoàn Thiện
-          </span>
-          <span className="text-2xl font-black text-blue-600">
-            {completionPercentage}%
-          </span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-6 overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${completionPercentage}%` }}
-            transition={{ duration: 0.5 }}
-            className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full flex items-center justify-center"
-          >
-            {completionPercentage > 10 && (
-              <span className="text-xs font-bold text-white">
-                {completionPercentage}%
-              </span>
-            )}
-          </motion.div>
-        </div>
-        {isProfileComplete && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-3 text-center text-green-600 font-bold flex items-center justify-center gap-2"
-          >
-            <Sparkles className="w-5 h-5" />
-            <span>Hoàn thành rồi! Tuyệt vời!</span>
-            <Sparkles className="w-5 h-5" />
-          </motion.div>
-        )}
-      </motion.div>
+      {!hasReceivedXP && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-white rounded-2xl p-4 sm:p-6 shadow-lg mb-6 sm:mb-8 border-2 border-blue-200"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-lg font-bold text-gray-800">
+              Tiến Độ Hoàn Thiện
+            </span>
+            <span className="text-2xl font-black text-blue-600">
+              {completionPercentage}%
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-6 overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${completionPercentage}%` }}
+              transition={{ duration: 0.5 }}
+              className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full flex items-center justify-center"
+            >
+              {completionPercentage > 10 && (
+                <span className="text-xs font-bold text-white">
+                  {completionPercentage}%
+                </span>
+              )}
+            </motion.div>
+          </div>
+          {isProfileComplete && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-3 text-center text-green-600 font-bold flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-5 h-5" />
+              <span>Hoàn thành rồi! Tuyệt vời!</span>
+              <Sparkles className="w-5 h-5" />
+            </motion.div>
+          )}
+        </motion.div>
+      )}
 
       {/* Settings Form */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-3xl p-8 shadow-xl border-2 border-gray-200"
+        className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xl border-2 border-gray-200"
       >
         <div className="space-y-8">
           {/* Basic Info Section */}
@@ -310,9 +314,9 @@ export default function StudentSettingsPage() {
             </div>
 
             {/* Age and Grade */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div>
-                <label className="block text-lg font-bold text-gray-700 mb-2">
+                <label className="block text-base sm:text-lg font-bold text-gray-700 mb-2">
                   Bạn bao nhiêu tuổi? 🎂
                 </label>
                 <input
@@ -328,7 +332,7 @@ export default function StudentSettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-lg font-bold text-gray-700 mb-2">
+                <label className="block text-base sm:text-lg font-bold text-gray-700 mb-2">
                   Bạn học lớp mấy? 📚
                 </label>
                 <select
@@ -336,7 +340,7 @@ export default function StudentSettingsPage() {
                   onChange={(e) =>
                     setGrade(e.target.value ? parseInt(e.target.value) : "")
                   }
-                  className="w-full px-6 py-4 text-lg border-2 border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full px-4 sm:px-6 py-3 sm:py-4 text-base sm:text-lg border-2 border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500 transition-colors"
                 >
                   <option value="">Chọn lớp</option>
                   <option value="1">Lớp 1</option>
@@ -360,14 +364,14 @@ export default function StudentSettingsPage() {
             <p className="text-sm text-gray-600 mb-4">
               💡 Chọn một biểu tượng đáng yêu đại diện cho bạn!
             </p>
-            <div className="grid grid-cols-8 gap-3">
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 sm:gap-3">
               {AVATAR_OPTIONS.map((avatar) => (
                 <motion.button
                   key={avatar}
                   onClick={() => setSelectedAvatar(avatar)}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className={`text-4xl p-4 rounded-2xl border-4 transition-all ${
+                  className={`text-2xl sm:text-3xl md:text-4xl p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl border-2 sm:border-4 transition-all ${
                     selectedAvatar === avatar
                       ? "border-blue-500 bg-blue-100 shadow-lg"
                       : "border-gray-300 bg-gray-50 hover:border-blue-300"
@@ -390,7 +394,7 @@ export default function StudentSettingsPage() {
             <p className="text-sm text-gray-600 mb-4">
               💡 Bạn thích học môn nào nhất?
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
               {SUBJECTS.map((subject) => (
                 <motion.button
                   key={subject.id}
@@ -425,23 +429,23 @@ export default function StudentSettingsPage() {
             <p className="text-sm text-gray-600 mb-4">
               💡 Bạn muốn học bao nhiêu phút mỗi ngày?
             </p>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               {STUDY_GOALS.map((minutes) => (
                 <motion.button
                   key={minutes}
                   onClick={() => setDailyGoal(minutes)}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className={`p-6 rounded-2xl border-4 transition-all ${
+                  className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 sm:border-4 transition-all ${
                     dailyGoal === minutes
                       ? "border-green-500 bg-green-100 shadow-lg"
                       : "border-gray-300 bg-gray-50 hover:border-green-300"
                   }`}
                 >
-                  <div className="text-3xl font-black text-gray-800">
+                  <div className="text-2xl sm:text-3xl font-black text-gray-800">
                     {minutes}
                   </div>
-                  <div className="text-sm font-semibold text-gray-600">
+                  <div className="text-xs sm:text-sm font-semibold text-gray-600">
                     phút
                   </div>
                 </motion.button>
@@ -456,9 +460,9 @@ export default function StudentSettingsPage() {
           disabled={saving}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="w-full mt-8 px-8 py-6 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-2xl font-black rounded-3xl shadow-2xl border-4 border-white hover:from-blue-600 hover:to-cyan-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full mt-6 sm:mt-8 px-6 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-lg sm:text-2xl font-black rounded-2xl sm:rounded-3xl shadow-2xl border-2 sm:border-4 border-white hover:from-blue-600 hover:to-cyan-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span className="flex items-center justify-center gap-3">
+          <span className="flex items-center justify-center gap-2 sm:gap-3">
             {saving ? (
               <>
                 <LoadingSpinner size="sm" />
@@ -467,9 +471,9 @@ export default function StudentSettingsPage() {
               </>
             ) : (
               <>
-                <Save className="w-8 h-8" />
+                <Save className="w-5 h-5 sm:w-8 sm:h-8" />
                 Lưu Thay Đổi
-                <Save className="w-8 h-8" />
+                <Save className="w-5 h-5 sm:w-8 sm:h-8" />
               </>
             )}
           </span>
