@@ -1,12 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
+import TierBadge from "./TierBadge";
+import type { TierLevel } from "@/lib/tierSystem";
 
 interface RankCardProps {
   rank: number;
   name: string;
   avatarUrl: string | null;
   xp: number;
+  tier: TierLevel;
+  improvement?: number; // percentage
   isCurrentUser?: boolean;
 }
 
@@ -23,6 +27,8 @@ export default function RankCard({
   name,
   avatarUrl,
   xp,
+  tier,
+  improvement,
   isCurrentUser = false,
 }: RankCardProps) {
   const isEmoji =
@@ -83,13 +89,30 @@ export default function RankCard({
         {/* Name and XP */}
         <div className="flex-1">
           <p className="font-black text-lg text-gray-800 mb-1">{name}</p>
-          <div className="flex items-center gap-1">
-            <span className="text-yellow-500">⭐</span>
-            <span className="font-bold text-xl text-gray-900">
-              {xp.toLocaleString()}
-            </span>
-            <span className="text-sm text-gray-600">XP</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1">
+              <span className="text-yellow-500">⭐</span>
+              <span className="font-bold text-xl text-gray-900">
+                {xp.toLocaleString()}
+              </span>
+              <span className="text-sm text-gray-600">XP</span>
+            </div>
+            {improvement !== undefined && improvement !== 0 && (
+              <div
+                className={`text-sm font-bold ${
+                  improvement > 0 ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {improvement > 0 ? "+" : ""}
+                {improvement}%
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Tier Badge */}
+        <div className="flex-shrink-0">
+          <TierBadge tier={tier} size="sm" showName={false} />
         </div>
       </div>
     </motion.div>

@@ -1,5 +1,7 @@
 import { getSupabaseBrowserClient } from './supabase';
 import type { Profile } from './supabase';
+import type { TierLevel } from './tierSystem';
+import { calculateTier, calculateImprovement } from './tierSystem';
 
 export interface LeaderboardEntry {
   rank: number;
@@ -11,6 +13,11 @@ export interface LeaderboardEntry {
   weekly_xp: number;
   monthly_xp: number;
   current_streak: number;
+  tier: TierLevel;
+  previous_week_xp: number;
+  previous_month_xp: number;
+  weekly_improvement: number; // percentage
+  monthly_improvement: number; // percentage
 }
 
 export type LeaderboardPeriod = 'weekly' | 'monthly' | 'all-time';
@@ -37,7 +44,7 @@ export async function getStudentLeaderboard(
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, username, full_name, avatar_url, total_xp, weekly_xp, monthly_xp, current_streak')
+      .select('id, username, full_name, avatar_url, total_xp, weekly_xp, monthly_xp, current_streak, tier, previous_week_xp, previous_month_xp')
       .eq('role', 'student')
       .order(xpField, { ascending: false })
       .limit(limit);
@@ -49,18 +56,31 @@ export async function getStudentLeaderboard(
 
     if (!data) return [];
 
-    // Add rank to each entry
-    return data.map((entry: any, index: number) => ({
-      rank: index + 1,
-      id: entry.id,
-      username: entry.username,
-      full_name: entry.full_name,
-      avatar_url: entry.avatar_url,
-      total_xp: entry.total_xp || 0,
-      weekly_xp: entry.weekly_xp || 0,
-      monthly_xp: entry.monthly_xp || 0,
-      current_streak: entry.current_streak || 0,
-    }));
+    // Add rank and calculate improvements
+    return data.map((entry: any, index: number) => {
+      const totalXP = entry.total_xp || 0;
+      const weeklyXP = entry.weekly_xp || 0;
+      const monthlyXP = entry.monthly_xp || 0;
+      const previousWeekXP = entry.previous_week_xp || 0;
+      const previousMonthXP = entry.previous_month_xp || 0;
+
+      return {
+        rank: index + 1,
+        id: entry.id,
+        username: entry.username,
+        full_name: entry.full_name,
+        avatar_url: entry.avatar_url,
+        total_xp: totalXP,
+        weekly_xp: weeklyXP,
+        monthly_xp: monthlyXP,
+        current_streak: entry.current_streak || 0,
+        tier: entry.tier || calculateTier(totalXP),
+        previous_week_xp: previousWeekXP,
+        previous_month_xp: previousMonthXP,
+        weekly_improvement: calculateImprovement(weeklyXP, previousWeekXP),
+        monthly_improvement: calculateImprovement(monthlyXP, previousMonthXP),
+      };
+    });
   } catch (error) {
     console.error('Unexpected error fetching leaderboard:', error);
     return [];

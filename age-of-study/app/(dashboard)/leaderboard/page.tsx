@@ -9,24 +9,18 @@ import {
   type LeaderboardEntry,
   type LeaderboardPeriod,
 } from "@/lib/leaderboardService";
-import PodiumCard from "@/components/leaderboard/PodiumCard";
 import RankCard from "@/components/leaderboard/RankCard";
+import PersonalProgress from "@/components/leaderboard/PersonalProgress";
 
-const ENCOURAGEMENT_MESSAGES = [
-  "🌟 Tiếp tục học để leo cao hơn!",
-  "🚀 Bạn đang làm rất tốt!",
-  "📚 Mỗi điểm đều có giá trị!",
-  "💪 Cố lên! Bạn làm được!",
-  "🎯 Hãy cố gắng hết sức mình!",
-];
+type ViewMode = "personal" | "class";
 
 export default function LeaderboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuthStore();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [period, setPeriod] = useState<LeaderboardPeriod>("all-time");
+  const [viewMode, setViewMode] = useState<ViewMode>("personal");
   const [loading, setLoading] = useState(true);
-  const [encouragementIndex, setEncouragementIndex] = useState(0);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -37,16 +31,6 @@ export default function LeaderboardPage() {
   useEffect(() => {
     loadLeaderboard();
   }, [period]);
-
-  // Rotate encouragement messages
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setEncouragementIndex(
-        (prev) => (prev + 1) % ENCOURAGEMENT_MESSAGES.length,
-      );
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
 
   const loadLeaderboard = async () => {
     setLoading(true);
@@ -68,8 +52,8 @@ export default function LeaderboardPage() {
     );
   }
 
-  const topThree = leaderboard.slice(0, 3);
-  const restOfRanks = leaderboard.slice(3);
+  const userEntry = leaderboard.find((e) => e.id === user?.id);
+  const topTen = leaderboard.slice(0, 10);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -80,256 +64,202 @@ export default function LeaderboardPage() {
         className="text-center mb-8"
       >
         <h1 className="text-5xl font-black text-gray-900 mb-3">
-          🏆 Bảng Xếp Hạng
+          🏆 Bảng Vinh Danh
         </h1>
         <p className="text-xl text-gray-600">
-          Những chiến binh học tập xuất sắc nhất!
+          So sánh với chính mình, không so với người khác!
         </p>
       </motion.div>
 
-      {/* Period Selector */}
+      {/* View Mode Tabs */}
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="flex justify-center gap-3 mb-12"
+        className="flex justify-center gap-3 mb-8"
       >
-        {[
-          {
-            value: "weekly" as LeaderboardPeriod,
-            label: "📅 Tuần này",
-            icon: "📅",
-          },
-          {
-            value: "monthly" as LeaderboardPeriod,
-            label: "📆 Tháng này",
-            icon: "📆",
-          },
-          {
-            value: "all-time" as LeaderboardPeriod,
-            label: "🌟 Mọi lúc",
-            icon: "🌟",
-          },
-        ].map((option) => (
-          <button
-            key={option.value}
-            onClick={() => setPeriod(option.value)}
-            className={`
-              px-6 py-3 rounded-2xl font-black text-lg
-              transition-all duration-200
-              ${
-                period === option.value
-                  ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg scale-105"
-                  : "bg-white text-gray-700 border-4 border-gray-200 hover:border-blue-300"
-              }
-            `}
-          >
-            {option.icon} {option.label.replace(option.icon + " ", "")}
-          </button>
-        ))}
+        <button
+          onClick={() => setViewMode("personal")}
+          className={`
+            px-8 py-4 rounded-2xl font-black text-lg
+            transition-all duration-200
+            ${
+              viewMode === "personal"
+                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg scale-105"
+                : "bg-white text-gray-700 border-4 border-gray-200 hover:border-purple-300"
+            }
+          `}
+        >
+          ⭐ Tiến Bộ Của Tôi
+        </button>
+        <button
+          onClick={() => setViewMode("class")}
+          className={`
+            px-8 py-4 rounded-2xl font-black text-lg
+            transition-all duration-200
+            ${
+              viewMode === "class"
+                ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg scale-105"
+                : "bg-white text-gray-700 border-4 border-gray-200 hover:border-blue-300"
+            }
+          `}
+        >
+          🏆 Bảng Vinh Danh Lớp
+        </button>
       </motion.div>
 
       {loading ? (
         <div className="text-center py-20">
           <div className="text-6xl mb-4 animate-bounce">🏆</div>
           <p className="text-xl font-bold text-gray-600">
-            Đang tải bảng xếp hạng...
+            Đang tải dữ liệu...
           </p>
         </div>
       ) : (
-        <>
-          {/* Top 3 Podium */}
-          {topThree.length > 0 && (
-            <div className="mb-12">
-              <div className="flex items-end justify-center gap-8 mb-8">
-                {/* 2nd Place */}
-                {topThree[1] && (
-                  <PodiumCard
-                    rank={2}
-                    name={
-                      topThree[1].full_name ||
-                      topThree[1].username ||
-                      "Học sinh"
-                    }
-                    avatarUrl={topThree[1].avatar_url}
-                    xp={
-                      period === "weekly"
-                        ? topThree[1].weekly_xp
-                        : period === "monthly"
-                          ? topThree[1].monthly_xp
-                          : topThree[1].total_xp
-                    }
-                  />
-                )}
-
-                {/* 1st Place */}
-                {topThree[0] && (
-                  <PodiumCard
-                    rank={1}
-                    name={
-                      topThree[0].full_name ||
-                      topThree[0].username ||
-                      "Học sinh"
-                    }
-                    avatarUrl={topThree[0].avatar_url}
-                    xp={
-                      period === "weekly"
-                        ? topThree[0].weekly_xp
-                        : period === "monthly"
-                          ? topThree[0].monthly_xp
-                          : topThree[0].total_xp
-                    }
-                  />
-                )}
-
-                {/* 3rd Place */}
-                {topThree[2] && (
-                  <PodiumCard
-                    rank={3}
-                    name={
-                      topThree[2].full_name ||
-                      topThree[2].username ||
-                      "Học sinh"
-                    }
-                    avatarUrl={topThree[2].avatar_url}
-                    xp={
-                      period === "weekly"
-                        ? topThree[2].weekly_xp
-                        : period === "monthly"
-                          ? topThree[2].monthly_xp
-                          : topThree[2].total_xp
-                    }
-                  />
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Rest of Rankings */}
-          {restOfRanks.length > 0 && (
-            <div className="space-y-3 mb-8">
-              {restOfRanks.map((entry) => (
-                <RankCard
-                  key={entry.id}
-                  rank={entry.rank}
-                  name={entry.full_name || entry.username || "Học sinh"}
-                  avatarUrl={entry.avatar_url}
-                  xp={
-                    period === "weekly"
-                      ? entry.weekly_xp
-                      : period === "monthly"
-                        ? entry.monthly_xp
-                        : entry.total_xp
-                  }
-                  isCurrentUser={user?.id === entry.id}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Encouragement Banner */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-3xl p-6 text-center shadow-xl mb-24"
-          >
-            <AnimatePresence mode="wait">
-              <motion.p
-                key={encouragementIndex}
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -10, opacity: 0 }}
+        <AnimatePresence mode="wait">
+          {viewMode === "personal" ? (
+            userEntry ? (
+              <motion.div
+                key="personal"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
                 transition={{ duration: 0.3 }}
-                className="text-2xl font-black text-white"
               >
-                {ENCOURAGEMENT_MESSAGES[encouragementIndex]}
-              </motion.p>
-            </AnimatePresence>
-          </motion.div>
-        </>
-      )}
-
-      {/* Sticky "Your Rank" Banner */}
-      {!loading &&
-        user &&
-        (() => {
-          const userEntry = leaderboard.find((e) => e.id === user.id);
-          if (!userEntry) return null;
-
-          const userXP =
-            period === "weekly"
-              ? userEntry.weekly_xp
-              : period === "monthly"
-                ? userEntry.monthly_xp
-                : userEntry.total_xp;
-          const nextRank = userEntry.rank - 1;
-          const nextEntry = leaderboard.find((e) => e.rank === nextRank);
-          const xpNeeded = nextEntry
-            ? (period === "weekly"
-                ? nextEntry.weekly_xp
-                : period === "monthly"
-                  ? nextEntry.monthly_xp
-                  : nextEntry.total_xp) - userXP
-            : 0;
-
-          return (
+                <PersonalProgress
+                  totalXP={userEntry.total_xp}
+                  weeklyXP={userEntry.weekly_xp}
+                  monthlyXP={userEntry.monthly_xp}
+                  previousWeekXP={userEntry.previous_week_xp}
+                  previousMonthXP={userEntry.previous_month_xp}
+                  currentStreak={userEntry.current_streak}
+                  tier={userEntry.tier}
+                  rank={userEntry.rank}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="personal-empty"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.3 }}
+                className="text-center py-20 bg-white rounded-3xl shadow-xl border-4 border-purple-200"
+              >
+                <div className="text-8xl mb-6 animate-bounce">🌱</div>
+                <h3 className="text-3xl font-black text-gray-800 mb-4">
+                  Hành trình của bạn mới bắt đầu!
+                </h3>
+                <p className="text-xl text-gray-600 max-w-md mx-auto mb-8">
+                  Hoàn thành bài học đầu tiên để theo dõi tiến độ cá nhân của bạn
+                </p>
+                <button
+                  onClick={() => window.location.href = '/learn'}
+                  className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black text-lg rounded-2xl shadow-lg hover:scale-105 transition-transform"
+                >
+                  🚀 Bắt đầu học ngay!
+                </button>
+              </motion.div>
+            )
+          ) : (
             <motion.div
-              initial={{ y: 100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-2xl px-4 z-50"
+              key="class"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
             >
-              <div className="bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 rounded-3xl p-6 shadow-2xl border-4 border-white">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    {/* Avatar */}
-                    <div className="w-16 h-16 rounded-full bg-white p-1 flex items-center justify-center">
-                      {userEntry.avatar_url &&
-                      !userEntry.avatar_url.startsWith("http") &&
-                      !userEntry.avatar_url.startsWith("/") ? (
-                        <span className="text-4xl">{userEntry.avatar_url}</span>
-                      ) : userEntry.avatar_url ? (
-                        <img
-                          src={userEntry.avatar_url}
-                          alt="You"
-                          className="w-full h-full rounded-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-3xl font-bold text-gray-600">
-                          {(userEntry.full_name || userEntry.username || "?")
-                            .charAt(0)
-                            .toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Text */}
-                    <div className="text-left">
-                      <p className="text-white text-lg font-black">
-                        Bạn đang ở hạng #{userEntry.rank}
-                      </p>
-                      <p className="text-white/90 text-sm font-semibold">
-                        {userEntry.rank <= 10
-                          ? `Tuyệt vời! Bạn thuộc top 10! 🌟`
-                          : xpNeeded > 0
-                            ? `Còn ${xpNeeded} XP nữa để lên hạng ${nextRank}! 💪`
-                            : `Tiếp tục cố gắng! 🚀`}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* XP Display */}
-                  <div className="text-right">
-                    <p className="text-white text-3xl font-black">
-                      {userXP.toLocaleString()}
-                    </p>
-                    <p className="text-white/90 text-sm font-bold">XP</p>
-                  </div>
-                </div>
+              {/* Period Selector */}
+              <div className="flex justify-center gap-3 mb-8">
+                {[
+                  {
+                    value: "weekly" as LeaderboardPeriod,
+                    label: "Tuần này",
+                    icon: "📅",
+                  },
+                  {
+                    value: "monthly" as LeaderboardPeriod,
+                    label: "Tháng này",
+                    icon: "📆",
+                  },
+                  {
+                    value: "all-time" as LeaderboardPeriod,
+                    label: "Tất cả",
+                    icon: "🌟",
+                  },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setPeriod(option.value)}
+                    className={`
+                      px-6 py-3 rounded-2xl font-black text-base
+                      transition-all duration-200
+                      ${
+                        period === option.value
+                          ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg scale-105"
+                          : "bg-white text-gray-700 border-4 border-gray-200 hover:border-blue-300"
+                      }
+                    `}
+                  >
+                    {option.icon} {option.label}
+                  </button>
+                ))}
               </div>
+
+              {/* Top 10 Rankings */}
+              {topTen.length > 0 ? (
+                <div className="space-y-3 mb-8">
+                  {topTen.map((entry) => {
+                    const xp =
+                      period === "weekly"
+                        ? entry.weekly_xp
+                        : period === "monthly"
+                          ? entry.monthly_xp
+                          : entry.total_xp;
+                    const improvement =
+                      period === "weekly"
+                        ? entry.weekly_improvement
+                        : period === "monthly"
+                          ? entry.monthly_improvement
+                          : undefined;
+
+                    return (
+                      <RankCard
+                        key={entry.id}
+                        rank={entry.rank}
+                        name={entry.full_name || entry.username || "Học sinh"}
+                        avatarUrl={entry.avatar_url}
+                        xp={xp}
+                        tier={entry.tier}
+                        improvement={improvement}
+                        isCurrentUser={user?.id === entry.id}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-20">
+                  <div className="text-6xl mb-4">📊</div>
+                  <p className="text-xl font-bold text-gray-600">
+                    Chưa có dữ liệu xếp hạng
+                  </p>
+                </div>
+              )}
+
+              {/* Encouragement Banner */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="bg-gradient-to-r from-green-500 to-teal-500 rounded-3xl p-6 text-center shadow-xl"
+              >
+                <p className="text-xl font-black text-white">
+                  💚 Mọi người đều đang tiến bộ! Hãy học mỗi ngày nhé!
+                </p>
+              </motion.div>
             </motion.div>
-          );
-        })()}
+          )}
+        </AnimatePresence>
+      )}
     </div>
   );
 }
