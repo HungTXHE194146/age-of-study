@@ -20,9 +20,8 @@ import {
   ChevronDown,
   BookOpen,
 } from "lucide-react";
+import Loading, { LoadingInline } from "@/components/ui/loading";
 import { TestService } from "@/lib/testService";
-import { RouteProtectedWrapper } from "@/lib/routeMiddleware";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { subjectService } from "@/lib/subjectService";
 import { Subject } from "@/types/teacher";
 
@@ -225,11 +224,7 @@ export default function TestManagementPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner text="Đang tải..." />
-      </div>
-    );
+    return <Loading message="Đang tải dữ liệu giáo viên..." fullScreen />;
   }
 
   if (!isAuthenticated || !user) {
@@ -423,11 +418,8 @@ export default function TestManagementPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="px-6 py-4 text-center text-gray-500"
-                  >
-                    <LoadingSpinner text="Đang tải..." />
+                  <td colSpan={6} className="px-6 py-4">
+                    <LoadingInline message="Đang tải danh sách bài kiểm tra..." />
                   </td>
                 </tr>
               ) : filteredAndSortedTests.length === 0 ? (

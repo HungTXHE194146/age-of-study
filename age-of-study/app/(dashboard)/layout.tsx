@@ -5,6 +5,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { checkRoutePermission } from "@/lib/routeMiddleware";
+import Loading from "@/components/ui/loading";
 
 export default function DashboardLayout({
   children,
@@ -43,14 +44,7 @@ export default function DashboardLayout({
   }, [isLoading, isAuthenticated, user, router]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-4">📚</div>
-          <p className="text-gray-600">Đang tải...</p>
-        </div>
-      </div>
-    );
+    return <Loading message="Đang tải dashboard..." size="lg" fullScreen />;
   }
 
   if (!isAuthenticated || !user) {

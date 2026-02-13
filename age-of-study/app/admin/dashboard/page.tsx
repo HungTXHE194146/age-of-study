@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import StatsCard from "@/components/admin/StatsCard";
 import UserAvatar from "@/components/admin/UserAvatar";
+import Loading from "@/components/ui/loading";
 import { Users, GraduationCap, UserCog, Activity } from "lucide-react";
 
 interface UserStats {
@@ -122,32 +123,21 @@ export default function AdminDashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="p-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <Loading message="Đang tải bảng điều khiển..." size="lg" fullScreen />;
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-full">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Tổng quan</h1>
-        <p className="text-gray-600">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Tổng quan</h1>
+        <p className="text-sm sm:text-base text-gray-600">
           Xem tổng quan hoạt động của hệ thống Age of Study
         </p>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <StatsCard
           title="Tổng người dùng"
           value={stats.totalUsers}
@@ -184,35 +174,35 @@ export default function AdminDashboard() {
 
       {/* Recent Users Table */}
       <div className="bg-white rounded-xl border-2 border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900">
             Người dùng mới nhất
           </h2>
           <a
             href="/admin/users"
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-block"
           >
             Xem tất cả →
           </a>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[640px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Người dùng
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Vai trò
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   XP
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Ngày tạo
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Trạng thái
                 </th>
               </tr>
@@ -223,7 +213,7 @@ export default function AdminDashboard() {
                   key={user.id}
                   className="hover:bg-gray-50 transition-colors"
                 >
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <UserAvatar
                         avatarUrl={user.avatar_url}
@@ -231,17 +221,17 @@ export default function AdminDashboard() {
                         username={user.username}
                         size="md"
                       />
-                      <div>
-                        <p className="font-semibold text-gray-900">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm truncate">
                           {user.full_name || user.username || "Chưa đặt tên"}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 truncate">
                           {user.username || `ID: ${user.id.slice(0, 8)}`}
                         </p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                     <span
                       className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border-2 ${getRoleBadgeColor(
                         user.role,
@@ -250,13 +240,13 @@ export default function AdminDashboard() {
                       {getRoleLabel(user.role)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                     {user.total_xp.toLocaleString()} XP
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {formatDate(user.created_at)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full border-2 bg-green-100 text-green-700 border-green-200">
                       Hoạt động
                     </span>

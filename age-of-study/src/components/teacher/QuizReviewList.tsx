@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "../ui/badge";
 import { Question, SortOption } from "@/types/teacher";
-import { sortOptions } from "@/constants/teacherMockData";
+import { sortOptions } from "@/constants/teacherConstants";
 import { Check, ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
 
 interface QuizReviewListProps {
@@ -53,6 +53,7 @@ export function QuizReviewList({
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
+            aria-label="Sort questions by"
             className="w-[180px] flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
             {sortOptions.map((option) => (
@@ -60,8 +61,7 @@ export function QuizReviewList({
                 Sort by: {option.label}
               </option>
             ))}
-          </select>
-        </div>
+          </select>        </div>
       </div>
 
       {/* Toolbar */}

@@ -6,7 +6,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { TestService } from "@/lib/testService";
 import { Button } from "@/components/ui/button";
 import { checkRoutePermission } from "@/lib/routeMiddleware";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import Loading from "@/components/ui/loading";
 
 interface Question {
   id: string;
@@ -181,8 +181,8 @@ export default function StudentTestPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <LoadingSpinner text="Đang tải bài kiểm tra..." />
-      </div>
+        <Loading message="Đang tải bài kiểm tra..." size="lg" />
+      </div>  
     );
   }
 

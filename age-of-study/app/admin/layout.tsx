@@ -3,7 +3,9 @@
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import Loading from "@/components/ui/loading";
+import { Menu } from "lucide-react";
 
 export default function AdminLayout({
   children,
@@ -12,6 +14,7 @@ export default function AdminLayout({
 }) {
   const { user, checkAuth, isAuthenticated, isLoading } = useAuthStore();
   const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -34,14 +37,7 @@ export default function AdminLayout({
   }, [isLoading, isAuthenticated, user, router]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="text-4xl mb-4">🔐</div>
-          <p className="text-gray-600">Đang xác thực...</p>
-        </div>
-      </div>
-    );
+    return <Loading message="Đang xác thực quyền Admin..." size="lg" fullScreen />;
   }
 
   if (!isAuthenticated || !user || user.role !== "system_admin") {
@@ -50,8 +46,23 @@ export default function AdminLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <AdminSidebar />
-      <main className="flex-1 overflow-auto">{children}</main>
+      <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile Header */}
+        <header className="lg:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Mở menu"
+          >
+            <Menu className="w-6 h-6 text-gray-600" />
+          </button>
+          <h1 className="text-lg font-bold text-gray-900">Age of Study Admin</h1>
+        </header>
+
+        <main className="flex-1 overflow-auto">{children}</main>
+      </div>
     </div>
   );
 }
