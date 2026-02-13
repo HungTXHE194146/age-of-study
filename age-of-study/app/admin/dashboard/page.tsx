@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import StatsCard from "@/components/admin/StatsCard";
 import UserAvatar from "@/components/admin/UserAvatar";
+import Loading from "@/components/ui/loading";
 import { Users, GraduationCap, UserCog, Activity } from "lucide-react";
 
 interface UserStats {
@@ -122,18 +123,7 @@ export default function AdminDashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="p-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <Loading message="Đang tải bảng điều khiển..." size="lg" fullScreen />;
   }
 
   return (

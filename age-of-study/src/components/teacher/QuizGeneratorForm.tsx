@@ -11,7 +11,7 @@ import { subjectService } from "@/lib/subjectService";
 import {
   difficultyOptions,
   questionCountOptions,
-} from "@/constants/teacherMockData";
+} from "@/constants/teacherConstants";
 
 interface QuizGeneratorFormProps {
   onGenerate: (data: GeneratorFormState) => void;
@@ -31,6 +31,7 @@ export function QuizGeneratorForm({
   const [isDragging, setIsDragging] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isLoadingSubjects, setIsLoadingSubjects] = useState(true);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   // Fetch subjects from Supabase
   useEffect(() => {
@@ -50,11 +51,33 @@ export function QuizGeneratorForm({
   }, []);
 
   const handleFileUpload = (file: File) => {
+    // Validate MIME type
+    const validTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword'
+    ];
+    
+    if (!validTypes.includes(file.type)) {
+      setFileError('Invalid file type. Please upload PDF or DOCX files only.');
+      return;
+    }
+    
+    // Validate file size (10MB max)
+    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    if (file.size > maxSize) {
+      setFileError(`File size exceeds 10MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`);
+      return;
+    }
+    
+    // Clear any previous errors and set the file
+    setFileError(null);
     setFormData((prev) => ({ ...prev, file }));
   };
 
   const handleFileRemove = () => {
     setFormData((prev) => ({ ...prev, file: null }));
+    setFileError(null);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -95,16 +118,19 @@ export function QuizGeneratorForm({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* File Upload Area */}
-        <div
-          className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-            isDragging
-              ? "border-blue-400 bg-blue-50 dark:bg-blue-900/20"
-              : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
-          }`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
+        <div>
+          <div
+            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+              isDragging
+                ? "border-blue-400 bg-blue-50 dark:bg-blue-900/20"
+                : fileError
+                  ? "border-red-400 bg-red-50 dark:bg-red-900/20"
+                  : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
           {formData.file ? (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -154,6 +180,13 @@ export function QuizGeneratorForm({
                 Choose File
               </label>
             </div>
+          )}
+          </div>
+          {fileError && (
+            <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+              <span className="text-lg">⚠️</span>
+              {fileError}
+            </p>
           )}
         </div>
 

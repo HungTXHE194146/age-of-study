@@ -4,6 +4,7 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Loading from "@/components/ui/loading";
 
 export default function AdminLayout({
   children,
@@ -34,14 +35,7 @@ export default function AdminLayout({
   }, [isLoading, isAuthenticated, user, router]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="text-4xl mb-4">🔐</div>
-          <p className="text-gray-600">Đang xác thực...</p>
-        </div>
-      </div>
-    );
+    return <Loading message="Đang xác thực quyền Admin..." size="lg" fullScreen />;
   }
 
   if (!isAuthenticated || !user || user.role !== "system_admin") {

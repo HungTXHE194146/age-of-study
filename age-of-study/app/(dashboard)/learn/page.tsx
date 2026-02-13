@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
+import Loading from "@/components/ui/loading";
 
 export default function LearnPage() {
   const { user, isAuthenticated, isLoading } = useAuthStore();
@@ -20,10 +21,7 @@ export default function LearnPage() {
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="text-4xl mb-4">📚</div>
-          <p className="text-gray-600">Đang tải...</p>
-        </div>
+        <Loading message="Đang tải trang học tập..." size="md" />
       </div>
     );
   }

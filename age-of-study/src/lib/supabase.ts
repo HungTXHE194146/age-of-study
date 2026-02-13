@@ -36,6 +36,7 @@ export interface Profile {
   // Gamification core
   total_xp: number
   weekly_xp: number
+  monthly_xp: number  // XP earned this month (reset monthly)
   current_streak: number
   last_study_date: string | null
   freeze_count: number
