@@ -4,7 +4,6 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import Loading from "@/components/ui/loading";
 import { Menu } from "lucide-react";
 
 export default function AdminLayout({
@@ -16,9 +15,11 @@ export default function AdminLayout({
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Run checkAuth only once on mount
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - run once
 
   useEffect(() => {
     // Redirect if not authenticated or not system_admin
@@ -37,7 +38,14 @@ export default function AdminLayout({
   }, [isLoading, isAuthenticated, user, router]);
 
   if (isLoading) {
-    return <Loading message="Đang xác thực quyền Admin..." size="lg" fullScreen />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-semibold">Đang xác thực quyền Admin...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated || !user || user.role !== "system_admin") {

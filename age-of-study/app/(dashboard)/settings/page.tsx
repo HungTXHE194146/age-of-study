@@ -9,26 +9,6 @@ import { Save, Star, Trophy, Sparkles } from "lucide-react";
 import confetti from "canvas-confetti";
 import Loading, { LoadingSpinner } from "@/components/ui/loading";
 
-// Avatar options for kids
-const AVATAR_OPTIONS = [
-  "🐶",
-  "🐱",
-  "🐼",
-  "🦊",
-  "🐻",
-  "🐰",
-  "🦁",
-  "🐯",
-  "🐸",
-  "🐨",
-  "🐵",
-  "🦉",
-  "🦄",
-  "🐲",
-  "🦖",
-  "🐙",
-];
-
 const SUBJECTS = [
   {
     id: "math",
@@ -79,7 +59,6 @@ export default function StudentSettingsPage() {
 
   // Form state
   const [fullName, setFullName] = useState("");
-  const [selectedAvatar, setSelectedAvatar] = useState("");
   const [age, setAge] = useState<number | "">("");
   const [grade, setGrade] = useState<number | "">("");
   const [favoriteSubject, setFavoriteSubject] = useState("");
@@ -95,7 +74,6 @@ export default function StudentSettingsPage() {
   useEffect(() => {
     if (user) {
       setFullName(user.full_name || "");
-      setSelectedAvatar(user.avatar_url || "");
       setAge(user.age || "");
       setGrade(user.grade || "");
       setFavoriteSubject(user.favorite_subject || "");
@@ -108,7 +86,6 @@ export default function StudentSettingsPage() {
   const getCompletionPercentage = () => {
     const fields = [
       fullName,
-      selectedAvatar,
       age,
       grade,
       favoriteSubject,
@@ -149,7 +126,6 @@ export default function StudentSettingsPage() {
 
       const updates = {
         full_name: fullName,
-        avatar_url: selectedAvatar,
         age: age === "" ? null : age,
         grade: grade === "" ? null : grade,
         favorite_subject: favoriteSubject,
@@ -286,6 +262,14 @@ export default function StudentSettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xl border-2 border-gray-200"
       >
+        {/* Avatar Info Banner */}
+        <div className="mb-6 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-4">
+          <p className="text-sm text-gray-700">
+            <span className="font-bold text-purple-600">💡 Mẹo:</span> Muốn đổi avatar? 
+            Ghé qua <a href="/backpack" className="font-bold text-purple-600 hover:text-purple-700 underline">Balo Thành Tích</a> để mở khóa và chọn avatar mới bằng XP nhé! 🎒✨
+          </p>
+        </div>
+
         <div className="space-y-8">
           {/* Basic Info Section */}
           <div>
@@ -350,36 +334,6 @@ export default function StudentSettingsPage() {
                   <option value="5">Lớp 5</option>
                 </select>
               </div>
-            </div>
-          </div>
-
-          {/* Avatar Selection */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
-              <h2 className="text-2xl font-black text-gray-900">
-                Chọn Avatar Yêu Thích 😊
-              </h2>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">
-              💡 Chọn một biểu tượng đáng yêu đại diện cho bạn!
-            </p>
-            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 sm:gap-3">
-              {AVATAR_OPTIONS.map((avatar) => (
-                <motion.button
-                  key={avatar}
-                  onClick={() => setSelectedAvatar(avatar)}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className={`text-2xl sm:text-3xl md:text-4xl p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl border-2 sm:border-4 transition-all ${
-                    selectedAvatar === avatar
-                      ? "border-blue-500 bg-blue-100 shadow-lg"
-                      : "border-gray-300 bg-gray-50 hover:border-blue-300"
-                  }`}
-                >
-                  {avatar}
-                </motion.button>
-              ))}
             </div>
           </div>
 
