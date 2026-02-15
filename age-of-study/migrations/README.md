@@ -28,6 +28,7 @@ psql -h <host> -U <user> -d <database> -f migrations/add_tier_system.sql
 - Seed badges mới (effort-based, không chỉ result-based)
 - Auto-calculate tier khi XP thay đổi
 
+### 4. Class System (PHẢI chạy trước Test Improvements)
 ### 3. Class System (PHẢI chạy trước Test Improvements)
 ```bash
 # Option 1: Using Supabase CLI (recommended)
@@ -65,6 +66,31 @@ psql -h <host> -U <user> -d <database> -f migrations/add_test_improvements.sql
 - Bảng `test_assignments` - Giao bài cho lớp
 - Liên kết tests ↔ classes
 
+### 5. Achievement Backpack System (Balo Thành Tích) 🎒
+```bash
+# Option 1: Using Supabase CLI (recommended)
+supabase db push migrations/add_achievement_backpack.sql
+
+# Option 2: Using psql with connection service
+psql service=mydb -f migrations/add_achievement_backpack.sql
+
+# Option 3: Using psql with explicit connection (will prompt for password)
+psql -h <host> -U <user> -d <database> -f migrations/add_achievement_backpack.sql
+```
+**Chức năng:**
+- **Badge Collection**: Track badges earned/unlocked (sử dụng bảng `badges` và `user_badges` có sẵn)
+- **Avatar Wardrobe** (`avatar_shop`, `user_avatars`): Shop 20+ emoji avatars, mua bằng XP
+- **Digital Certificates** (`certificates`): Giáo viên trao giấy khen cho học sinh
+- **Secure Updates**: Database function `update_certificate_timestamps()` chỉ cho phép update timestamps
+- **Smart Detection**: Avatar type detection dựa trên URL pattern, không phải length
+
+**⚠️ Security Features:**
+- Students chỉ update được `viewed_at`/`shared_at` của certificates (không thể sửa title/teacher_name)
+- RLS policies đầy đủ cho tất cả tables
+- SECURITY DEFINER function để enforce column-level restrictions
+
+**📚 Xem thêm**: [SECURITY_FIXES.md](./SECURITY_FIXES.md) để hiểu chi tiết về security design
+
 ---
 
 ## 🚀 Chạy Tất Cả Cùng Lúc (Supabase Dashboard)
@@ -76,6 +102,7 @@ Nếu dùng Supabase Dashboard → SQL Editor:
 -- 1. add_tier_system.sql
 -- 2. add_class_system.sql
 -- 3. add_test_improvements.sql
+-- 4. add_achievement_backpack.sql
 ```
 
 ---
@@ -85,6 +112,8 @@ Nếu dùng Supabase Dashboard → SQL Editor:
 ### Dependencies
 - `add_test_improvements.sql` phụ thuộc vào `classes` table từ `add_class_system.sql`
 - Phải chạy `add_class_system.sql` TRƯỚC `add_test_improvements.sql`
+- `add_achievement_backpack.sql` phụ thuộc vào `profiles` và `badges` tables (đã có sẵn)
+- `add_achievement_backpack.sql` độc lập, có thể chạy bất kỳ lúc nào sau khi có profiles table
 
 ### Rollback
 
