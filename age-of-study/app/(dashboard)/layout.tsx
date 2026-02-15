@@ -6,7 +6,6 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { checkRoutePermission } from "@/lib/routeMiddleware";
-import Loading from "@/components/ui/loading";
 
 export default function DashboardLayout({
   children,
@@ -17,9 +16,11 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
 
+  // Run checkAuth only once on mount
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - run once
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
@@ -46,7 +47,14 @@ export default function DashboardLayout({
   }, [isLoading, isAuthenticated, user, router, pathname]);
 
   if (isLoading) {
-    return <Loading message="Đang tải dashboard..." size="lg" fullScreen />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-semibold">Đang tải dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated || !user) {
