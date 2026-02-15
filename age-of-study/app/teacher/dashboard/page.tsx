@@ -1,16 +1,18 @@
-'use client'
+"use client";
 
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Loading from "@/components/ui/loading";
-import { 
-  ClipboardList, 
-  Users, 
-  BarChart3, 
+import {
+  ClipboardList,
+  Users,
+  BarChart3,
   Settings,
-  Plus
+  Plus,
+  LogOut,
 } from "lucide-react";
+import { checkRoutePermission } from "@/lib/routeMiddleware";
 
 export default function TeacherDashboard() {
   const { user, checkAuth, isAuthenticated, isLoading } = useAuthStore();
@@ -21,13 +23,32 @@ export default function TeacherDashboard() {
   }, [checkAuth]);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && isAuthenticated && user) {
+      // Check route permissions using centralized middleware
+      const currentPath = window.location.pathname;
+      const redirectPath = checkRoutePermission({
+        user,
+        currentPath,
+        isAuthenticated,
+      });
+
+      if (redirectPath) {
+        router.push(redirectPath);
+        return;
+      }
+    } else if (!isLoading && !isAuthenticated) {
       router.push("/login");
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, user, router]);
 
   if (isLoading) {
-    return <Loading message="Đang tải bảng điều khiển giáo viên..." size="lg" fullScreen />;
+    return (
+      <Loading
+        message="Đang tải bảng điều khiển giáo viên..."
+        size="lg"
+        fullScreen
+      />
+    );
   }
 
   if (!isAuthenticated || !user) {
@@ -39,21 +60,26 @@ export default function TeacherDashboard() {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-7xl">
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
-          Bảng Điều Khiển Giáo Viên
-        </h1>
-        <p className="text-sm sm:text-base lg:text-lg text-gray-600">
-          Chào mừng {user.full_name || user.username}! Quản lý lớp học và bài kiểm tra của bạn.
-        </p>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              Bảng Điều Khiển Giáo Viên
+            </h1>
+            <p className="text-lg text-gray-600">
+              Chào mừng {user.full_name || user.username}! Quản lý lớp học và
+              bài kiểm tra của bạn.
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {/* Test Management Card */}
-        <div 
+        <div
           className="bg-white rounded-2xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-all border-2 border-blue-100 cursor-pointer hover:border-blue-300"
-          onClick={() => handleNavigate('/teacher/tests')}
+          onClick={() => handleNavigate("/teacher/tests")}
         >
           <div className="flex items-center justify-between mb-3 sm:mb-4">
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -136,9 +162,9 @@ export default function TeacherDashboard() {
           Hành động nhanh
         </h2>
         <div className="flex flex-wrap gap-3 sm:gap-4">
-          <button 
+          <button
             className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-500 text-white rounded-full font-semibold hover:bg-blue-600 transition-colors text-sm sm:text-base"
-            onClick={() => handleNavigate('/teacher/tests/create')}
+            onClick={() => handleNavigate("/teacher/tests/create")}
           >
             ✨ Tạo bài kiểm tra mới
           </button>

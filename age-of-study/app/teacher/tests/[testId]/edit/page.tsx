@@ -1,34 +1,64 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import {
-  Plus,
-  FileText,
-  Link as LinkIcon,
-  Settings,
-  Save,
-  ArrowLeft,
-  Book,
-  Eye,
-} from "lucide-react";
-import { QuizGeneratorForm } from "@/components/teacher/QuizGeneratorForm";
-import { QuizReviewList } from "@/components/teacher/QuizReviewList";
-import { QuestionBankTab } from "@/components/teacher/QuestionBankTab";
-import { QuestionPointsGrid } from "@/components/teacher/QuestionPointsGrid";
-import { PaginatedQuestionPreview } from "@/components/teacher/PaginatedQuestionPreview";
+import { useRouter, useParams } from "next/navigation";
+import { useAuthStore } from "@/store/useAuthStore";
+import { TestService } from "@/lib/testService";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { RouteProtectedWrapper } from "@/lib/routeMiddleware";
+import { TestWithQuestions } from "@/types/test";
 import { Question } from "@/types/teacher";
 import { subjectService } from "@/lib/subjectService";
 import { Subject } from "@/types/teacher";
-import { TestService } from "@/lib/testService";
-import { CreateTestRequest } from "@/types/test";
-import { useAuthStore } from "@/store/useAuthStore";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import {
+  Save,
+  Plus,
+  Trash2,
+  Eye,
+  FileText,
+  Link as LinkIcon,
+  Settings,
+  ArrowLeft,
+  Book,
+} from "lucide-react";
+import { QuizGeneratorForm } from "@/components/teacher/QuizGeneratorForm";
+import { QuestionBankTab } from "@/components/teacher/QuestionBankTab";
+import { QuestionPointsGrid } from "@/components/teacher/QuestionPointsGrid";
+import { PaginatedQuestionPreview } from "@/components/teacher/PaginatedQuestionPreview";
+import Loading from "@/components/ui/loading";
 
-export default function CreateTestPage() {
+// Simple UUID generator function
+const generateUUID = (): string => {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
+interface EditableQuestion {
+  id?: string;
+  content: {
+    question: string;
+    options: string[];
+  };
+  correct_option_index: number;
+}
+
+export default function TeacherTestEditPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const params = useParams();
+  const { user, isAuthenticated } = useAuthStore();
+  const testId = params.testId as string;
+
+  const [test, setTest] = useState<TestWithQuestions | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"manual" | "ai" | "bank">(
     "manual",
   );
@@ -42,7 +72,6 @@ export default function CreateTestPage() {
   const [nodes, setNodes] = useState<{ id: number; title: string }[]>([]);
   const [isLoadingNodes, setIsLoadingNodes] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isLoadingSubjects, setIsLoadingSubjects] = useState(true);
   const [manualQuestionType, setManualQuestionType] = useState<
@@ -65,28 +94,110 @@ export default function CreateTestPage() {
     true: "",
     false: "",
   });
+  const [manualTrueFalseCorrectAnswer, setManualTrueFalseCorrectAnswer] =
+    useState<"TRUE" | "FALSE">("TRUE");
   const [manualEssayHint, setManualEssayHint] = useState("");
 
   // State for question management
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [points, setPoints] = useState<{ [questionId: string]: number }>({});
 
-  // Fetch subjects from Supabase
   useEffect(() => {
-    async function fetchSubjects() {
-      try {
-        setIsLoadingSubjects(true);
-        const subjectList = await subjectService.getSubjects();
-        setSubjects(subjectList);
-      } catch (error) {
-        console.error("Failed to fetch subjects:", error);
-      } finally {
-        setIsLoadingSubjects(false);
-      }
+    if (testId) {
+      fetchTest();
+      fetchSubjects();
     }
+  }, [testId]);
 
-    fetchSubjects();
-  }, []);
+  const fetchTest = async () => {
+    setLoading(true);
+    try {
+      const testService = new TestService();
+      const testWithQuestions = await testService.getTestWithQuestions(testId);
+      if (!testWithQuestions) {
+        router.push("/teacher/tests");
+        return;
+      }
+      setTest(testWithQuestions);
+
+      // Initialize form state with existing test data
+      setTestDetails({
+        title: testWithQuestions.title,
+        description: testWithQuestions.description || "",
+        subject: testWithQuestions.subject_id?.toString() || "",
+        node: testWithQuestions.node_id?.toString() || "",
+        timeLimit: testWithQuestions.settings.time_limit || 30,
+      });
+
+      // Fetch nodes for the existing subject
+      if (testWithQuestions.subject_id) {
+        await fetchNodes(testWithQuestions.subject_id.toString());
+      }
+
+      // Initialize questions with points
+      const mappedQuestions = testWithQuestions.questions.map((q, index) => ({
+        id: q.id,
+        createdAt: Date.now(),
+        number: index + 1,
+        type: "MULTIPLE_CHOICE" as const,
+        questionText: q.content.question,
+        options: q.content.options.map((opt, optIndex) => ({
+          id: optIndex.toString(),
+          label: String.fromCharCode(65 + optIndex),
+          text: opt,
+          isCorrect: optIndex === q.correct_option_index,
+        })),
+        difficulty: "Easy" as const,
+        topic: "Existing",
+        points: q.points || 10, // Use existing points or default to 10
+      }));
+      setQuestions(mappedQuestions);
+
+      // Initialize points state with existing points
+      const initialPoints: { [questionId: string]: number } = {};
+      testWithQuestions.questions.forEach((q) => {
+        initialPoints[q.id] = q.points || 10;
+      });
+      setPoints(initialPoints);
+    } catch (error) {
+      console.error("Error fetching test:", error);
+      router.push("/teacher/tests");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSubjects = async () => {
+    try {
+      setIsLoadingSubjects(true);
+      const subjectList = await subjectService.getSubjects();
+      setSubjects(subjectList);
+    } catch (error) {
+      console.error("Failed to fetch subjects:", error);
+    } finally {
+      setIsLoadingSubjects(false);
+    }
+  };
+
+  const fetchNodes = async (subjectId: string) => {
+    try {
+      setIsLoadingNodes(true);
+      const supabase = await getSupabaseBrowserClient();
+      const { data, error } = await supabase
+        .from("nodes")
+        .select("id, title")
+        .eq("subject_id", parseInt(subjectId))
+        .order("title", { ascending: true });
+
+      if (error) throw error;
+      setNodes(data || []);
+    } catch (error) {
+      console.error("Error fetching nodes:", error);
+      setNodes([]);
+    } finally {
+      setIsLoadingNodes(false);
+    }
+  };
 
   const handleAddQuestion = (question: Question) => {
     setQuestions((prev) => [...prev, question]);
@@ -102,66 +213,69 @@ export default function CreateTestPage() {
       return;
     }
 
-    if (
-      !testDetails.subject ||
-      testDetails.subject === "" ||
-      testDetails.subject === "0"
-    ) {
-      alert("Vui lòng chọn môn học liên quan cho bài kiểm tra");
-      return;
-    }
-
     if (questions.length === 0) {
       alert("Vui lòng thêm ít nhất một câu hỏi");
       return;
     }
 
-    setIsSaving(true);
+    setSaving(true);
     try {
       const testService = new TestService();
 
-      // Create test data for Supabase
-      const createTestRequest: CreateTestRequest = {
+      // Update test data in Supabase
+      await testService.updateTest(testId, {
         title: testDetails.title,
         description: testDetails.description,
         type: "practice",
-
-        // 1. Lưu ID môn học vào cột subject_id
         subject_id: testDetails.subject ? parseInt(testDetails.subject) : null,
-
-        // 2. node_id chỉ có dữ liệu nếu người dùng chọn cụ thể một bài học (Skill Node)
-        // Nếu chỉ chọn môn chung chung, node_id phải là null
         node_id: testDetails.node ? parseInt(testDetails.node) : null,
-
         settings: {
           time_limit: testDetails.timeLimit,
           allow_retry: true,
         },
-        is_published: true,
-        created_by: user?.id || "",
-      };
+        is_published: true, // Publish status
+      });
 
-      // Fix for foreign key violation: ensure node_id is properly null for practice tests
-      if (
-        !testDetails.subject ||
-        testDetails.subject === "" ||
-        testDetails.subject === "0"
-      ) {
-        createTestRequest.node_id = null;
-      }
-
-      // Create the test in Supabase
-      const createdTest = await testService.createTest(createTestRequest);
-
-      // Create test_questions relationships only (questions already exist in question bank)
+      // Update questions and test_questions records
       const supabase = await getSupabaseBrowserClient();
 
+      // Delete existing test_questions relationships
+      await supabase.from("test_questions").delete().eq("test_id", testId);
+
+      // Update existing questions or create new ones
+      const questionsToInsert = questions.map((q: Question, index: number) => ({
+        id: q.id,
+        node_id: testDetails.node ? parseInt(testDetails.node) : null,
+        content: {
+          question: q.questionText,
+          options: q.options.map((opt) => opt.text),
+        },
+        correct_option_index:
+          q.type === "MULTIPLE_CHOICE"
+            ? q.options.findIndex((opt) => opt.isCorrect)
+            : q.type === "TRUE_FALSE"
+              ? 0 // Assume first option (True) is correct for TRUE_FALSE
+              : -1, // -1 for ESSAY questions
+        difficulty: q.difficulty.toLowerCase() as "easy" | "medium" | "hard",
+        status: "available",
+        created_by: user?.id || null,
+        created_at: new Date().toISOString(),
+      }));
+
+      // Insert or update questions
+      const { data: insertedQuestions, error: questionsError } = await supabase
+        .from("questions")
+        .upsert(questionsToInsert, { onConflict: "id" })
+        .select();
+
+      if (questionsError) throw questionsError;
+
       // Insert test_questions relationships
-      const testQuestionsToInsert = questions.map(
-        (q: Question, index: number) => ({
-          test_id: createdTest.id,
-          question_id: q.id, // Use existing question ID from question bank
-          points: q.points || 10, // Use question points if available, otherwise default to 10
+      const testQuestionsToInsert = insertedQuestions.map(
+        (q: { id: string }, index: number) => ({
+          test_id: testId,
+          question_id: q.id,
+          points: questions[index].points || 10, // Use question points if available, otherwise default to 10
           display_order: index,
         }),
       );
@@ -172,13 +286,13 @@ export default function CreateTestPage() {
 
       if (testQuestionsError) throw testQuestionsError;
 
-      alert("Bài kiểm tra đã được lưu thành công!");
-      router.push("/teacher/tests");
+      alert("Bài kiểm tra đã được cập nhật thành công!");
+      router.push(`/teacher/tests/${testId}`);
     } catch (error) {
       console.error("Error saving test:", error);
-      alert("Có lỗi xảy ra khi lưu bài kiểm tra");
+      alert("Cập nhật bài kiểm tra thất bại. Vui lòng thử lại.");
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 
@@ -188,65 +302,68 @@ export default function CreateTestPage() {
       return;
     }
 
-    if (
-      !testDetails.subject ||
-      testDetails.subject === "" ||
-      testDetails.subject === "0"
-    ) {
-      alert("Vui lòng chọn môn học liên quan cho bài kiểm tra");
-      return;
-    }
-
     if (questions.length === 0) {
       alert("Vui lòng thêm ít nhất một câu hỏi");
       return;
     }
 
-    setIsSaving(true);
+    setSaving(true);
     try {
       const testService = new TestService();
 
-      // Create test data for Supabase (draft version)
-      const createTestRequest: CreateTestRequest = {
+      // Update test data in Supabase (draft version)
+      await testService.updateTest(testId, {
         title: testDetails.title,
         description: testDetails.description,
         type: "practice",
-
-        // 1. Lưu ID môn học vào cột subject_id
         subject_id: testDetails.subject ? parseInt(testDetails.subject) : null,
-
-        // 2. node_id chỉ có dữ liệu nếu người dùng chọn cụ thể một bài học (Skill Node)
-        // Nếu chỉ chọn môn chung chung, node_id phải là null
         node_id: testDetails.node ? parseInt(testDetails.node) : null,
-
         settings: {
           time_limit: testDetails.timeLimit,
           allow_retry: true,
         },
         is_published: false, // Draft status
-        created_by: user?.id || "",
-      };
+      });
 
-      // Fix for foreign key violation: ensure node_id is properly null for practice tests
-      if (
-        !testDetails.subject ||
-        testDetails.subject === "" ||
-        testDetails.subject === "0"
-      ) {
-        createTestRequest.node_id = null;
-      }
-
-      // Create the test in Supabase
-      const createdTest = await testService.createTest(createTestRequest);
-
-      // Create test_questions relationships only (questions already exist in question bank)
+      // Update questions and test_questions records
       const supabase = await getSupabaseBrowserClient();
 
+      // Delete existing test_questions relationships
+      await supabase.from("test_questions").delete().eq("test_id", testId);
+
+      // Update existing questions or create new ones
+      const questionsToInsert = questions.map((q: Question, index: number) => ({
+        id: q.id,
+        node_id: testDetails.node ? parseInt(testDetails.node) : null,
+        content: {
+          question: q.questionText,
+          options: q.options.map((opt) => opt.text),
+        },
+        correct_option_index:
+          q.type === "MULTIPLE_CHOICE"
+            ? q.options.findIndex((opt) => opt.isCorrect)
+            : q.type === "TRUE_FALSE"
+              ? 0 // Assume first option (True) is correct for TRUE_FALSE
+              : -1, // -1 for ESSAY questions
+        difficulty: q.difficulty.toLowerCase() as "easy" | "medium" | "hard",
+        status: "available",
+        created_by: user?.id || null,
+        created_at: new Date().toISOString(),
+      }));
+
+      // Insert or update questions
+      const { data: insertedQuestions, error: questionsError } = await supabase
+        .from("questions")
+        .upsert(questionsToInsert, { onConflict: "id" })
+        .select();
+
+      if (questionsError) throw questionsError;
+
       // Insert test_questions relationships
-      const testQuestionsToInsert = questions.map(
-        (q: Question, index: number) => ({
-          test_id: createdTest.id,
-          question_id: q.id, // Use existing question ID from question bank
+      const testQuestionsToInsert = insertedQuestions.map(
+        (q: { id: string }, index: number) => ({
+          test_id: testId,
+          question_id: q.id,
           points: 10, // Default points
           display_order: index,
         }),
@@ -259,14 +376,47 @@ export default function CreateTestPage() {
       if (testQuestionsError) throw testQuestionsError;
 
       alert("Bài kiểm tra đã được lưu nháp thành công!");
-      router.push("/teacher/tests");
+      router.push(`/teacher/tests/${testId}`);
     } catch (error) {
       console.error("Error saving draft:", error);
-      alert("Có lỗi xảy ra khi lưu nháp bài kiểm tra");
+      alert("Lưu nháp bài kiểm tra thất bại. Vui lòng thử lại.");
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
+
+  const handlePreviewTest = () => {
+    router.push(`/teacher/tests/${testId}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loading message="Đang tải bài kiểm tra..." />
+      </div>
+    );
+  }
+
+  if (!test) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Bài kiểm tra không tồn tại
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Bài kiểm tra bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.
+          </p>
+          <Button
+            onClick={() => router.push("/teacher/tests")}
+            className="mt-4"
+          >
+            Quay lại danh sách bài kiểm tra
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -279,10 +429,10 @@ export default function CreateTestPage() {
           Quay lại
         </button>
         <h1 className="text-4xl font-bold text-gray-900 mb-2">
-          Tạo bài kiểm tra mới
+          Chỉnh sửa bài kiểm tra
         </h1>
         <p className="text-lg text-gray-600">
-          Thiết lập chi tiết bài kiểm tra và thêm câu hỏi
+          Cập nhật chi tiết bài kiểm tra và câu hỏi
         </p>
       </div>
 
@@ -299,7 +449,7 @@ export default function CreateTestPage() {
                 <h2 className="text-2xl font-bold text-gray-900">
                   Chi tiết bài kiểm tra
                 </h2>
-                <p className="text-gray-600">Cấu hình các thông số cơ bản</p>
+                <p className="text-gray-600">Cập nhật các thông số cơ bản</p>
               </div>
             </div>
 
@@ -342,7 +492,7 @@ export default function CreateTestPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Môn học <span className="text-red-500">*</span>
+                  Môn học
                 </label>
                 <select
                   value={testDetails.subject}
@@ -356,31 +506,12 @@ export default function CreateTestPage() {
 
                     // Fetch nodes for the selected subject
                     if (selectedSubjectId) {
-                      try {
-                        setIsLoadingNodes(true);
-                        const supabase = (
-                          await import("@/lib/supabase")
-                        ).getSupabaseBrowserClient();
-                        const { data, error } = await supabase
-                          .from("nodes")
-                          .select("id, title")
-                          .eq("subject_id", parseInt(selectedSubjectId))
-                          .order("title", { ascending: true });
-
-                        if (error) throw error;
-                        setNodes(data || []);
-                      } catch (error) {
-                        console.error("Error fetching nodes:", error);
-                        setNodes([]);
-                      } finally {
-                        setIsLoadingNodes(false);
-                      }
+                      await fetchNodes(selectedSubjectId);
                     } else {
                       setNodes([]);
                     }
                   }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
                 >
                   <option value="">Chọn môn học</option>
                   {isLoadingSubjects ? (
@@ -453,7 +584,9 @@ export default function CreateTestPage() {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Câu hỏi</h2>
-                  <p className="text-gray-600">Thêm và quản lý câu hỏi</p>
+                  <p className="text-gray-600">
+                    Thêm, chỉnh sửa và quản lý câu hỏi
+                  </p>
                 </div>
               </div>
               <div className="text-right">
@@ -507,11 +640,11 @@ export default function CreateTestPage() {
             <div className="space-y-6">
               {activeTab === "manual" && (
                 <div className="space-y-4">
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 mb-2">
                       Tạo câu hỏi thủ công
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <p className="text-sm text-gray-600">
                       Nhập thông tin câu hỏi và các lựa chọn trả lời
                     </p>
                   </div>
@@ -740,7 +873,15 @@ export default function CreateTestPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Đáp án đúng
                         </label>
-                        <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <select
+                          value={manualTrueFalseCorrectAnswer}
+                          onChange={(e) =>
+                            setManualTrueFalseCorrectAnswer(
+                              e.target.value as "TRUE" | "FALSE",
+                            )
+                          }
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
                           <option value="TRUE">Đúng</option>
                           <option value="FALSE">Sai</option>
                         </select>
@@ -795,7 +936,7 @@ export default function CreateTestPage() {
 
                         // Create question object
                         const newQuestion: Question = {
-                          id: Date.now().toString(),
+                          id: generateUUID(),
                           createdAt: Date.now(),
                           number: questions.length + 1,
                           type: manualQuestionType,
@@ -813,13 +954,16 @@ export default function CreateTestPage() {
                                       id: "1",
                                       label: "A",
                                       text: manualTrueFalseContent.true,
-                                      isCorrect: true,
+                                      isCorrect:
+                                        manualTrueFalseCorrectAnswer === "TRUE",
                                     },
                                     {
                                       id: "2",
                                       label: "B",
                                       text: manualTrueFalseContent.false,
-                                      isCorrect: false,
+                                      isCorrect:
+                                        manualTrueFalseCorrectAnswer ===
+                                        "FALSE",
                                     },
                                   ]
                                 : [],
@@ -852,108 +996,47 @@ export default function CreateTestPage() {
               {activeTab === "ai" && (
                 <div>
                   <QuizGeneratorForm
-                    onGenerate={async (data) => {
-                      try {
-                        // Use the question bank service to get random questions
-                        // based on the selected subject or node
-                        const questionBankService = (
-                          await import("@/lib/questionBankService")
-                        ).questionBankService;
-
-                        // Determine filter based on current test details
-                        const filter = {
-                          subjectId: testDetails.subject || undefined,
-                          nodeId: testDetails.node || undefined,
-                          difficulty: data.difficulty,
+                    onGenerate={(data) => {
+                      // Mock AI question generation
+                      const mockQuestions = Array.from(
+                        { length: data.questionCount },
+                        (_, i) => ({
+                          id: generateUUID(),
+                          createdAt: Date.now(),
+                          number: questions.length + i + 1,
                           type: "MULTIPLE_CHOICE" as const,
-                          limit: data.questionCount,
-                          offset: 0,
-                        };
-
-                        // Get random questions from the bank
-                        const randomQuestions =
-                          await questionBankService.getQuestions(filter);
-
-                        if (randomQuestions.length === 0) {
-                          alert(
-                            "Không tìm thấy câu hỏi phù hợp trong ngân hàng câu hỏi. Vui lòng kiểm tra lại bộ lọc.",
-                          );
-                          return;
-                        }
-
-                        // Transform questions to match the expected format
-                        const transformedQuestions = randomQuestions
-                          .slice(0, data.questionCount)
-                          .map((q, index) => ({
-                            id: q.id,
-                            createdAt: q.createdAt,
-                            number: questions.length + index + 1,
-                            type: q.type,
-                            questionText: q.questionText,
-                            options: q.options.map((opt) => ({
-                              ...opt,
-                              isCorrect: opt.isCorrect || false, // Ensure isCorrect is set
-                            })),
-                            difficulty: q.difficulty,
-                            topic: q.topic || data.topic || "AI Generated",
-                          }));
-
-                        transformedQuestions.forEach((q) =>
-                          handleAddQuestion(q),
-                        );
-
-                        if (transformedQuestions.length < data.questionCount) {
-                          alert(
-                            `Chỉ tìm thấy ${transformedQuestions.length} câu hỏi phù hợp trong ngân hàng câu hỏi.`,
-                          );
-                        }
-                      } catch (error) {
-                        console.error("Error generating questions:", error);
-                        alert(
-                          "Có lỗi xảy ra khi tạo câu hỏi từ ngân hàng câu hỏi. Đang sử dụng câu hỏi mẫu.",
-                        );
-
-                        // Fallback to mock questions
-                        const mockQuestions = Array.from(
-                          { length: data.questionCount },
-                          (_, i) => ({
-                            id: Date.now().toString() + i,
-                            createdAt: Date.now(),
-                            number: questions.length + i + 1,
-                            type: "MULTIPLE_CHOICE" as const,
-                            questionText: `Câu hỏi AI ${i + 1}: ${data.topic}`,
-                            options: [
-                              {
-                                id: "1",
-                                label: "A",
-                                text: "Đáp án A",
-                                isCorrect: true,
-                              },
-                              {
-                                id: "2",
-                                label: "B",
-                                text: "Đáp án B",
-                                isCorrect: false,
-                              },
-                              {
-                                id: "3",
-                                label: "C",
-                                text: "Đáp án C",
-                                isCorrect: false,
-                              },
-                              {
-                                id: "4",
-                                label: "D",
-                                text: "Đáp án D",
-                                isCorrect: false,
-                              },
-                            ],
-                            difficulty: data.difficulty,
-                            topic: data.topic || "AI Generated",
-                          }),
-                        );
-                        mockQuestions.forEach((q) => handleAddQuestion(q));
-                      }
+                          questionText: `Câu hỏi AI ${i + 1}: ${data.topic}`,
+                          options: [
+                            {
+                              id: "1",
+                              label: "A",
+                              text: "Đáp án A",
+                              isCorrect: true,
+                            },
+                            {
+                              id: "2",
+                              label: "B",
+                              text: "Đáp án B",
+                              isCorrect: false,
+                            },
+                            {
+                              id: "3",
+                              label: "C",
+                              text: "Đáp án C",
+                              isCorrect: false,
+                            },
+                            {
+                              id: "4",
+                              label: "D",
+                              text: "Đáp án D",
+                              isCorrect: false,
+                            },
+                          ],
+                          difficulty: data.difficulty,
+                          topic: data.topic || "AI Generated",
+                        }),
+                      );
+                      mockQuestions.forEach((q) => handleAddQuestion(q));
                     }}
                   />
                 </div>
@@ -1098,26 +1181,26 @@ export default function CreateTestPage() {
             )}
           </div>
         </div>
-      </div>
 
-      {/* Save Button */}
-      <div className="mt-8 flex justify-end gap-4">
-        <button
-          onClick={handleSaveDraft}
-          disabled={isSaving}
-          className="px-8 py-4 bg-gray-500 text-white rounded-full font-semibold hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          <Save className="w-5 h-5" />
-          {isSaving ? "Đang lưu..." : "Lưu nháp"}
-        </button>
-        <button
-          onClick={handleSaveTest}
-          disabled={isSaving}
-          className="px-8 py-4 bg-blue-500 text-white rounded-full font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          <Save className="w-5 h-5" />
-          {isSaving ? "Đang lưu..." : "Lưu bài kiểm tra"}
-        </button>
+        {/* Save Button */}
+        <div className="mt-8 flex justify-end gap-4">
+          <button
+            onClick={handleSaveDraft}
+            disabled={isSaving}
+            className="px-8 py-4 bg-gray-500 text-white rounded-full font-semibold hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <Save className="w-5 h-5" />
+            {isSaving ? "Đang lưu..." : "Lưu nháp"}
+          </button>
+          <button
+            onClick={handleSaveTest}
+            disabled={isSaving}
+            className="px-8 py-4 bg-blue-500 text-white rounded-full font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <Save className="w-5 h-5" />
+            {isSaving ? "Đang lưu..." : "Lưu bài kiểm tra"}
+          </button>
+        </div>
       </div>
     </div>
   );
