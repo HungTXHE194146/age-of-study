@@ -211,7 +211,7 @@ export default function TeacherTestDetailPage() {
                 </div>
 
                 <div className="text-gray-900 mb-4 text-lg leading-relaxed">
-                  {question.content.question}
+                  {question.content.questionText}
                 </div>
 
                 <div className="space-y-3">
@@ -226,9 +226,9 @@ export default function TeacherTestDetailPage() {
                     >
                       <div className="flex items-center gap-3">
                         <span className="w-8 h-8 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center font-semibold text-gray-700">
-                          {String.fromCharCode(65 + optionIndex)}
+                          {option.label}
                         </span>
-                        <span className="text-gray-900 flex-1">{option}</span>
+                        <span className="text-gray-900 flex-1">{option.text}</span>
                         {optionIndex === question.correct_option_index && (
                           <span className="ml-2 text-green-600 font-semibold">
                             ✓ Đáp án đúng

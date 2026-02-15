@@ -221,7 +221,7 @@ export default function ClassStudentsPage() {
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-4 mb-4">
-            <Link href={`/teacher/classes/${classId}`}>
+            <Link href={`/teacher/classes`}>
               <Button
                 variant="outline"
                 size="sm"

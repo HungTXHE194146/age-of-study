@@ -1,5 +1,11 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase";
-import { Question, QuestionType, DifficultyLevel } from "@/types/teacher";
+import {
+  Question,
+  QuestionType,
+  DifficultyLevel,
+  QuestionOption,
+  QuestionDifficulty,
+} from "@/types/teacher";
 
 export interface QuestionFilter {
   subjectId?: string;
@@ -11,17 +17,36 @@ export interface QuestionFilter {
   offset?: number;
 }
 
-export interface QuestionBankQuestion extends Question {
+export interface QuestionBankQuestion {
+  id: string;
+  createdAt: number;
+  number: number;
+  type: QuestionType;
+  questionText: string;
+  options: QuestionOption[];
+  difficulty: QuestionDifficulty;
+  points?: number;
+  explanation?: string;
+  model_answer?: string;
   subject_name?: string;
   node_title?: string;
   created_at_formatted?: string;
+}
+
+export interface EditQuestionData {
+  questionText: string;
+  options: QuestionOption[];
+  difficulty: QuestionDifficulty;
+  explanation?: string;
+  model_answer?: string;
+  correct_option_index?: number;
 }
 
 interface SupabaseQuestionData {
   id: number;
   node_id: number;
   content: {
-    question: string;
+    questionText: string;
     options: string[];
   };
   correct_option_index: number;
@@ -30,6 +55,7 @@ interface SupabaseQuestionData {
   created_by: string;
   created_at: string;
   q_type: string;
+  model_answer: string;
   nodes: {
     id: number;
     title: string;
@@ -135,7 +161,7 @@ export class QuestionBankService {
         createdAt: new Date(q.created_at).getTime(),
         number: 0, // Will be set when added to test
         type: this.mapQuestionType(q.q_type),
-        questionText: q.content.question || "",
+        questionText: q.content.questionText || "",
         options: this.parseOptions(q.content.options || []),
         difficulty: this.mapDifficulty(q.difficulty),
         topic: q.nodes?.title || "Chưa xác định",
@@ -268,12 +294,25 @@ export class QuestionBankService {
   }
 
   private parseOptions(
-    options: string[],
+    options: (string | { label: string; text: string })[],
   ): { id: string; label: string; text: string; isCorrect: boolean }[] {
-    return (options || []).map((option, index) => ({
+    if (!options || options.length === 0) return [];
+
+    // Check if options are in the new format (with label and text)
+    if (options[0] && typeof options[0] === "object" && "label" in options[0]) {
+      return options.map((option, index: number) => ({
+        id: (index + 1).toString(),
+        label: (option as { label: string; text: string }).label,
+        text: (option as { label: string; text: string }).text || "",
+        isCorrect: false, // We don't store this in the bank, will be set when added to test
+      }));
+    }
+
+    // Fallback to old format (just text array)
+    return (options || []).map((option, index: number) => ({
       id: (index + 1).toString(),
       label: String.fromCharCode(65 + index), // A, B, C, D
-      text: option,
+      text: typeof option === "string" ? option : "",
       isCorrect: false, // We don't store this in the bank, will be set when added to test
     }));
   }
@@ -301,6 +340,61 @@ export class QuestionBankService {
         return "ESSAY";
       default:
         return "MULTIPLE_CHOICE";
+    }
+  }
+
+  async deleteQuestion(questionId: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from("questions")
+        .update({ status: "deleted" })
+        .eq("id", parseInt(questionId));
+
+      if (error) {
+        console.error("Error deleting question:", error);
+        throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Failed to delete question:", error);
+      return false;
+    }
+  }
+
+  async editQuestion(
+    questionId: string,
+    data: EditQuestionData,
+  ): Promise<boolean> {
+    try {
+      // Transform options to match database format - keep the new format with label and text
+      const optionsArray = data.options.map((opt) => ({
+        label: opt.label,
+        text: opt.text,
+      }));
+
+      const { error } = await this.supabase
+        .from("questions")
+        .update({
+          content: {
+            questionText: data.questionText,
+            options: optionsArray,
+          },
+          difficulty: data.difficulty.toLowerCase(),
+          explanation: data.explanation,
+          model_answer: data.model_answer,
+        })
+        .eq("id", questionId);
+
+      if (error) {
+        console.error("Error editing question:", error);
+        throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Failed to edit question:", error);
+      return false;
     }
   }
 }
