@@ -50,6 +50,10 @@ export interface NavigationItem {
   isActive?: boolean;
 }
 
+/**
+ * Subject type matching database schema
+ * Table: subjects
+ */
 export interface Subject {
   id: number;
   name: string;
