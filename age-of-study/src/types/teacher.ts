@@ -49,14 +49,16 @@ export interface NavigationItem {
   isActive?: boolean
 }
 
+/**
+ * Subject type matching database schema
+ * Table: subjects
+ */
 export interface Subject {
-  id: string
+  id: number              // BIGINT in database
+  code: string | null
   name: string
-  code: string
-  grade_level: string
-  description?: string
-  created_at: string
-  updated_at: string
+  description: string | null
+  created_at: string      // TIMESTAMPTZ
 }
 
 export interface GeneratorFormState {

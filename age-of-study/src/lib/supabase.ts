@@ -24,7 +24,6 @@ export const supabase = getSupabaseBrowserClient()
 export interface Profile {
   id: string
   username: string | null
-  email: string | null  // Added email field to match DB and enable username-based login
   full_name: string | null
   avatar_url: string | null
   role: 'system_admin' | 'teacher' | 'student'
