@@ -21,7 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { icon: "🏠", label: "Trang chủ", href: "/learn" },
   { icon: "⚔️", label: "Học tập", href: "/learn/skill-tree" },
   { icon: "🏆", label: "Xếp hạng", href: "/leaderboard" },
-  { icon: "🎒", label: "Balo", href: "/inventory" },
+  { icon: "🎒", label: "Balo", href: "/backpack" },
 ];
 
 /* ─────────────────────────────────────

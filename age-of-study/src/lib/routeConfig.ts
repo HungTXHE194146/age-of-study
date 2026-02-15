@@ -38,6 +38,19 @@ export const routeConfig: RouteConfig[] = [
     allowedRoles: ['student', 'teacher'],
   },
   {
+    path: '/leaderboard',
+    allowedRoles: ['student', 'teacher'],
+  },
+  {
+    path: '/settings',
+    allowedRoles: ['student', 'teacher', 'system_admin'],
+  },
+  {
+    path: '/backpack',
+    allowedRoles: ['student'],
+    redirectTo: '/learn',
+  },
+  {
     path: '/teacher',
     allowedRoles: ['teacher', 'system_admin'],
     redirectTo: '/learn',
