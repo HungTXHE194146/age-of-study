@@ -1,6 +1,7 @@
 'use client';
 
 import GameHeader from "@/components/GameHeader";
+import FloatingChatbot from "@/components/student/FloatingChatbot";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
@@ -13,7 +14,7 @@ export default function DashboardLayout({
 }) {
   const { user, checkAuth, isAuthenticated, isLoading } = useAuthStore();
   const router = useRouter();
-  const pathname = usePathname(); // Use Next.js hook instead of window.location
+  const pathname = usePathname();
 
   // Run checkAuth only once on mount
   useEffect(() => {
@@ -23,9 +24,8 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
-      // Use pathname from hook (reactive)
+      // Check route permissions using centralized middleware
       const currentPath = pathname || '/';
-      
       const redirectPath = checkRoutePermission({
         user,
         currentPath,
@@ -37,14 +37,14 @@ export default function DashboardLayout({
         return;
       }
 
-      // Auto-redirect teachers ONLY when accessing root dashboard path
-      if (user.role === "teacher" && currentPath === "/") {
+      // Auto-redirect based on user role when accessing dashboard
+      if (user.role === "teacher" && (currentPath === "/" || currentPath === "/dashboard")) {
         router.push("/teacher/dashboard");
       }
     } else if (!isLoading && !isAuthenticated) {
       router.push("/login");
     }
-  }, [isLoading, isAuthenticated, user, router, pathname]); // Add pathname to deps
+  }, [isLoading, isAuthenticated, user, router, pathname]);
 
   if (isLoading) {
     return (
@@ -61,10 +61,17 @@ export default function DashboardLayout({
     return null;
   }
 
+  // Check if current page is a test page (hide chatbot during tests)
+  const isTestPage = pathname?.includes('/learn/tests/');
+  const showChatbot = user.role === 'student' && !isTestPage;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <GameHeader />
       <main className="pb-20 md:pb-8">{children}</main>
+      
+      {/* Floating Chatbot - only for students, not during tests */}
+      {showChatbot && <FloatingChatbot />}
     </div>
   );
 }
