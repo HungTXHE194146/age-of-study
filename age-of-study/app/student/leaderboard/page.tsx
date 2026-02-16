@@ -145,10 +145,11 @@ export default function LeaderboardPage() {
                   Hành trình của bạn mới bắt đầu!
                 </h3>
                 <p className="text-xl text-gray-600 max-w-md mx-auto mb-8">
-                  Hoàn thành bài học đầu tiên để theo dõi tiến độ cá nhân của bạn
+                  Hoàn thành bài học đầu tiên để theo dõi tiến độ cá nhân của
+                  bạn
                 </p>
                 <button
-                  onClick={() => window.location.href = '/learn'}
+                  onClick={() => (window.location.href = "/student")}
                   className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black text-lg rounded-2xl shadow-lg hover:scale-105 transition-transform"
                 >
                   🚀 Bắt đầu học ngay!

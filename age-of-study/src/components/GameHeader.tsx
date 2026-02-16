@@ -18,8 +18,8 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { icon: "🏠", label: "Trang chủ", href: "/learn" },
-  { icon: "⚔️", label: "Học tập", href: "/learn/skill-tree" },
+  { icon: "🏠", label: "Trang chủ", href: "/student" },
+  { icon: "⚔️", label: "Học tập", href: "/student/skill-tree" },
   { icon: "🏆", label: "Xếp hạng", href: "/leaderboard" },
   { icon: "🎒", label: "Balo", href: "/backpack" },
 ];
@@ -147,7 +147,9 @@ export default function GameHeader() {
               className="select-none w-10 h-10 sm:w-12 sm:h-12"
               priority
             />
-            <span className="bubble-text hidden lg:inline text-lg sm:text-xl">Age Of Study</span>
+            <span className="bubble-text hidden lg:inline text-lg sm:text-xl">
+              Age Of Study
+            </span>
           </div>
 
           {/* ── CENTER: Desktop Nav ── */}
@@ -155,7 +157,7 @@ export default function GameHeader() {
             {NAV_ITEMS.map((item) => {
               const isActive =
                 pathname === item.href ||
-                (item.href !== "/learn" && pathname.startsWith(item.href));
+                (item.href !== "/student" && pathname.startsWith(item.href));
 
               return (
                 <motion.div
@@ -197,10 +199,17 @@ export default function GameHeader() {
               whileHover={{ scale: 1.08 }}
               transition={SPRING}
             >
-              <span role="img" aria-label="Streak" className="text-base sm:text-lg">
+              <span
+                role="img"
+                aria-label="Streak"
+                className="text-base sm:text-lg"
+              >
                 🔥
               </span>
-              <span className="whitespace-nowrap text-xs sm:text-sm">{streak}<span className="hidden xs:inline"> Ngày</span></span>
+              <span className="whitespace-nowrap text-xs sm:text-sm">
+                {streak}
+                <span className="hidden xs:inline"> Ngày</span>
+              </span>
             </motion.div>
 
             {/* XP Badge */}
@@ -212,7 +221,10 @@ export default function GameHeader() {
               <span role="img" aria-label="XP" className="text-base sm:text-lg">
                 ⭐
               </span>
-              <span className="whitespace-nowrap text-xs sm:text-sm">{formatXP(xp)}<span className="hidden xs:inline"> XP</span></span>
+              <span className="whitespace-nowrap text-xs sm:text-sm">
+                {formatXP(xp)}
+                <span className="hidden xs:inline"> XP</span>
+              </span>
             </motion.div>
 
             {/* Avatar + Dropdown */}
@@ -313,7 +325,7 @@ export default function GameHeader() {
           {NAV_ITEMS.map((item) => {
             const isActive =
               pathname === item.href ||
-              (item.href !== "/learn" && pathname.startsWith(item.href));
+              (item.href !== "/student" && pathname.startsWith(item.href));
 
             return (
               <motion.div

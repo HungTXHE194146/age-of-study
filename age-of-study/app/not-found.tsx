@@ -1,12 +1,14 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function NotFound() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [particles, setParticles] = useState<Array<{ left: number; top: number; delay: number; duration: number }>>([]);
+  const [particles, setParticles] = useState<
+    Array<{ left: number; top: number; delay: number; duration: number }>
+  >([]);
 
   useEffect(() => {
     setMounted(true);
@@ -21,21 +23,21 @@ export default function NotFound() {
   }, []);
 
   const handleGoHome = () => {
-    router.push('/learn');
+    router.push("/student");
   };
 
   const handleGetHelp = () => {
     // Open support chat or redirect to help page
     // For now, redirect to settings where they can find help
-    router.push('/settings');
+    router.push("/settings");
   };
 
   const handleHelpClick = () => {
-    router.push('/settings');
+    router.push("/settings");
   };
 
   const handleHelpKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       handleHelpClick();
     }
@@ -45,29 +47,43 @@ export default function NotFound() {
     <div className="min-h-screen bg-gradient-to-br from-[#1a1410] via-[#2d2416] to-[#1a1410] relative overflow-hidden flex items-center justify-center">
       {/* Animated background symbols */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className={`absolute top-20 left-10 text-amber-700/10 text-6xl font-bold transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}`}>
+        <div
+          className={`absolute top-20 left-10 text-amber-700/10 text-6xl font-bold transition-all duration-1000 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-10"}`}
+        >
           Σ
         </div>
-        <div className={`absolute top-40 right-20 text-amber-700/10 text-5xl font-bold transition-all duration-1000 delay-200 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}`}>
+        <div
+          className={`absolute top-40 right-20 text-amber-700/10 text-5xl font-bold transition-all duration-1000 delay-200 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-10"}`}
+        >
           π
         </div>
-        <div className={`absolute bottom-40 left-20 text-amber-700/10 text-6xl font-bold transition-all duration-1000 delay-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        <div
+          className={`absolute bottom-40 left-20 text-amber-700/10 text-6xl font-bold transition-all duration-1000 delay-300 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
+        >
           A+
         </div>
-        <div className={`absolute bottom-20 right-32 text-amber-700/10 text-5xl font-bold transition-all duration-1000 delay-400 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        <div
+          className={`absolute bottom-20 right-32 text-amber-700/10 text-5xl font-bold transition-all duration-1000 delay-400 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
+        >
           √x
         </div>
-        <div className={`absolute top-1/3 right-10 text-amber-700/10 text-4xl font-bold transition-all duration-1000 delay-100 ${mounted ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
+        <div
+          className={`absolute top-1/3 right-10 text-amber-700/10 text-4xl font-bold transition-all duration-1000 delay-100 ${mounted ? "opacity-100 scale-100" : "opacity-0 scale-50"}`}
+        >
           🎓
         </div>
-        <div className={`absolute bottom-1/3 left-32 text-amber-700/10 text-4xl font-bold transition-all duration-1000 delay-500 ${mounted ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
+        <div
+          className={`absolute bottom-1/3 left-32 text-amber-700/10 text-4xl font-bold transition-all duration-1000 delay-500 ${mounted ? "opacity-100 scale-100" : "opacity-0 scale-50"}`}
+        >
           📚
         </div>
       </div>
 
       {/* Giant 404 in background */}
       <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-        <div className={`text-[20rem] md:text-[30rem] font-black text-amber-900/10 select-none transition-all duration-1000 ${mounted ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
+        <div
+          className={`text-[20rem] md:text-[30rem] font-black text-amber-900/10 select-none transition-all duration-1000 ${mounted ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}
+        >
           404
         </div>
       </div>
@@ -102,17 +118,17 @@ export default function NotFound() {
       {/* Main content */}
       <div className="relative z-10 w-full max-w-2xl mx-auto px-6 text-center">
         {/* Owl mascot */}
-        <div className={`mb-8 transition-all duration-1000 delay-200 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        <div
+          className={`mb-8 transition-all duration-1000 delay-200 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
+        >
           <div className="relative inline-block">
             {/* Glow effect */}
             <div className="absolute inset-0 bg-amber-500/20 blur-3xl rounded-full scale-150" />
-            
+
             {/* Owl circle background */}
             <div className="relative w-64 h-64 mx-auto bg-gradient-to-b from-[#2a2520] to-[#1a1510] rounded-full flex items-center justify-center border-4 border-amber-900/30 shadow-2xl">
               {/* Simplified owl illustration using emojis/text */}
-              <div className="text-8xl animate-sway">
-                🦉
-              </div>
+              <div className="text-8xl animate-sway">🦉</div>
             </div>
 
             {/* Decorative small icons around owl */}
@@ -126,24 +142,33 @@ export default function NotFound() {
         </div>
 
         {/* Title */}
-        <h1 className={`text-4xl md:text-5xl font-bold text-white mb-4 transition-all duration-1000 delay-400 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        <h1
+          className={`text-4xl md:text-5xl font-bold text-white mb-4 transition-all duration-1000 delay-400 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
+        >
           Ôi không! Bạn bị lạc rồi! 🧭
         </h1>
 
         {/* Description */}
-        <p className={`text-gray-300 text-lg mb-8 max-w-lg mx-auto transition-all duration-1000 delay-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          Có vẻ như hòn đảo này không tồn tại trên bản đồ tri thức của chúng mình. Đừng lo nhé nhà thám hiểm!
+        <p
+          className={`text-gray-300 text-lg mb-8 max-w-lg mx-auto transition-all duration-1000 delay-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
+        >
+          Có vẻ như hòn đảo này không tồn tại trên bản đồ tri thức của chúng
+          mình. Đừng lo nhé nhà thám hiểm!
         </p>
 
         {/* Action buttons */}
-        <div className={`flex flex-col sm:flex-row gap-4 justify-center items-center mb-12 transition-all duration-1000 delay-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        <div
+          className={`flex flex-col sm:flex-row gap-4 justify-center items-center mb-12 transition-all duration-1000 delay-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
+        >
           {/* Primary button */}
           <button
             onClick={handleGoHome}
             className="group relative px-8 py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-orange-500/50 transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-2"
           >
             <span className="relative z-10">Quay lại bản đồ chính</span>
-            <span className="text-xl group-hover:translate-x-1 transition-transform">🗺️</span>
+            <span className="text-xl group-hover:translate-x-1 transition-transform">
+              🗺️
+            </span>
             <div className="absolute inset-0 bg-gradient-to-r from-orange-600 to-amber-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
           </button>
 
@@ -153,19 +178,24 @@ export default function NotFound() {
             className="group px-8 py-4 bg-transparent text-blue-300 font-semibold rounded-xl border-2 border-blue-500/50 hover:border-blue-400 hover:bg-blue-500/10 transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-2"
           >
             <span>Cần giúp đỡ? (Hỏi Cú Mèo)</span>
-            <span className="text-xl group-hover:rotate-12 transition-transform">💬</span>
+            <span className="text-xl group-hover:rotate-12 transition-transform">
+              💬
+            </span>
           </button>
         </div>
 
         {/* Footer */}
-        <div className={`text-gray-500 text-sm transition-all duration-1000 delay-900 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+        <div
+          className={`text-gray-500 text-sm transition-all duration-1000 delay-900 ${mounted ? "opacity-100" : "opacity-0"}`}
+        >
           AGE OF STUDY • BẢN ĐỒ TRI THỨC {new Date().getFullYear()}
         </div>
       </div>
 
       <style jsx>{`
         @keyframes float {
-          0%, 100% {
+          0%,
+          100% {
             transform: translateY(0px) translateX(0px);
             opacity: 0.2;
           }
@@ -182,7 +212,8 @@ export default function NotFound() {
         }
 
         @keyframes float-slow {
-          0%, 100% {
+          0%,
+          100% {
             transform: translateY(0px);
           }
           50% {
@@ -191,7 +222,8 @@ export default function NotFound() {
         }
 
         @keyframes float-slower {
-          0%, 100% {
+          0%,
+          100% {
             transform: translateY(0px);
           }
           50% {
@@ -200,7 +232,8 @@ export default function NotFound() {
         }
 
         @keyframes sway {
-          0%, 100% {
+          0%,
+          100% {
             transform: rotate(-5deg);
           }
           50% {
@@ -209,7 +242,8 @@ export default function NotFound() {
         }
 
         @keyframes bounce-slow {
-          0%, 100% {
+          0%,
+          100% {
             transform: translateY(0);
           }
           50% {

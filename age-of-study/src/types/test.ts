@@ -34,6 +34,7 @@ export interface QuestionContent {
   difficulty: string;
   explanation?: string;
   questionText: string;
+  question: string;
 }
 
 export interface Question {

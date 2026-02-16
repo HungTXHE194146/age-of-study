@@ -502,7 +502,7 @@ export default function ClassStudentsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
                         <Link
-                          href={`/learn/tests?studentId=${student.student_id}`}
+                          href={`/student/tests?studentId=${student.student_id}`}
                         >
                           <Button
                             variant="outline"

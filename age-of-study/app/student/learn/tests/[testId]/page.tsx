@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useAuthStore } from "@/store/useAuthStore";
 import { TestService } from "@/lib/testService";
 import { Button } from "@/components/ui/button";
 import { checkRoutePermission } from "@/lib/routeMiddleware";
 import Loading from "@/components/ui/loading";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface Question {
   id: string;
@@ -65,7 +65,7 @@ export default function StudentTestPage() {
       const redirectPath = checkRoutePermission({
         user,
         currentPath,
-        isAuthenticated
+        isAuthenticated,
       });
 
       if (redirectPath) {
@@ -182,7 +182,7 @@ export default function StudentTestPage() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <Loading message="Đang tải bài kiểm tra..." size="lg" />
-      </div>  
+      </div>
     );
   }
 
@@ -217,9 +217,7 @@ export default function StudentTestPage() {
               <h1 className="text-4xl font-bold text-gray-900 mb-2">
                 Bài kiểm tra đã hoàn thành!
               </h1>
-              <p className="text-lg text-gray-600">
-                {test.title}
-              </p>
+              <p className="text-lg text-gray-600">{test.title}</p>
             </div>
 
             {/* Stats Cards */}
@@ -227,16 +225,24 @@ export default function StudentTestPage() {
               <div className="bg-white rounded-lg p-6 shadow-md">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">
-                      Điểm số
-                    </p>
+                    <p className="text-sm text-gray-600">Điểm số</p>
                     <p className="text-3xl font-bold text-green-600">
                       {submissionResult.score}%
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="w-6 h-6 text-green-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -245,16 +251,24 @@ export default function StudentTestPage() {
               <div className="bg-white rounded-lg p-6 shadow-md">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">
-                      Câu đúng
-                    </p>
+                    <p className="text-sm text-gray-600">Câu đúng</p>
                     <p className="text-3xl font-bold text-green-600">
                       {submissionResult.correctAnswers}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg
+                      className="w-6 h-6 text-blue-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -263,16 +277,24 @@ export default function StudentTestPage() {
               <div className="bg-white rounded-lg p-6 shadow-md">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">
-                      Tổng số câu
-                    </p>
+                    <p className="text-sm text-gray-600">Tổng số câu</p>
                     <p className="text-3xl font-bold text-gray-900">
                       {submissionResult.totalQuestions}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <svg
+                      className="w-6 h-6 text-purple-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -281,9 +303,7 @@ export default function StudentTestPage() {
               <div className="bg-white rounded-lg p-6 shadow-md">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">
-                      Thời gian
-                    </p>
+                    <p className="text-sm text-gray-600">Thời gian</p>
                     <p className="text-3xl font-bold text-blue-600">
                       {Math.floor(
                         (test.settings.time_limit * 60 - timeLeft) / 60,
@@ -295,8 +315,18 @@ export default function StudentTestPage() {
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                    <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="w-6 h-6 text-orange-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -308,7 +338,7 @@ export default function StudentTestPage() {
               <h3 className="text-2xl font-bold text-gray-900 mb-6">
                 Xem lại câu hỏi
               </h3>
-              
+
               <div className="space-y-6">
                 {submissionResult.questions.map((question, index) => {
                   const userAnswer = submissionResult.answers.find(
@@ -319,8 +349,8 @@ export default function StudentTestPage() {
                     <div
                       key={question.id}
                       className={`p-6 rounded-lg border-2 ${
-                        isCorrect 
-                          ? "border-green-200 bg-green-50" 
+                        isCorrect
+                          ? "border-green-200 bg-green-50"
                           : "border-red-200 bg-red-50"
                       }`}
                     >
@@ -332,8 +362,8 @@ export default function StudentTestPage() {
                             </span>
                             <span
                               className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                isCorrect 
-                                  ? "bg-green-200 text-green-800" 
+                                isCorrect
+                                  ? "bg-green-200 text-green-800"
                                   : "bg-red-200 text-red-800"
                               }`}
                             >
@@ -343,19 +373,39 @@ export default function StudentTestPage() {
                           <h4 className="text-lg font-semibold text-gray-900 mb-4">
                             {question.content.question}
                           </h4>
-                          
+
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div className="bg-white p-4 rounded-lg">
-                              <p className="text-sm text-gray-600 mb-2">Câu trả lời của bạn:</p>
+                              <p className="text-sm text-gray-600 mb-2">
+                                Câu trả lời của bạn:
+                              </p>
                               <p className="font-medium text-gray-900">
-                                {String.fromCharCode(65 + (userAnswer?.selected_option_index || 0))}. {question.content.options[userAnswer?.selected_option_index || 0]}
+                                {String.fromCharCode(
+                                  65 + (userAnswer?.selected_option_index || 0),
+                                )}
+                                .{" "}
+                                {
+                                  question.content.options[
+                                    userAnswer?.selected_option_index || 0
+                                  ]
+                                }
                               </p>
                             </div>
                             {!isCorrect && (
                               <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                                <p className="text-sm text-green-600 mb-2">Đáp án đúng:</p>
+                                <p className="text-sm text-green-600 mb-2">
+                                  Đáp án đúng:
+                                </p>
                                 <p className="font-medium text-green-800">
-                                  {String.fromCharCode(65 + question.correct_option_index)}. {question.content.options[question.correct_option_index]}
+                                  {String.fromCharCode(
+                                    65 + question.correct_option_index,
+                                  )}
+                                  .{" "}
+                                  {
+                                    question.content.options[
+                                      question.correct_option_index
+                                    ]
+                                  }
                                 </p>
                               </div>
                             )}
@@ -363,42 +413,55 @@ export default function StudentTestPage() {
 
                           {/* Options list */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {question.content.options.map((option, optionIndex) => {
-                              const isUserAnswer = optionIndex === (userAnswer?.selected_option_index || -1);
-                              const isCorrectOption = optionIndex === question.correct_option_index;
-                              
-                              return (
-                                <div
-                                  key={optionIndex}
-                                  className={`p-3 rounded-lg border-2 ${
-                                    isCorrectOption
-                                      ? "border-green-300 bg-green-50"
-                                      : isUserAnswer && !isCorrect
-                                        ? "border-red-300 bg-red-50"
-                                        : "border-gray-200 bg-gray-50"
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                            {question.content.options.map(
+                              (option, optionIndex) => {
+                                const isUserAnswer =
+                                  optionIndex ===
+                                  (userAnswer?.selected_option_index || -1);
+                                const isCorrectOption =
+                                  optionIndex === question.correct_option_index;
+
+                                return (
+                                  <div
+                                    key={optionIndex}
+                                    className={`p-3 rounded-lg border-2 ${
                                       isCorrectOption
-                                        ? "bg-green-200 text-green-800"
+                                        ? "border-green-300 bg-green-50"
                                         : isUserAnswer && !isCorrect
-                                          ? "bg-red-200 text-red-800"
-                                          : "bg-gray-200 text-gray-800"
-                                    }`}>
-                                      {String.fromCharCode(65 + optionIndex)}
-                                    </span>
-                                    <span className="text-gray-900">{option}</span>
-                                    {isCorrectOption && (
-                                      <span className="ml-auto text-green-600 font-semibold">✓</span>
-                                    )}
-                                    {isUserAnswer && !isCorrectOption && (
-                                      <span className="ml-auto text-red-600 font-semibold">✗</span>
-                                    )}
+                                          ? "border-red-300 bg-red-50"
+                                          : "border-gray-200 bg-gray-50"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <span
+                                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                          isCorrectOption
+                                            ? "bg-green-200 text-green-800"
+                                            : isUserAnswer && !isCorrect
+                                              ? "bg-red-200 text-red-800"
+                                              : "bg-gray-200 text-gray-800"
+                                        }`}
+                                      >
+                                        {String.fromCharCode(65 + optionIndex)}
+                                      </span>
+                                      <span className="text-gray-900">
+                                        {option}
+                                      </span>
+                                      {isCorrectOption && (
+                                        <span className="ml-auto text-green-600 font-semibold">
+                                          ✓
+                                        </span>
+                                      )}
+                                      {isUserAnswer && !isCorrectOption && (
+                                        <span className="ml-auto text-red-600 font-semibold">
+                                          ✗
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              );
-                            })}
+                                );
+                              },
+                            )}
                           </div>
                         </div>
                       </div>
@@ -409,7 +472,7 @@ export default function StudentTestPage() {
 
               {/* Actions */}
               <div className="flex gap-4 mt-8">
-                <Button 
+                <Button
                   onClick={() => router.push("/learn")}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3"
                 >
@@ -579,14 +642,14 @@ export default function StudentTestPage() {
 
                     <div className="flex justify-between">
                       <div className="flex gap-2">
-                        <Button 
+                        <Button
                           onClick={handlePrevQuestion}
                           disabled={currentQuestionIndex === 0}
                           variant="secondary"
                         >
                           Previous
                         </Button>
-                        <Button 
+                        <Button
                           onClick={handleNextQuestion}
                           disabled={currentQuestionIndex === totalQuestions - 1}
                           variant="secondary"

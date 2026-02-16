@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import GameHeader from "@/components/GameHeader";
 import FloatingChatbot from "@/components/student/FloatingChatbot";
@@ -25,11 +25,11 @@ export default function DashboardLayout({
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
       // Check route permissions using centralized middleware
-      const currentPath = pathname || '/';
+      const currentPath = pathname || "/";
       const redirectPath = checkRoutePermission({
         user,
         currentPath,
-        isAuthenticated
+        isAuthenticated,
       });
 
       if (redirectPath) {
@@ -38,7 +38,10 @@ export default function DashboardLayout({
       }
 
       // Auto-redirect based on user role when accessing dashboard
-      if (user.role === "teacher" && (currentPath === "/" || currentPath === "/dashboard")) {
+      if (
+        user.role === "teacher" &&
+        (currentPath === "/" || currentPath === "/dashboard")
+      ) {
         router.push("/teacher/dashboard");
       }
     } else if (!isLoading && !isAuthenticated) {
@@ -62,14 +65,14 @@ export default function DashboardLayout({
   }
 
   // Check if current page is a test page (hide chatbot during tests)
-  const isTestPage = pathname?.includes('/learn/tests/');
-  const showChatbot = user.role === 'student' && !isTestPage;
+  const isTestPage = pathname?.includes("/student/tests/");
+  const showChatbot = user.role === "student" && !isTestPage;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <GameHeader />
       <main className="pb-20 md:pb-8">{children}</main>
-      
+
       {/* Floating Chatbot - only for students, not during tests */}
       {showChatbot && <FloatingChatbot />}
     </div>
