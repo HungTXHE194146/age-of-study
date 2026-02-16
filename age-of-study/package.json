@@ -9,22 +9,24 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
+    "@google/generative-ai": "^0.24.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
     "@types/canvas-confetti": "^1.9.0",
     "@types/html2canvas": "^0.5.35",
+    "@types/pdf-parse": "^1.1.5",
+    "@types/word-extractor": "^1.0.6",
     "canvas-confetti": "^1.9.4",
     "framer-motion": "^12.34.0",
     "html2canvas": "^1.4.1",
     "lucide-react": "^0.563.0",
-    "@google/generative-ai": "^0.24.0",
     "mammoth": "^1.11.0",
     "next": "^16.1.6",
     "pdf-parse": "^2.4.5",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-dropzone": "^15.0.0",
+    "word-extractor": "^1.0.4",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

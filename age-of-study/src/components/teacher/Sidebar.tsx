@@ -33,6 +33,12 @@ const navigationItems = [
     icon: LayoutDashboard,
   },
   {
+    id: "classes",
+    label: "Lớp học",
+    href: "/teacher/classes",
+    icon: GraduationCap,
+  },
+  {
     id: "my-tests",
     label: "Bài kiểm tra",
     href: "/teacher/tests",

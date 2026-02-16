@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
-import { CloudUpload, FileText, X, Loader2 } from "lucide-react";
+import { CloudUpload, FileText, X, Loader2, AlertCircle } from "lucide-react";
 import { GeneratorFormState, DifficultyLevel, Subject } from "@/types/teacher";
 import { subjectService } from "@/lib/subjectService";
 import {
@@ -131,7 +131,7 @@ export function QuizGeneratorForm({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-          {formData.file ? (
+            {formData.file ? (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <FileText className="w-8 h-8 text-blue-500" />
@@ -237,7 +237,7 @@ export function QuizGeneratorForm({
                   subject: e.target.value,
                 }))
               }
-              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Select a subject...</option>
               {isLoadingSubjects ? (
@@ -268,7 +268,7 @@ export function QuizGeneratorForm({
                   difficulty: e.target.value as DifficultyLevel,
                 }))
               }
-              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {difficultyOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -294,7 +294,7 @@ export function QuizGeneratorForm({
                   questionCount: parseInt(e.target.value),
                 }))
               }
-              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {questionCountOptions.map((option) => (
                 <option key={option.value} value={option.value.toString()}>

@@ -89,7 +89,7 @@ export function QuestionPointsGrid({
                   type="number"
                   value={editingPoints}
                   onChange={(e) => setEditingPoints(parseInt(e.target.value) || 0)}
-                  className="w-24 text-center p-0 "
+                  className="w-24 text-center"
                   min="1"
                   max="100"
                   disabled={!selectedQuestionId}

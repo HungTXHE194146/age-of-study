@@ -99,7 +99,10 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Student Management Card */}
-        <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-all border-2 border-green-100">
+        <div
+          className="bg-white rounded-2xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-all border-2 border-green-100 cursor-pointer hover:border-green-300"
+          onClick={() => handleNavigate("/teacher/classes")}
+        >
           <div className="flex items-center justify-between mb-3 sm:mb-4">
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
               <Users className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />

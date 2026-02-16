@@ -1,13 +1,31 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, Plus, Check, Clock, Book } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Plus,
+  Check,
+  Clock,
+  Book,
+  Edit3,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Question, QuestionType, DifficultyLevel } from "@/types/teacher";
-import { QuestionBankQuestion } from "@/lib/questionBankService";
+import {
+  Question,
+  QuestionType,
+  DifficultyLevel,
+  QuestionDifficulty,
+} from "@/types/teacher";
+import {
+  QuestionBankQuestion,
+  EditQuestionData,
+} from "@/lib/questionBankService";
 import { questionBankService } from "@/lib/questionBankService";
 import Loading from "../ui/loading";
+import { QuestionEditor } from "./QuestionEditor";
 
 interface QuestionBankTabProps {
   onAddQuestions: (questions: Question[]) => void;
@@ -45,6 +63,7 @@ export function QuestionBankTab({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalQuestions, setTotalQuestions] = useState(0);
   const questionsPerPage = 10;
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
   // Load subjects and initial questions
   useEffect(() => {
@@ -156,15 +175,15 @@ export function QuestionBankTab({
   };
 
   const handleAddSelectedQuestions = () => {
-    const selectedQuestions = questions.filter((q) =>
-      selectedQuestionIds.has(q.id),
+    const selectedQuestions = questions.filter(
+      (q) => selectedQuestionIds.has(q.id) && !existingQuestionIds?.has(q.id),
     );
     if (selectedQuestions.length === 0) {
-      alert("Vui lòng chọn ít nhất một câu hỏi");
+      alert("Vui lòng chọn ít nhất một câu hỏi chưa có trong bài kiểm tra");
       return;
     }
 
-    // Transform questions to match the expected format
+    // Transform questions to match the expected format for PaginatedQuestionPreview
     const transformedQuestions = selectedQuestions.map((q, index) => ({
       id: q.id,
       createdAt: q.createdAt,
@@ -172,15 +191,91 @@ export function QuestionBankTab({
       type: q.type,
       questionText: q.questionText,
       options: q.options.map((opt, idx) => ({
-        ...opt,
+        id: opt.id,
+        label: opt.label,
+        text:
+          typeof opt.text === "string"
+            ? opt.text
+            : (opt.text as { text?: string })?.text || "",
         isCorrect: idx === 0, // Default first option as correct
       })),
       difficulty: q.difficulty,
-      topic: q.topic,
+      points: 10, // Default points
+      explanation: q.explanation || "",
+      model_answer: q.model_answer || "",
     }));
 
     onAddQuestions(transformedQuestions);
     setSelectedQuestionIds(new Set());
+  };
+
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa câu hỏi này khỏi kho?")) {
+      return;
+    }
+
+    const success = await questionBankService.deleteQuestion(questionId);
+    if (success) {
+      alert("Xóa câu hỏi thành công!");
+      loadQuestions(); // Reload questions to update the list
+    } else {
+      alert("Xóa câu hỏi thất bại. Vui lòng thử lại.");
+    }
+  };
+
+  const handleEditQuestion = (question: QuestionBankQuestion) => {
+    // Transform question to match Question type for QuestionEditor
+    // Keep the original ID (numeric for bank questions, UUID for new questions)
+    const transformedQuestion: Question = {
+      id: question.id, // Keep original ID to preserve bank question identification
+      createdAt: question.createdAt,
+      number: 0, // Will be set when added to test
+      type: question.type,
+      questionText: question.questionText,
+      options: question.options.map((opt, idx) => ({
+        id: opt.id,
+        label: opt.label,
+        text:
+          typeof opt.text === "string"
+            ? opt.text
+            : (opt.text as { text?: string })?.text || "",
+        isCorrect: idx === 0, // Default first option as correct
+      })),
+      difficulty: question.difficulty,
+      points: 10, // Default points
+      explanation: question.explanation || "",
+      model_answer: question.model_answer || "",
+    };
+    setEditingQuestion(transformedQuestion);
+  };
+
+  const handleSaveEdit = async (updatedQuestion: Question) => {
+    if (!updatedQuestion) return;
+
+    // This is a question from the bank, update it in the question bank
+    const editData: EditQuestionData = {
+      questionText: updatedQuestion.questionText,
+      options: updatedQuestion.options,
+      difficulty: updatedQuestion.difficulty,
+      explanation: updatedQuestion.explanation || "",
+      model_answer: updatedQuestion.model_answer || "",
+    };
+
+    const success = await questionBankService.editQuestion(
+      updatedQuestion.id,
+      editData,
+    );
+    if (success) {
+      alert("Cập nhật câu hỏi thành công!");
+      setEditingQuestion(null);
+      loadQuestions(); // Reload questions to update the list
+    } else {
+      alert("Cập nhật câu hỏi thất bại. Vui lòng thử lại.");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingQuestion(null);
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -424,7 +519,7 @@ export function QuestionBankTab({
                                 .slice(0, 4)
                                 .map((option, index) => (
                                   <div
-                                    key={option.id}
+                                    key={`${question.id}-${option.id}-${index}`}
                                     className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 shadow-sm"
                                   >
                                     <div className="flex-shrink-0 w-8 h-8 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center">
@@ -433,7 +528,10 @@ export function QuestionBankTab({
                                       </span>
                                     </div>
                                     <span className="text-sm text-gray-700 leading-relaxed">
-                                      {option.text}
+                                      {typeof option.text === "string"
+                                        ? option.text
+                                        : (option.text as { text?: string })
+                                            ?.text || ""}
                                     </span>
                                   </div>
                                 ))}
@@ -449,10 +547,27 @@ export function QuestionBankTab({
                             <span>
                               Ngày tạo: {question.created_at_formatted}
                             </span>
-                            {question.topic && (
-                              <span>Chủ đề: {question.topic}</span>
-                            )}
                           </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditQuestion(question)}
+                            className="flex items-center gap-2 text-blue-600 border-blue-300 hover:bg-blue-50 hover:border-blue-400"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                            Sửa
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteQuestion(question.id)}
+                            className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Xóa
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -492,6 +607,15 @@ export function QuestionBankTab({
           )}
         </div>
       </div>
+
+      {/* Question Editor Modal */}
+      {editingQuestion && (
+        <QuestionEditor
+          question={editingQuestion}
+          onSave={handleSaveEdit}
+          onCancel={handleCancelEdit}
+        />
+      )}
     </div>
   );
 }
