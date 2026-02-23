@@ -1,4 +1,4 @@
-import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { getSupabaseBrowserClient } from '@/lib/supabase';
 
 // Định nghĩa interface Node để match với database schema
 export interface Node {
@@ -36,7 +36,7 @@ export async function fetchGradeSkillTree(gradeCode: string): Promise<{
   nodes: Node[];
 }> {
   try {
-    const supabase = getSupabaseServerClient();
+    const supabase = getSupabaseBrowserClient();
 
     // Lấy danh sách các môn học thuộc khối
     const { data: subjects, error: subjectsError } = await supabase
