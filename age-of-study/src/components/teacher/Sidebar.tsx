@@ -45,6 +45,12 @@ const navigationItems = [
     icon: FileText,
   },
   {
+    id: "skill-tree",
+    label: "Cây kỹ năng",
+    href: "/teacher/skill-tree",
+    icon: Brain,
+  },
+  {
     id: "leaderboard",
     label: "Bảng xếp hạng",
     href: "/teacher/leaderboard",

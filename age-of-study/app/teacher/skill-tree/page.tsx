@@ -19,6 +19,7 @@ import { subjectService } from "@/lib/subjectService";
 import { Subject } from "@/types/teacher";
 import VisualSkillTree from "@/components/VisualSkillTree";
 import { fetchGradeSkillTree } from "@/lib/gradeSkillTreeService";
+import Loading from "@/components/ui/loading";
 
 interface GradeLevel {
   id: number;
@@ -33,7 +34,17 @@ export default function TeacherSkillTreePage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [gradeLevels, setGradeLevels] = useState<GradeLevel[]>([]);
   const [loading, setLoading] = useState(false);
-  const [subjectNodes, setSubjectNodes] = useState<{ id: number; title: string; node_type: string; parent_node_id?: number | null; position_x?: number; position_y?: number; order_index: number }[]>([]);
+  const [subjectNodes, setSubjectNodes] = useState<
+    {
+      id: number;
+      title: string;
+      node_type: string;
+      parent_node_id?: number | null;
+      position_x?: number;
+      position_y?: number;
+      order_index: number;
+    }[]
+  >([]);
   const router = useRouter();
 
   const handleGradeSelect = (grade: GradeLevel) => {
@@ -98,7 +109,6 @@ export default function TeacherSkillTreePage() {
 
         {/* --- TOPBAR: THANH ĐIỀU KHIỂN NGANG --- */}
         <div className="relative z-20 w-full h-20 bg-slate-900/60 backdrop-blur-xl border-b border-indigo-500/30 shadow-[0_4px_24px_-5px_rgba(99,102,241,0.2)] flex items-center justify-between px-6 shrink-0">
-          
           {/* Logo & Tên */}
           <div className="flex items-center gap-3">
             <div className="relative w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg transform transition-transform hover:rotate-12 cursor-pointer">
@@ -116,7 +126,7 @@ export default function TeacherSkillTreePage() {
 
           {/* Chọn Khối (Dropdown ở giữa) */}
           <div className="relative flex-1 max-w-sm mx-4">
-            <div 
+            <div
               onClick={() => setIsGradeSelectorOpen(!isGradeSelectorOpen)}
               className="bg-slate-800/80 border border-indigo-500/40 rounded-xl px-4 py-2 cursor-pointer hover:border-indigo-400/60 transition-all shadow-inner flex items-center justify-between group"
             >
@@ -130,7 +140,11 @@ export default function TeacherSkillTreePage() {
                   </h4>
                 </div>
               </div>
-              {isGradeSelectorOpen ? <ChevronUp className="w-4 h-4 text-indigo-400" /> : <ChevronDown className="w-4 h-4 text-indigo-400" />}
+              {isGradeSelectorOpen ? (
+                <ChevronUp className="w-4 h-4 text-indigo-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-indigo-400" />
+              )}
             </div>
 
             {/* Menu Dropdown */}
@@ -144,7 +158,9 @@ export default function TeacherSkillTreePage() {
                       ${selectedGrade?.id === grade.id ? "bg-indigo-600/30 border border-indigo-400/50" : "hover:bg-slate-700/50 border border-transparent"}
                     `}
                   >
-                    <span className={`font-semibold text-sm ${selectedGrade?.id === grade.id ? "text-indigo-200" : "text-slate-300"}`}>
+                    <span
+                      className={`font-semibold text-sm ${selectedGrade?.id === grade.id ? "text-indigo-200" : "text-slate-300"}`}
+                    >
                       {grade.name}
                     </span>
                   </div>
@@ -159,26 +175,40 @@ export default function TeacherSkillTreePage() {
             {selectedGrade && (
               <div className="hidden lg:flex items-center gap-4 mr-4 border-r border-slate-700 pr-4">
                 <div className="flex flex-col items-center justify-center">
-                  <span className="text-[10px] text-slate-400 uppercase">Môn học</span>
-                  <span className="font-bold text-blue-400 text-sm">{subjects.filter(s => s.grade_level === selectedGrade.code).length}</span>
+                  <span className="text-[10px] text-slate-400 uppercase">
+                    Môn học
+                  </span>
+                  <span className="font-bold text-blue-400 text-sm">
+                    {
+                      subjects.filter(
+                        (s) => s.grade_level === selectedGrade.code,
+                      ).length
+                    }
+                  </span>
                 </div>
                 <div className="flex flex-col items-center justify-center">
-                  <span className="text-[10px] text-slate-400 uppercase">Bài học</span>
+                  <span className="text-[10px] text-slate-400 uppercase">
+                    Bài học
+                  </span>
                   <span className="font-bold text-purple-400 text-sm">--</span>
                 </div>
               </div>
             )}
 
             {/* Nút Quản Lý */}
-            <Button 
-              onClick={() => router.push('/teacher/nodes/create')} // ĐƯỜNG DẪN GIẢ
+            <Button
+              onClick={() => router.push("/teacher/nodes/create")} // ĐƯỜNG DẪN GIẢ
               className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 rounded-xl gap-2"
             >
               <PlusCircle className="w-4 h-4" />
               <span className="hidden sm:inline">Thêm Node</span>
             </Button>
-            
-            <Button variant="outline" size="md" className="rounded-xl border-slate-600 bg-slate-800/50 hover:bg-slate-700 hover:text-white">
+
+            <Button
+              variant="outline"
+              size="md"
+              className="rounded-xl border-slate-600 bg-slate-800/50 hover:bg-slate-700 hover:text-white"
+            >
               <Settings className="w-4 h-4" />
             </Button>
           </div>
@@ -186,12 +216,22 @@ export default function TeacherSkillTreePage() {
 
         {/* --- MAIN CONTENT: BẢN ĐỒ KỸ NĂNG --- */}
         <div className="flex-1 relative z-10">
-          {selectedGrade ? (
+          {loading ? (
+            <div className="h-full flex items-center justify-center">
+              <Loading message="Đang tải bản đồ kỹ năng..." size="lg" />
+            </div>
+          ) : selectedGrade ? (
             // Truyền gradeCode xuống. Thuộc tính isTeacherMode={true} để bật các nút Sửa/Xóa
-            <VisualSkillTree gradeCode={selectedGrade.code} isTeacherMode={true} subjectNodes={subjectNodes} />
+            <VisualSkillTree
+              gradeCode={selectedGrade.code}
+              isTeacherMode={true}
+              subjectNodes={subjectNodes}
+            />
           ) : (
             <div className="h-full flex items-center justify-center">
-              <p className="text-slate-400">Vui lòng chọn khối học ở thanh điều khiển phía trên.</p>
+              <p className="text-slate-400">
+                Vui lòng chọn khối học ở thanh điều khiển phía trên.
+              </p>
             </div>
           )}
         </div>

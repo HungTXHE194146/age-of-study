@@ -183,9 +183,17 @@ export function RouteProtectedWrapper({
   children: React.ReactNode;
   allowedRoles?: Profile["role"][];
 }) {
-  const { user, isAuthenticated, isLoading } = useAuthStore();
+  const { user, isAuthenticated, isLoading, checkAuth } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
+
+  // THÊM MỚI: Tự động khởi tạo Auth nếu đang ở trạng thái mặc định (F5)
+  useEffect(() => {
+    // Nếu store có hàm checkAuth và chưa xác định được user khi đang loading
+    if (isLoading && !isAuthenticated && checkAuth) {
+      checkAuth();
+    }
+  }, [isLoading, isAuthenticated, checkAuth]);
 
   // Pre-check permissions before rendering anything
   useEffect(() => {
