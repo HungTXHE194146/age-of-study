@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -163,7 +163,7 @@ export default function HomePage() {
 
           <div className="grid md:grid-cols-3 gap-8 mb-20">
             {/* Math Island */}
-            <Link href="/learn">
+            <Link href="/student">
               <motion.div
                 className="relative bg-gradient-to-br from-red-400 to-pink-500 p-8 rounded-3xl shadow-2xl border-4 border-white cursor-pointer"
                 variants={islandVariants}
@@ -192,7 +192,7 @@ export default function HomePage() {
             </Link>
 
             {/* English Island */}
-            <Link href="/learn">
+            <Link href="/student">
               <motion.div
                 className="relative bg-gradient-to-br from-cyan-400 to-blue-500 p-8 rounded-3xl shadow-2xl border-4 border-white cursor-pointer"
                 variants={islandVariants}
@@ -220,7 +220,7 @@ export default function HomePage() {
             </Link>
 
             {/* Vietnamese Island */}
-            <Link href="/learn">
+            <Link href="/student">
               <motion.div
                 className="relative bg-gradient-to-br from-green-400 to-teal-500 p-8 rounded-3xl shadow-2xl border-4 border-white cursor-pointer"
                 variants={islandVariants}

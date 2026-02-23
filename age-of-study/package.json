@@ -16,6 +16,7 @@
     "@types/html2canvas": "^0.5.35",
     "@types/pdf-parse": "^1.1.5",
     "@types/word-extractor": "^1.0.6",
+    "@xyflow/react": "^12.10.0",
     "canvas-confetti": "^1.9.4",
     "framer-motion": "^12.34.0",
     "html2canvas": "^1.4.1",

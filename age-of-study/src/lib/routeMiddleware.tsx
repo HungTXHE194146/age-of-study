@@ -48,7 +48,7 @@ export function checkRoutePermission(
     if (!canAccess) {
       // Get the redirect path from route config
       const redirectPath = getRedirectPath(user.role, currentPath);
-      return redirectPath || "/learn";
+      return redirectPath || "/student";
     }
   }
 
@@ -87,7 +87,7 @@ export function withRouteProtection<P extends object>(
 
       // Check specific roles
       if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-        router.push("/learn");
+        router.push("/student");
       }
     }, [user, isAuthenticated, isLoading, pathname, router]);
 
@@ -141,14 +141,14 @@ export function withRouteProtectionPreCheck<P extends object>(
         if (!canAccess) {
           // Get the redirect path from route config
           const redirectPath = getRedirectPath(user.role, currentPath);
-          router.push(redirectPath || "/learn");
+          router.push(redirectPath || "/student");
           return;
         }
       }
 
       // Check specific roles if provided
       if (allowedRoles && !allowedRoles.includes(user.role)) {
-        router.push("/learn");
+        router.push("/student");
         return;
       }
     }, [user, isAuthenticated, isLoading, pathname, router]);
@@ -218,14 +218,14 @@ export function RouteProtectedWrapper({
       if (!canAccess) {
         // Get the redirect path from route config
         const redirectPath = getRedirectPath(user.role, currentPath);
-        router.push(redirectPath || "/learn");
+        router.push(redirectPath || "/student");
         return;
       }
     }
 
     // Check specific roles if provided
     if (allowedRoles && !allowedRoles.includes(user.role)) {
-      router.push("/learn");
+      router.push("/student");
       return;
     }
   }, [user, isAuthenticated, isLoading, pathname, router]);
