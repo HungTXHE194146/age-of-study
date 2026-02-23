@@ -120,30 +120,6 @@ export default function TeacherDashboard() {
           </button>
         </div>
 
-        {/* Node Management Card */}
-        <div
-          className="bg-white rounded-2xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-all border-2 border-red-100 cursor-pointer hover:border-red-300"
-          onClick={() => handleNavigate("/teacher/skill-tree")}
-        >
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
-          </div>
-          <h3 className="text-base sm:text-xl font-bold text-red-600 mb-2">
-            Quản lý Node
-          </h3>
-          <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4">
-            Quản lý các node kiến thức và kỹ năng
-          </p>
-          <button className="w-full px-3 sm:px-4 py-2 bg-red-500 text-white rounded-full font-semibold hover:bg-red-600 transition-colors text-sm">
-            Quản lý ngay
-          </button>
-        </div>
-
         {/* Analytics Card */}
         <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-all border-2 border-purple-100">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
@@ -189,9 +165,25 @@ export default function TeacherDashboard() {
         >
           <div className="flex items-center justify-between mb-3 sm:mb-4">
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-9l-2-2H5a2 2 0 00-2 2z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5v2M12 5v2M16 5v2" />
+              <svg
+                className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-9l-2-2H5a2 2 0 00-2 2z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 5v2M12 5v2M16 5v2"
+                />
               </svg>
             </div>
             <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />

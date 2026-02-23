@@ -6,14 +6,14 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 // Define the Node type to match the database schema
 interface Node {
-  id: number;
+  id: string;
   position_x?: number;
   position_y?: number;
-  parent_node_id?: number | null;
+  parent_node_id?: string | null;
 }
 
 export type NodePosition = {
-  id: number;
+  id: string;
   x: number;
   y: number;
 };
@@ -36,7 +36,7 @@ export async function updateNodePositions(
       }
     }
 
-    // Update positions using individual updates to avoid type issues
+    // Use individual updates instead of RPC for better compatibility
     for (const pos of positions) {
       const { error } = await supabase
         .from("nodes")
@@ -63,8 +63,10 @@ export async function updateNodePositions(
 }
 
 export async function updateNodeConnection(
-  sourceId: number,
-  targetId: number,
+  sourceId: string,
+  targetId: string,
+  sourceHandle: string = 'bottom',
+  targetHandle: string = 'top',
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = getSupabaseServerClient();
@@ -110,10 +112,14 @@ export async function updateNodeConnection(
       return { success: false, error: "Error checking target node parent" };
     }
 
-    // Update the parent_node_id for the target node
+    // Update the parent_node_id for the target node with handle positions
     const { error: updateError } = await supabase
       .from("nodes")
-      .update({ parent_node_id: sourceId })
+      .update({ 
+        parent_node_id: sourceId,
+        source_position: sourceHandle,
+        target_position: targetHandle
+      })
       .eq("id", targetId);
 
     if (updateError) {

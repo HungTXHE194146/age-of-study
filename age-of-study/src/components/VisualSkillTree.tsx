@@ -94,10 +94,66 @@ const CustomNode: React.FC<NodeProps<CustomNodeType>> = ({
 
   return (
     <div className="relative group">
+      {/* Connection Points for easier linking - Hidden by default, visible on hover in teacher mode */}
       <Handle
         type="target"
         position={Position.Top}
-        className="!bg-transparent !border-none"
+        id="top"
+        className={`w-4 h-4 rounded-full border-2 border-white transition-all duration-200 ${
+          isTeacher 
+            ? 'opacity-0 group-hover:opacity-100 bg-green-500 hover:bg-green-400 cursor-pointer' 
+            : '!bg-transparent !border-none'
+        }`}
+        style={{ 
+          top: '-12px',
+          left: '50%',
+          transform: 'translate(-50%, -50%)'
+        }}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="bottom"
+        className={`w-4 h-4 rounded-full border-2 border-white transition-all duration-200 ${
+          isTeacher 
+            ? 'opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-400 cursor-pointer' 
+            : '!bg-transparent !border-none'
+        }`}
+        style={{ 
+          bottom: '-12px',
+          left: '50%',
+          transform: 'translate(-50%, 50%)'
+        }}
+      />
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="left"
+        className={`w-4 h-4 rounded-full border-2 border-white transition-all duration-200 ${
+          isTeacher 
+            ? 'opacity-0 group-hover:opacity-100 bg-blue-500 hover:bg-blue-400 cursor-pointer' 
+            : '!bg-transparent !border-none'
+        }`}
+        style={{ 
+          left: '-12px',
+          top: '50%',
+          transform: 'translate(-50%, -50%)'
+        }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        className={`w-4 h-4 rounded-full border-2 border-white transition-all duration-200 ${
+          isTeacher 
+            ? 'opacity-0 group-hover:opacity-100 bg-purple-500 hover:bg-purple-400 cursor-pointer' 
+            : '!bg-transparent !border-none'
+        }`}
+        style={{ 
+          right: '-12px',
+          top: '50%',
+          transform: 'translate(50%, -50%)'
+        }}
       />
 
       <div
@@ -160,18 +216,12 @@ const CustomNode: React.FC<NodeProps<CustomNodeType>> = ({
           </div>
         )}
       </div>
-
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="!bg-transparent !border-none"
-      />
     </div>
   );
 };
 
 // --- STYLED CUSTOM EDGE COMPONENT ---
-const CustomEdge: React.FC<EdgeProps> = ({
+const CustomEdge: React.FC<EdgeProps & { setEdges?: (callback: (eds: Edge[]) => Edge[]) => void }> = ({
   id,
   sourceX,
   sourceY,
@@ -182,6 +232,8 @@ const CustomEdge: React.FC<EdgeProps> = ({
   style = {},
   markerEnd,
   data,
+  selected,
+  setEdges,
 }) => {
   const [edgePath] = getBezierPath({
     sourceX,
@@ -243,6 +295,41 @@ const CustomEdge: React.FC<EdgeProps> = ({
           calcMode="linear"
         />
       </circle>
+      
+      {/* Delete button for edges when selected */}
+      {selected && (
+        <foreignObject
+          width={24}
+          height={24}
+          x={(sourceX + targetX) / 2 - 12}
+          y={(sourceY + targetY) / 2 - 12}
+          requiredExtensions="http://www.w3.org/1999/xhtml"
+        >
+          <div
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: 12,
+              backgroundColor: 'red',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+              zIndex: 1000
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              // Handle edge deletion
+              if (setEdges) {
+                setEdges((eds: Edge[]) => eds.filter((edge: Edge) => edge.id !== id));
+              }
+            }}
+          >
+            <span style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>×</span>
+          </div>
+        </foreignObject>
+      )}
     </>
   );
 };
@@ -378,16 +465,23 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   }, [gradeCode, isTeacherMode, subjectNodes, setNodes, setEdges]);
 
   const nodeTypes = useMemo(() => ({ custom: CustomNode }), []);
-  const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
+  const edgeTypes = useMemo(() => ({ custom: (props: EdgeProps) => <CustomEdge {...props} setEdges={setEdges} /> }), [setEdges]);
 
   // Xử lý sự kiện kéo nối dây (onConnect)
   const onConnect = useCallback(async (params: Connection) => {
     if (!isTeacherMode) return;
 
     try {
+      // Lấy vị trí từ params (mặc định là bottom/top nếu kéo từ giữa node)
+      const sourceHandle = params.sourceHandle || 'bottom';
+      const targetHandle = params.targetHandle || 'top';
+      
+      // Gọi action update DB
       const result = await updateNodeConnection(
-        parseInt(params.source!),
-        parseInt(params.target!)
+        params.source!,
+        params.target!,
+        sourceHandle,
+        targetHandle
       );
 
       if (result.success) {
@@ -401,6 +495,41 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     }
   }, [isTeacherMode, setEdges]);
 
+  // Xử lý sự kiện xóa edge
+  const onEdgesDelete = useCallback((edgesToDelete: Edge[]) => {
+    if (!isTeacherMode) return;
+
+    try {
+      // Xóa các edge khỏi state
+      setEdges((eds) => eds.filter((edge) => !edgesToDelete.find((e) => e.id === edge.id)));
+      
+      // Gọi API để cập nhật database (nếu cần)
+      edgesToDelete.forEach(async (edge) => {
+        try {
+          // Gọi API xóa kết nối từ database
+          const response = await fetch('/api/delete-connection', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              sourceId: parseInt(edge.source),
+              targetId: parseInt(edge.target)
+            }),
+          });
+          
+          if (!response.ok) {
+            console.error('Failed to delete connection from database');
+          }
+        } catch (error) {
+          console.error('Error deleting connection:', error);
+        }
+      });
+    } catch (error) {
+      console.error('Error in onEdgesDelete:', error);
+    }
+  }, [isTeacherMode, setEdges]);
+
   // Xử lý sự kiện thả chuột sau khi di chuyển (onNodeDragStop)
   const onNodeDragStop = useCallback(async (event: React.MouseEvent, node: CustomNodeType, nodes: CustomNodeType[]) => {
     if (!isTeacherMode) return;
@@ -411,7 +540,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
       
       // Map thành định dạng yêu cầu
       const positions = selectedNodes.map(n => ({
-        id: parseInt(n.id),
+        id: n.id.toString(),
         x: Math.round(n.position.x),
         y: Math.round(n.position.y)
       }));
@@ -437,6 +566,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onEdgesDelete={onEdgesDelete}
         onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}

@@ -3,7 +3,7 @@ import { Edge } from "@xyflow/react";
 
 const BRANCH_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4"];
 
-export const transformDBNodesToFlow = (dbNodes: { id: number; title: string; node_type: string; parent_node_id?: number | null; position_x?: number; position_y?: number; order_index: number }[], isTeacherMode: boolean) => {
+export const transformDBNodesToFlow = (dbNodes: { id: number; title: string; node_type: string; parent_node_id?: number | null; position_x?: number; position_y?: number; order_index: number; source_position?: 'top' | 'bottom' | 'left' | 'right' | null; target_position?: 'top' | 'bottom' | 'left' | 'right' | null }[], isTeacherMode: boolean) => {
   const rfNodes: CustomNodeType[] = [];
   const rfEdges: Edge[] = [];
 
@@ -61,6 +61,8 @@ export const transformDBNodesToFlow = (dbNodes: { id: number; title: string; nod
         id: `e-${node.parent_node_id}-${node.id}`,
         source: node.parent_node_id.toString(),
         target: nodeId,
+        sourceHandle: node.source_position || 'bottom', // Gắn handle nguồn
+        targetHandle: node.target_position || 'top',    // Gắn handle đích
         type: "custom",
         data: { color: branchColor }
       });
