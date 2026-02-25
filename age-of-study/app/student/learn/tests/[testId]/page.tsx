@@ -7,26 +7,7 @@ import { Button } from "@/components/ui/button";
 import { checkRoutePermission } from "@/lib/routeMiddleware";
 import Loading from "@/components/ui/loading";
 import { useAuthStore } from "@/store/useAuthStore";
-
-interface Question {
-  id: string;
-  content: {
-    question: string;
-    options: string[];
-  };
-  correct_option_index: number;
-}
-
-interface Test {
-  id: string;
-  title: string;
-  description: string;
-  type: string;
-  settings: {
-    time_limit: number;
-  };
-  questions: Question[];
-}
+import type { Question, TestWithQuestions } from "@/types/test";
 
 interface SubmissionResult {
   score: number;
@@ -48,7 +29,7 @@ export default function StudentTestPage() {
   const { user, isAuthenticated } = useAuthStore();
   const testId = params.testId as string;
 
-  const [test, setTest] = useState<Test | null>(null);
+  const [test, setTest] = useState<TestWithQuestions | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -387,7 +368,7 @@ export default function StudentTestPage() {
                                 {
                                   question.content.options[
                                     userAnswer?.selected_option_index || 0
-                                  ]
+                                  ]?.text
                                 }
                               </p>
                             </div>
@@ -404,7 +385,7 @@ export default function StudentTestPage() {
                                   {
                                     question.content.options[
                                       question.correct_option_index
-                                    ]
+                                    ]?.text
                                   }
                                 </p>
                               </div>
@@ -445,7 +426,7 @@ export default function StudentTestPage() {
                                         {String.fromCharCode(65 + optionIndex)}
                                       </span>
                                       <span className="text-gray-900">
-                                        {option}
+                                        {option.text}
                                       </span>
                                       {isCorrectOption && (
                                         <span className="ml-auto text-green-600 font-semibold">
@@ -634,7 +615,7 @@ export default function StudentTestPage() {
                             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                           />
                           <span className="text-gray-900 dark:text-white">
-                            {String.fromCharCode(65 + index)}. {option}
+                            {String.fromCharCode(65 + index)}. {option.text}
                           </span>
                         </label>
                       ))}

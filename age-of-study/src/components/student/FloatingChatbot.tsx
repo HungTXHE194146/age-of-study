@@ -1,27 +1,31 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Minimize2, Maximize2, RotateCcw } from 'lucide-react';
-import Image from 'next/image';
-import { chatService, type ChatMessage } from '@/lib/chatService';
+import { useState, useRef, useEffect, useCallback } from "react";
+import { X, Send, Minimize2, Maximize2, RotateCcw } from "lucide-react";
+import Image from "next/image";
+import { chatService, type ChatMessage } from "@/lib/chatService";
 
 interface Position {
   x: number;
   y: number;
 }
 
-export default function FloatingChatbot({ subjectId }: { subjectId?: number | null }) {
+export default function FloatingChatbot({
+  subjectId,
+}: {
+  subjectId?: number | null;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      id: 'welcome',
-      text: 'Xin chào! Mình là Cú Mèo - trợ lý học tập của bạn 🦉\nHãy hỏi mình bất cứ điều gì về bài học nhé!',
-      sender: 'bot',
+      id: "welcome",
+      text: "Xin chào! Mình là Cú Mèo - trợ lý học tập của bạn 🦉\nHãy hỏi mình bất cứ điều gì về bài học nhé!",
+      sender: "bot",
       timestamp: new Date(),
     },
   ]);
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState("");
   const [position, setPosition] = useState<Position>({ x: 20, y: 20 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -35,13 +39,13 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
     if (isOpen && !isMinimized) {
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isOpen, isMinimized]);
 
   // Load saved position from localStorage
   useEffect(() => {
-    const savedPosition = localStorage.getItem('chatbot-position');
+    const savedPosition = localStorage.getItem("chatbot-position");
     if (savedPosition) {
       setPosition(JSON.parse(savedPosition));
     } else {
@@ -55,7 +59,7 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
 
   // Save position to localStorage
   const savePosition = (pos: Position) => {
-    localStorage.setItem('chatbot-position', JSON.stringify(pos));
+    localStorage.setItem("chatbot-position", JSON.stringify(pos));
   };
 
   // Handle dragging
@@ -98,8 +102,8 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
 
         // Calculate distance moved
         const dist = Math.sqrt(
-          Math.pow(e.clientX - startPos.x, 2) + 
-          Math.pow(e.clientY - startPos.y, 2)
+          Math.pow(e.clientX - startPos.x, 2) +
+            Math.pow(e.clientY - startPos.y, 2),
         );
 
         // If moved more than 5px, it's a drag, don't open chat
@@ -110,13 +114,13 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
     };
 
     if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
     }
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isDragging, dragOffset, position, startPos]);
 
@@ -126,7 +130,7 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
     try {
       const history = await chatService.getChatHistory();
       if (history.length > 0) {
-        setMessages(prev => [prev[0], ...history]); // Keep welcome message + add history
+        setMessages((prev) => [prev[0], ...history]); // Keep welcome message + add history
       }
       setHistoryLoaded(true);
     } catch {
@@ -146,21 +150,21 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       text: inputText,
-      sender: 'user',
+      sender: "user",
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
     const messageText = inputText;
-    setInputText('');
+    setInputText("");
     setIsLoading(true);
 
     // Create a placeholder bot message for streaming
     const botMessageId = (Date.now() + 1).toString();
     const botMessage: ChatMessage = {
       id: botMessageId,
-      text: '',
-      sender: 'bot',
+      text: "",
+      sender: "bot",
       timestamp: new Date(),
       isStreaming: true,
     };
@@ -168,9 +172,12 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
 
     // Build conversation history from current messages (for context)
     const conversationHistory = messages
-      .filter(m => m.id !== 'welcome')
+      .filter((m) => m.id !== "welcome")
       .slice(-10)
-      .map(m => ({ role: m.sender === 'user' ? 'user' as const : 'bot' as const, text: m.text }));
+      .map((m) => ({
+        role: m.sender === "user" ? ("user" as const) : ("bot" as const),
+        text: m.text,
+      }));
 
     await chatService.sendMessageStream(
       messageText,
@@ -181,20 +188,16 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
           // Append each chunk to the bot message (streaming effect)
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === botMessageId
-                ? { ...m, text: m.text + text }
-                : m
-            )
+              m.id === botMessageId ? { ...m, text: m.text + text } : m,
+            ),
           );
         },
         onDone: () => {
           // Mark streaming as complete
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === botMessageId
-                ? { ...m, isStreaming: false }
-                : m
-            )
+              m.id === botMessageId ? { ...m, isStreaming: false } : m,
+            ),
           );
           setIsLoading(false);
         },
@@ -204,12 +207,12 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
             prev.map((m) =>
               m.id === botMessageId
                 ? { ...m, text: error, isStreaming: false }
-                : m
-            )
+                : m,
+            ),
           );
           setIsLoading(false);
         },
-      }
+      },
     );
   };
 
@@ -218,9 +221,9 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
     if (cleared) {
       setMessages([
         {
-          id: 'welcome',
-          text: 'Xin chào! Mình là Cú Mèo - trợ lý học tập của bạn 🦉\nHãy hỏi mình bất cứ điều gì về bài học nhé!',
-          sender: 'bot',
+          id: "welcome",
+          text: "Xin chào! Mình là Cú Mèo - trợ lý học tập của bạn 🦉\nHãy hỏi mình bất cứ điều gì về bài học nhé!",
+          sender: "bot",
           timestamp: new Date(),
         },
       ]);
@@ -229,7 +232,7 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -241,7 +244,7 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
       {!isOpen && (
         <div
           ref={buttonRef}
-          className={`fixed z-50 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+          className={`fixed z-50 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
@@ -262,17 +265,21 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
                 className="object-cover scale-125"
               />
             </div>
-            
+
             {/* Pulse effect */}
             <span className="absolute inset-0 rounded-full bg-yellow-400 animate-ping opacity-20"></span>
-            
+
             {/* Tooltip */}
-            <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg 
+            <div
+              className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg 
                           opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap
-                          pointer-events-none">
+                          pointer-events-none"
+            >
               Hỏi Cú Mèo
-              <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 
-                            border-transparent border-t-gray-900"></div>
+              <div
+                className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 
+                            border-transparent border-t-gray-900"
+              ></div>
             </div>
           </button>
         </div>
@@ -284,16 +291,18 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
           className="fixed bottom-4 right-4 z-50 flex flex-col bg-white rounded-2xl shadow-2xl 
                    border-2 border-yellow-200 overflow-hidden transition-all duration-300"
           style={{
-            width: isMinimized ? '320px' : '400px',
-            height: isMinimized ? '60px' : '600px',
-            maxHeight: '80vh',
-            maxWidth: '95vw',
+            width: isMinimized ? "320px" : "400px",
+            height: isMinimized ? "60px" : "600px",
+            maxHeight: "80vh",
+            maxWidth: "95vw",
           }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between bg-[#FFEDAA] 
+          <div
+            className="flex items-center justify-between bg-[#FFEDAA] 
                         text-amber-900 p-4 cursor-pointer"
-               onClick={() => setIsMinimized(!isMinimized)}>
+            onClick={() => setIsMinimized(!isMinimized)}
+          >
             <div className="flex items-center gap-3">
               <div className="relative">
                 <div className="w-10 h-10 bg-white rounded-full overflow-hidden border border-yellow-200">
@@ -312,7 +321,7 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
                 <p className="text-xs text-amber-700">Trợ lý học tập AI</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-1">
               <button
                 onClick={(e) => {
@@ -331,9 +340,13 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
                   setIsMinimized(!isMinimized);
                 }}
                 className="hover:bg-amber-500/10 p-2 rounded-lg transition-colors"
-                aria-label={isMinimized ? 'Mở rộng' : 'Thu nhỏ'}
+                aria-label={isMinimized ? "Mở rộng" : "Thu nhỏ"}
               >
-                {isMinimized ? <Maximize2 className="w-5 h-5" /> : <Minimize2 className="w-5 h-5" />}
+                {isMinimized ? (
+                  <Maximize2 className="w-5 h-5" />
+                ) : (
+                  <Minimize2 className="w-5 h-5" />
+                )}
               </button>
               <button
                 onClick={(e) => {
@@ -355,13 +368,13 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
                       className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                        message.sender === 'user'
-                          ? 'bg-[#FFEDAA] text-amber-900 shadow-sm border border-yellow-200'
-                          : 'bg-white text-gray-800 shadow-md border border-gray-100'
+                        message.sender === "user"
+                          ? "bg-[#FFEDAA] text-amber-900 shadow-sm border border-yellow-200"
+                          : "bg-white text-gray-800 shadow-md border border-gray-100"
                       }`}
                     >
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -373,31 +386,39 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
                       {!message.isStreaming && (
                         <p
                           className={`text-xs mt-1 ${
-                            message.sender === 'user' ? 'text-amber-700' : 'text-gray-400'
+                            message.sender === "user"
+                              ? "text-amber-700"
+                              : "text-gray-400"
                           }`}
                         >
-                          {message.timestamp.toLocaleTimeString('vi-VN', {
-                            hour: '2-digit',
-                            minute: '2-digit',
+                          {new Date(message.timestamp).toLocaleTimeString("vi-VN", {
+                            hour: "2-digit",
+                            minute: "2-digit",
                           })}
                         </p>
                       )}
                     </div>
                   </div>
                 ))}
-                
+
                 {isLoading && (
                   <div className="flex justify-start">
                     <div className="bg-white text-gray-800 shadow-md border border-gray-100 rounded-2xl px-4 py-3">
                       <div className="flex gap-1">
                         <span className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"></span>
-                        <span className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
-                        <span className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                        <span
+                          className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.1s" }}
+                        ></span>
+                        <span
+                          className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.2s" }}
+                        ></span>
                       </div>
                     </div>
                   </div>
                 )}
-                
+
                 <div ref={chatEndRef} />
               </div>
 
@@ -425,18 +446,22 @@ export default function FloatingChatbot({ subjectId }: { subjectId?: number | nu
                     <Send className="w-5 h-5" />
                   </button>
                 </div>
-                
+
                 {/* Quick Actions */}
                 <div className="flex flex-wrap gap-2 mt-3">
                   <button
-                    onClick={() => setInputText('Giải thích kiến thức này cho mình')}
+                    onClick={() =>
+                      setInputText("Giải thích kiến thức này cho mình")
+                    }
                     className="px-3 py-1 text-xs bg-yellow-50 text-amber-700 rounded-full 
                              border border-yellow-100 hover:bg-yellow-100 transition-colors"
                   >
                     Giải thích kiến thức
                   </button>
                   <button
-                    onClick={() => setInputText('Cho mình một bài tập tương tự')}
+                    onClick={() =>
+                      setInputText("Cho mình một bài tập tương tự")
+                    }
                     className="px-3 py-1 text-xs bg-amber-50 text-amber-700 rounded-full 
                              border border-amber-100 hover:bg-amber-100 transition-colors"
                   >

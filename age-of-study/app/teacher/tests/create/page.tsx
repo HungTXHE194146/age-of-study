@@ -61,6 +61,7 @@ export default function CreateTestPage() {
     { id: "4", label: "D", text: "", isCorrect: false },
   ]);
   const [manualCorrectAnswer, setManualCorrectAnswer] = useState("A");
+  const [tfSelection, setTfSelection] = useState<"TRUE" | "FALSE">("TRUE");
   const [manualTrueFalseContent, setManualTrueFalseContent] = useState({
     true: "",
     false: "",

@@ -234,8 +234,8 @@ export async function POST(request: NextRequest) {
 // ============================================================================
 
 /**
- * Retrieve relevant context from questions and documents tables
- * Uses PostgreSQL full-text search to find matching content
+ * Retrieve relevant context from lesson_sections table
+ * Uses PostgreSQL FTS + JSONB search to find matching content and Q&A pairs
  */
 async function retrieveContext(
   supabase: SupabaseClient,
@@ -245,77 +245,223 @@ async function retrieveContext(
   const contextParts: string[] = []
 
   // Extract search keywords from the message
-  // Simple approach: split by spaces, remove short words/stopwords
-  const stopwords = new Set(['là', 'gì', 'cho', 'mình', 'của', 'và', 'hay', 'hoặc', 'thì', 'mà', 'để', 'có', 'không', 'được', 'với', 'từ', 'trong', 'này', 'đó', 'một', 'các', 'những', 'bạn', 'em', 'hãy', 'như', 'nào', 'sao', 'thế', 'bao', 'nhiêu'])
-  const keywords = message
-    .replace(/[?!.,;:]/g, '')
+  // Note: Don't include "từ" in stopwords because it's part of compound words like "đại từ", "động từ"
+  const stopwords = new Set(['là', 'gì', 'cho', 'mình', 'của', 'và', 'hay', 'hoặc', 'thì', 'mà', 'để', 'có', 'không', 'được', 'với', 'trong', 'này', 'đó', 'một', 'các', 'những', 'bạn', 'em', 'hãy', 'như', 'nào', 'sao', 'thế', 'bao', 'nhiêu', 'vậy', 'nhỉ', 'à', 'ạ', 'ơi', 'nha', 'nhé', 'đi', 'đâu', 'rồi', 'chưa'])
+  
+  // Clean message
+  const cleanedMessage = message.replace(/[?!.,;:]/g, '').toLowerCase()
+  
+  // Extract keywords
+  const keywords = cleanedMessage
     .split(/\s+/)
     .filter(w => w.length > 1 && !stopwords.has(w))
 
   if (keywords.length === 0) {
-    // If no keywords extracted, use the whole message
-    keywords.push(...message.split(/\s+/).filter(w => w.length > 1).slice(0, 5))
+    keywords.push(...cleanedMessage.split(/\s+/).filter(w => w.length > 1).slice(0, 5))
+  }
+  
+  // Build search terms: 
+  // 1. Join keywords as phrase (e.g., "đại từ" from ["đại", "từ"])
+  // 2. Individual keywords for broader matching
+  const searchTerms: string[] = []
+  
+  // Add keywords joined as phrase (e.g., "đại từ động từ")
+  if (keywords.length > 0) {
+    const keywordsPhrase = keywords.slice(0, 3).join(' ')  // Max 3 words
+    if (keywordsPhrase.length > 2) {
+      searchTerms.push(keywordsPhrase)
+    }
+  }
+  
+  // Add individual keywords
+  searchTerms.push(...keywords.slice(0, 5))
+
+  // Build search query
+  const searchTerm = keywords.slice(0, 5).join(' ')
+  
+  // Debug logging (gated by environment variable to avoid PII leaks)
+  const DEBUG = process.env.DEBUG === 'true'
+  if (DEBUG) {
+    console.log('[CHAT-API] Original message:', message?.substring(0, 100))
+    console.log('[CHAT-API] Extracted keywords:', keywords)
+    console.log('[CHAT-API] Search terms:', searchTerms)
   }
 
-  // Build a tsquery from keywords (OR logic for broader matches)
-  const tsQuery = keywords.slice(0, 8).join(' | ')
-
-  // --- Retrieve relevant QUESTIONS ---
+  // --- Retrieve relevant LESSON SECTIONS with Q&A pairs ---
   try {
-    let questionsQuery = supabase
-      .from('questions')
-      .select('content, difficulty, node_id, subject_id')
-      .eq('status', 'available') // Published/available questions only
-      .limit(MAX_CONTEXT_QUESTIONS)
-
+    // Get node_ids for the subject first
+    let nodeIds: number[] = []
     if (subjectId) {
-      questionsQuery = questionsQuery.eq('subject_id', subjectId)
+      const { data: nodes } = await supabase
+        .from('nodes')
+        .select('id')
+        .eq('subject_id', subjectId)
+      
+      nodeIds = (nodes || []).map((n: { id: number }) => n.id)
+      if (DEBUG) console.log(`[CHAT-API] Subject ID: ${subjectId}, Found ${nodeIds.length} nodes`)
+    } else {
+      if (DEBUG) console.log('[CHAT-API] No subject ID provided, searching all subjects')
     }
 
-    const { data: questions } = await questionsQuery
-      .order('created_at', { ascending: false })
+    // Query lesson_sections with ILIKE search on both title and content
+    // Search each term (phrase or keyword) for better matching
+    let sectionsQuery = supabase
+      .from('lesson_sections')
+      .select(`
+        id,
+        title,
+        content,
+        qa_pairs,
+        remember,
+        section_type,
+        node_id,
+        nodes!inner(title, subject_id)
+      `)
+    
+    // Sanitize search terms to prevent PostgREST filter injection
+    const escapeLike = (term: string) => {
+      return term
+        .replace(/\\/g, '\\\\')  // Escape backslashes first
+        .replace(/%/g, '\\%')      // Escape % wildcard
+        .replace(/_/g, '\\_')      // Escape _ wildcard
+        .replace(/["()]/g, '')     // Remove PostgREST control chars
+    }
+    
+    // Build OR condition for each search term in title or content
+    const orConditions = searchTerms.map(term => {
+      const escaped = escapeLike(term)
+      return `title.ilike.%${escaped}%,content.ilike.%${escaped}%`
+    }).join(',')
+    
+    if (orConditions) {
+      sectionsQuery = sectionsQuery.or(orConditions)
+    }
 
-    if (questions && questions.length > 0) {
-      contextParts.push('📚 Câu hỏi trong bài học:')
-      for (const q of questions as Array<{ content: Record<string, unknown>; difficulty: string }>) {
-        contextParts.push(
-          `- Câu hỏi: ${q.content.question || ''}` +
-          `\n  Đáp án: ${(q.content.options as string[] || []).join(', ')}` +
-          `\n  Giải thích: ${q.content.explanation || ''}` +
-          `\n  Độ khó: ${q.difficulty || 'medium'}`
-        )
+    if (nodeIds.length > 0) {
+      sectionsQuery = sectionsQuery.in('node_id', nodeIds)
+    }
+
+    // Order by relevance: prioritize exact phrase matches in title
+    // Note: Supabase doesn't support complex ORDER BY expressions, so we'll sort in JS
+    sectionsQuery = sectionsQuery.limit(20)  // Get more results to sort
+
+    const { data: sectionsRaw, error: sectionsError } = await sectionsQuery
+    
+    if (sectionsError) {
+      console.error('Error querying lesson_sections:', sectionsError)
+    }
+
+    // Sort results by relevance in JavaScript
+    const sections = sectionsRaw?.sort((a, b) => {
+      const aTitle = (a.title ?? '').toLowerCase()
+      const bTitle = (b.title ?? '').toLowerCase()
+      const aContent = (a.content ?? '').toLowerCase()
+      const bContent = (b.content ?? '').toLowerCase()
+      
+      // Priority 1: Exact phrase match in title
+      const firstTerm = searchTerms[0]?.toLowerCase() || ''
+      const aExactTitle = aTitle.includes(firstTerm) ? 1 : 0
+      const bExactTitle = bTitle.includes(firstTerm) ? 1 : 0
+      if (aExactTitle !== bExactTitle) return bExactTitle - aExactTitle
+      
+      // Priority 2: Any match in title
+      const aTitleMatch = searchTerms.some(t => aTitle.includes(t.toLowerCase())) ? 1 : 0
+      const bTitleMatch = searchTerms.some(t => bTitle.includes(t.toLowerCase())) ? 1 : 0
+      if (aTitleMatch !== bTitleMatch) return bTitleMatch - aTitleMatch
+      
+      // Priority 3: Content match
+      const aContentMatch = searchTerms.some(t => aContent.includes(t.toLowerCase())) ? 1 : 0
+      const bContentMatch = searchTerms.some(t => bContent.includes(t.toLowerCase())) ? 1 : 0
+      return bContentMatch - aContentMatch
+    }).slice(0, MAX_CONTEXT_DOCUMENTS)  // Take top 5 after sorting
+
+    if (DEBUG) {
+      console.log(`[DEBUG] Search terms: ${searchTerms.join(', ')}`)
+      console.log(`[DEBUG] Found ${sections?.length || 0} sections`)
+    }
+
+    if (sections && sections.length > 0) {
+      contextParts.push('📖 Kiến thức bài học:')
+      
+      for (const section of sections as Array<{
+        title: string
+        content: string
+        qa_pairs: Array<{ question: string; answer: string }>
+        remember: string | null
+        section_type: string
+        nodes: { title: string; subject_id: number } | Array<{ title: string; subject_id: number }>
+      }>) {
+        // Handle both single object and array from Supabase
+        const nodeTitle = Array.isArray(section.nodes) 
+          ? section.nodes[0]?.title 
+          : section.nodes?.title || 'Bài học'
+        if (DEBUG) console.log(`[DEBUG] Section: ${section.title} (Node: ${nodeTitle})`)
+        
+        // Add main content
+        if (section.content && section.content.length > 0) {
+          const truncated = section.content.length > 1500
+            ? section.content.substring(0, 1500) + '...'
+            : section.content
+          contextParts.push(`\n📝 ${nodeTitle} - ${section.title}:\n${truncated}`)
+        }
+
+        // Add Q&A pairs if available
+        if (section.qa_pairs && section.qa_pairs.length > 0) {
+          contextParts.push('\n💡 Câu hỏi & Đáp án mẫu:')
+          for (const qa of section.qa_pairs.slice(0, 3)) {
+            contextParts.push(
+              `Q: ${qa.question.substring(0, 200)}${qa.question.length > 200 ? '...' : ''}` +
+              `\nA: ${qa.answer.substring(0, 300)}${qa.answer.length > 300 ? '...' : ''}`
+            )
+          }
+        }
+
+        // Add remember section if available
+        if (section.remember) {
+          const rememberTrunc = section.remember.length > 500
+            ? section.remember.substring(0, 500) + '...'
+            : section.remember
+          contextParts.push(`\n🎯 Ghi nhớ:\n${rememberTrunc}`)
+        }
+      }
+    }
+
+    // Reuse already-fetched sections for Q&A pairs to avoid duplicate queries
+    // Filter sections that have relevant qa_pairs
+    const qaMatches = sections?.filter(section => {
+      if (!section.qa_pairs || section.qa_pairs.length === 0) return false
+      const qaStr = JSON.stringify(section.qa_pairs).toLowerCase()
+      return searchTerms.some(term => qaStr.includes(term.toLowerCase()))
+    }).slice(0, 5) || []
+
+    if (DEBUG) console.log(`[DEBUG] Found ${qaMatches?.length || 0} Q&A matches`)
+
+    if (qaMatches && qaMatches.length > 0) {
+      for (const match of qaMatches) {
+        // Handle both single object and array from Supabase
+        const nodeTitle = Array.isArray(match.nodes)
+          ? match.nodes[0]?.title || 'Bài học'
+          : (match.nodes as any)?.title || 'Bài học'
+        if (match.qa_pairs && match.qa_pairs.length > 0) {
+          // Find matching Q&A pairs
+          const relevantQA = match.qa_pairs.filter((qa: any) => 
+            searchTerms.some(term => 
+              qa.question.toLowerCase().includes(term.toLowerCase()) ||
+              qa.answer.toLowerCase().includes(term.toLowerCase())
+            )
+          )
+          
+          if (relevantQA.length > 0) {
+            contextParts.push(`\n📚 ${nodeTitle} - Câu hỏi liên quan:`)
+            for (const qa of relevantQA.slice(0, 2)) {
+              contextParts.push(`Q: ${qa.question}\nA: ${qa.answer}`)
+            }
+          }
+        }
       }
     }
   } catch (err) {
-    console.error('Error retrieving questions:', err)
-  }
-
-  // --- Retrieve relevant DOCUMENTS ---
-  try {
-    let docsQuery = supabase
-      .from('documents')
-      .select('title, content')
-      .limit(MAX_CONTEXT_DOCUMENTS)
-
-    if (subjectId) {
-      docsQuery = docsQuery.eq('subject_id', subjectId)
-    }
-
-    const { data: docs } = await docsQuery
-      .order('created_at', { ascending: false })
-
-    if (docs && docs.length > 0) {
-      contextParts.push('\n📖 Tài liệu bài học:')
-      for (const doc of docs as Array<{ title: string; content: string }>) {
-        // Truncate long documents to ~2000 chars each
-        const truncated = doc.content.length > 2000
-          ? doc.content.substring(0, 2000) + '...'
-          : doc.content
-        contextParts.push(`--- ${doc.title} ---\n${truncated}`)
-      }
-    }
-  } catch (err) {
-    console.error('Error retrieving documents:', err)
+    console.error('Error retrieving lesson sections:', err)
   }
 
   if (contextParts.length === 0) {
