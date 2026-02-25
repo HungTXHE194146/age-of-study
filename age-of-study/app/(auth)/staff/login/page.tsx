@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, FormEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -26,10 +26,10 @@ export default function StaffLoginPage() {
   // Auto-navigate after successful login
   useEffect(() => {
     if (user) {
-      if (user.role === 'teacher') {
-        router.push('/teacher/dashboard');
+      if (user.role === "teacher") {
+        router.push("/teacher/dashboard");
       } else {
-        router.push('/learn');
+        router.push("/student");
       }
     }
   }, [user, router]);

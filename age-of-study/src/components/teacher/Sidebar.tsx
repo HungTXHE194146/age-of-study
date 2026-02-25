@@ -33,10 +33,22 @@ const navigationItems = [
     icon: LayoutDashboard,
   },
   {
+    id: "classes",
+    label: "Lớp học",
+    href: "/teacher/classes",
+    icon: GraduationCap,
+  },
+  {
     id: "my-tests",
     label: "Bài kiểm tra",
     href: "/teacher/tests",
     icon: FileText,
+  },
+  {
+    id: "skill-tree",
+    label: "Cây kỹ năng",
+    href: "/teacher/skill-tree",
+    icon: Brain,
   },
   {
     id: "leaderboard",

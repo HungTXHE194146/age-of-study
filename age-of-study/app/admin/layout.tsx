@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -31,7 +31,7 @@ export default function AdminLayout({
         if (user.role === "teacher") {
           router.push("/teacher/dashboard");
         } else {
-          router.push("/learn");
+          router.push("/student");
         }
       }
     }
@@ -42,7 +42,9 @@ export default function AdminLayout({
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-semibold">Đang xác thực quyền Admin...</p>
+          <p className="text-gray-600 font-semibold">
+            Đang xác thực quyền Admin...
+          </p>
         </div>
       </div>
     );
@@ -54,8 +56,11 @@ export default function AdminLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      
+      <AdminSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile Header */}
         <header className="lg:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
@@ -66,7 +71,9 @@ export default function AdminLayout({
           >
             <Menu className="w-6 h-6 text-gray-600" />
           </button>
-          <h1 className="text-lg font-bold text-gray-900">Age of Study Admin</h1>
+          <h1 className="text-lg font-bold text-gray-900">
+            Age of Study Admin
+          </h1>
         </header>
 
         <main className="flex-1 overflow-auto">{children}</main>

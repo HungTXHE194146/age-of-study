@@ -2,6 +2,7 @@ import { LucideIcon } from "lucide-react";
 
 export type DifficultyLevel = "Easy" | "Medium" | "Hard" | "Mixed";
 export type QuestionType = "MULTIPLE_CHOICE" | "TRUE_FALSE" | "ESSAY";
+export type QuestionDifficulty = "Easy" | "Medium" | "Hard";
 export type SortOption = "relevance" | "difficulty" | "date";
 
 export interface QuestionOption {
@@ -12,15 +13,16 @@ export interface QuestionOption {
 }
 
 export interface Question {
-  createdAt: number;
   id: string;
+  createdAt: number;
   number: number;
   type: QuestionType;
   questionText: string;
   options: QuestionOption[];
-  difficulty: DifficultyLevel;
-  topic: string;
+  difficulty: QuestionDifficulty;
   points?: number;
+  explanation?: string;
+  model_answer?: string;
 }
 
 export interface Quiz {

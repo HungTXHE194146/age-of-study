@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useRef, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -36,10 +36,10 @@ export default function LoginPage() {
   // Auto-navigate after successful login
   useEffect(() => {
     if (user) {
-      if (user.role === 'teacher') {
-        router.push('/teacher/dashboard');
+      if (user.role === "teacher") {
+        router.push("/teacher/dashboard");
       } else {
-        router.push('/learn');
+        router.push("/student");
       }
     }
   }, [user, router]);
@@ -67,8 +67,12 @@ export default function LoginPage() {
           href="/"
           className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-md hover:shadow-lg hover:bg-white transition-all group border border-gray-100"
         >
-          <span className="text-lg group-hover:scale-110 group-hover:-translate-x-0.5 transition-transform duration-300">🏠</span>
-          <span className="font-semibold text-gray-700 group-hover:text-orange-500 transition-colors text-sm">Về trang chủ</span>
+          <span className="text-lg group-hover:scale-110 group-hover:-translate-x-0.5 transition-transform duration-300">
+            🏠
+          </span>
+          <span className="font-semibold text-gray-700 group-hover:text-orange-500 transition-colors text-sm">
+            Về trang chủ
+          </span>
         </Link>
       </motion.div>
 
@@ -221,8 +225,8 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-  aria-pressed={showPassword}
+                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                aria-pressed={showPassword}
               >
                 {showPassword ? (
                   <svg

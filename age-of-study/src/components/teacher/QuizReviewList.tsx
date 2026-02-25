@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,8 @@ export function QuizReviewList({
                 Sort by: {option.label}
               </option>
             ))}
-          </select>        </div>
+          </select>{" "}
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -99,17 +100,24 @@ export function QuizReviewList({
                 </Badge>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {question.topic}
-                </span>
                 {onRemoveQuestion && (
                   <button
                     onClick={() => onRemoveQuestion(question.id)}
                     className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                     title="Xóa câu hỏi"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 )}
@@ -124,7 +132,7 @@ export function QuizReviewList({
             </div>
 
             {/* Answer Display */}
-            {question.type === 'MULTIPLE_CHOICE' && (
+            {question.type === "MULTIPLE_CHOICE" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {question.options.map((option) => (
                   <div
@@ -156,7 +164,7 @@ export function QuizReviewList({
               </div>
             )}
 
-            {question.type === 'TRUE_FALSE' && (
+            {question.type === "TRUE_FALSE" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {question.options.map((option) => (
                   <div
@@ -170,7 +178,7 @@ export function QuizReviewList({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span className="font-semibold text-gray-900 dark:text-white">
-                          {option.label === 'A' ? 'TRUE' : 'FALSE'}
+                          {option.label === "A" ? "TRUE" : "FALSE"}
                         </span>
                         <span className="text-gray-700 dark:text-gray-300">
                           {option.text}
@@ -188,18 +196,22 @@ export function QuizReviewList({
               </div>
             )}
 
-            {question.type === 'ESSAY' && (
+            {question.type === "ESSAY" && (
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="font-semibold text-gray-900 dark:text-white">
                     Essay Question
                   </span>
-                  <Badge variant="secondary" className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400">
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400"
+                  >
                     No specific answer
                   </Badge>
                 </div>
                 <p className="text-gray-700 dark:text-gray-300 text-sm">
-                  This is an essay question. Students will need to provide a written response.
+                  This is an essay question. Students will need to provide a
+                  written response.
                 </p>
               </div>
             )}

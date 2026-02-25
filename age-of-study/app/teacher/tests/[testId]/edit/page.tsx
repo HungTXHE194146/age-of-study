@@ -11,7 +11,7 @@ import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { RouteProtectedWrapper } from "@/lib/routeMiddleware";
 import { TestWithQuestions } from "@/types/test";
-import { Question } from "@/types/teacher";
+import { Question, QuestionDifficulty } from "@/types/teacher";
 import { subjectService } from "@/lib/subjectService";
 import { Subject } from "@/types/teacher";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
@@ -97,10 +97,12 @@ export default function TeacherTestEditPage() {
   const [manualTrueFalseCorrectAnswer, setManualTrueFalseCorrectAnswer] =
     useState<"TRUE" | "FALSE">("TRUE");
   const [manualEssayHint, setManualEssayHint] = useState("");
+  const [manualExplanation, setManualExplanation] = useState("");
 
   // State for question management
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [points, setPoints] = useState<{ [questionId: string]: number }>({});
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
   useEffect(() => {
     if (testId) {
@@ -140,14 +142,14 @@ export default function TeacherTestEditPage() {
         createdAt: Date.now(),
         number: index + 1,
         type: "MULTIPLE_CHOICE" as const,
-        questionText: q.content.question,
+        questionText: q.content.questionText,
         options: q.content.options.map((opt, optIndex) => ({
           id: optIndex.toString(),
-          label: String.fromCharCode(65 + optIndex),
-          text: opt,
+          label: opt.label,
+          text: opt.text,
           isCorrect: optIndex === q.correct_option_index,
         })),
-        difficulty: "Easy" as const,
+        difficulty: q.difficulty.toLowerCase() as QuestionDifficulty,
         topic: "Existing",
         points: q.points || 10, // Use existing points or default to 10
       }));
@@ -207,6 +209,19 @@ export default function TeacherTestEditPage() {
     setQuestions((prev) => prev.filter((q) => q.id !== id));
   };
 
+  const handleEditQuestion = (question: Question) => {
+    // Find the question index
+    const questionIndex = questions.findIndex((q) => q.id === question.id);
+    if (questionIndex === -1) return;
+
+    // Update the question in the list
+    setQuestions((prev) =>
+      prev.map((q) =>
+        q.id === question.id ? { ...question, number: q.number } : q,
+      ),
+    );
+  };
+
   const handleSaveTest = async () => {
     if (!testDetails.title.trim()) {
       alert("Vui lòng nhập tiêu đề bài kiểm tra");
@@ -243,12 +258,16 @@ export default function TeacherTestEditPage() {
       await supabase.from("test_questions").delete().eq("test_id", testId);
 
       // Update existing questions or create new ones
-      const questionsToInsert = questions.map((q: Question, index: number) => ({
+      // Use upsert for all questions to handle both new and existing questions from bank
+      const questionsToSave = questions.map((q, index) => ({
         id: q.id,
         node_id: testDetails.node ? parseInt(testDetails.node) : null,
         content: {
-          question: q.questionText,
-          options: q.options.map((opt) => opt.text),
+          questionText: q.questionText,
+          options: q.options.map((opt) => ({
+            label: opt.label,
+            text: opt.text,
+          })),
         },
         correct_option_index:
           q.type === "MULTIPLE_CHOICE"
@@ -260,19 +279,27 @@ export default function TeacherTestEditPage() {
         status: "available",
         created_by: user?.id || null,
         created_at: new Date().toISOString(),
+        explanation: q.explanation || null,
       }));
 
-      // Insert or update questions
-      const { data: insertedQuestions, error: questionsError } = await supabase
-        .from("questions")
-        .upsert(questionsToInsert, { onConflict: "id" })
-        .select();
+      try {
+        // Use upsert with conflict resolution to handle both new and existing questions
+        const { error: questionsError } = await supabase
+          .from("questions")
+          .upsert(questionsToSave, { onConflict: "id" });
 
-      if (questionsError) throw questionsError;
+        if (questionsError) {
+          console.error("Error upserting questions:", questionsError);
+          throw questionsError;
+        }
+      } catch (error) {
+        console.error("Error saving questions:", error);
+        throw error;
+      }
 
-      // Insert test_questions relationships
-      const testQuestionsToInsert = insertedQuestions.map(
-        (q: { id: string }, index: number) => ({
+      // Insert test_questions relationships for all questions
+      const testQuestionsToInsert = questions.map(
+        (q: Question, index: number) => ({
           test_id: testId,
           question_id: q.id,
           points: questions[index].points || 10, // Use question points if available, otherwise default to 10
@@ -287,7 +314,7 @@ export default function TeacherTestEditPage() {
       if (testQuestionsError) throw testQuestionsError;
 
       alert("Bài kiểm tra đã được cập nhật thành công!");
-      router.push(`/teacher/tests/${testId}`);
+      router.push(`/teacher/tests`);
     } catch (error) {
       console.error("Error saving test:", error);
       alert("Cập nhật bài kiểm tra thất bại. Vui lòng thử lại.");
@@ -332,12 +359,15 @@ export default function TeacherTestEditPage() {
       await supabase.from("test_questions").delete().eq("test_id", testId);
 
       // Update existing questions or create new ones
-      const questionsToInsert = questions.map((q: Question, index: number) => ({
+      const questionsToSave = questions.map((q: Question, index: number) => ({
         id: q.id,
         node_id: testDetails.node ? parseInt(testDetails.node) : null,
         content: {
-          question: q.questionText,
-          options: q.options.map((opt) => opt.text),
+          questionText: q.questionText,
+          options: q.options.map((opt) => ({
+            label: opt.label,
+            text: opt.text,
+          })),
         },
         correct_option_index:
           q.type === "MULTIPLE_CHOICE"
@@ -349,15 +379,27 @@ export default function TeacherTestEditPage() {
         status: "available",
         created_by: user?.id || null,
         created_at: new Date().toISOString(),
+        explanation: q.explanation || null,
       }));
 
-      // Insert or update questions
-      const { data: insertedQuestions, error: questionsError } = await supabase
-        .from("questions")
-        .upsert(questionsToInsert, { onConflict: "id" })
-        .select();
+      let insertedQuestions: { id: string }[] = [];
+      try {
+        // Use upsert with conflict resolution to handle both new and existing questions
+        const { data, error: questionsError } = await supabase
+          .from("questions")
+          .upsert(questionsToSave, { onConflict: "id" })
+          .select();
 
-      if (questionsError) throw questionsError;
+        if (questionsError) {
+          console.error("Error upserting questions:", questionsError);
+          throw questionsError;
+        }
+        
+        insertedQuestions = data || [];
+      } catch (error) {
+        console.error("Error saving questions:", error);
+        throw error;
+      }
 
       // Insert test_questions relationships
       const testQuestionsToInsert = insertedQuestions.map(
@@ -888,12 +930,19 @@ export default function TeacherTestEditPage() {
                       </div>
                     )}
 
-                    {/* Essay Answer (No specific answer needed) */}
-                    {manualQuestionType === "ESSAY" && (
-                      <div className="text-sm text-gray-500 italic">
-                        * Câu hỏi tự luận không cần chọn đáp án đúng
-                      </div>
-                    )}
+                    {/* Explanation Field */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Giải thích (không bắt buộc)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={manualExplanation}
+                        onChange={(e) => setManualExplanation(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Nhập giải thích cho câu hỏi..."
+                      />
+                    </div>
 
                     <button
                       onClick={() => {
@@ -967,8 +1016,8 @@ export default function TeacherTestEditPage() {
                                     },
                                   ]
                                 : [],
-                          difficulty: manualDifficulty,
-                          topic: "Thủ công",
+                          difficulty: manualDifficulty.toLowerCase() as QuestionDifficulty,
+                          explanation: manualExplanation || undefined,
                         };
 
                         handleAddQuestion(newQuestion);
@@ -984,6 +1033,7 @@ export default function TeacherTestEditPage() {
                         setManualCorrectAnswer("A");
                         setManualTrueFalseContent({ true: "", false: "" });
                         setManualEssayHint("");
+                        setManualExplanation("");
                       }}
                       className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                     >
@@ -997,7 +1047,7 @@ export default function TeacherTestEditPage() {
                 <div>
                   <QuizGeneratorForm
                     onGenerate={(data) => {
-                      // Mock AI question generation
+                      // Mock AI question generation with explanations
                       const mockQuestions = Array.from(
                         { length: data.questionCount },
                         (_, i) => ({
@@ -1032,7 +1082,11 @@ export default function TeacherTestEditPage() {
                               isCorrect: false,
                             },
                           ],
-                          difficulty: data.difficulty,
+                          difficulty:
+                            (data.difficulty === "Mixed"
+                              ? "Medium"
+                              : data.difficulty.toLowerCase()) as QuestionDifficulty,
+                          explanation: `Giải thích cho câu hỏi AI ${i + 1}: Đây là câu hỏi được tạo bởi AI dựa trên chủ đề "${data.topic}". Câu trả lời đúng là A.`,
                           topic: data.topic || "AI Generated",
                         }),
                       );
@@ -1123,9 +1177,9 @@ export default function TeacherTestEditPage() {
                     ),
                   );
                   // Update points state for display
-                  setPoints(prev => ({
+                  setPoints((prev) => ({
                     ...prev,
-                    [questionId]: points
+                    [questionId]: points,
                   }));
                 }}
                 onNavigateToQuestion={(index) => setCurrentQuestionIndex(index)}
@@ -1169,6 +1223,8 @@ export default function TeacherTestEditPage() {
                 questions={questions}
                 currentQuestionIndex={currentQuestionIndex}
                 onQuestionChange={setCurrentQuestionIndex}
+                onQuestionDelete={handleRemoveQuestion}
+                onQuestionEdit={handleEditQuestion}
                 points={points}
               />
             ) : (

@@ -59,6 +59,9 @@ export interface Node {
   description: string
   required_points: number
   order: number
+  parent_node_id: string | null
+  source_position: 'top' | 'bottom' | 'left' | 'right' | null
+  target_position: 'top' | 'bottom' | 'left' | 'right' | null
   created_at: string
   updated_at: string
 }

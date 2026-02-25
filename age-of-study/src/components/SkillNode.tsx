@@ -1,129 +1,237 @@
-'use client'
-
-import { motion } from 'framer-motion'
-import { Lock, CheckCircle, Star } from 'lucide-react'
-import { type Node } from '@/lib/supabase'
-
-interface SkillNodeProps {
-  node: Node
-  isUnlocked: boolean
-  isCompleted: boolean
-  currentPoints: number
-  onNodeClick: (node: Node) => void
+// Định nghĩa interface Node để match với database schema
+interface Node {
+  id: number;
+  title: string;
+  description?: string;
+  parent_node_id?: number | null;
+  node_type: string;
+  required_xp: number;
+  position_x?: number;
+  position_y?: number;
+  order_index: number;
+  children?: Node[];
 }
 
-export function SkillNode({ 
-  node, 
-  isUnlocked, 
-  isCompleted, 
-  currentPoints, 
-  onNodeClick 
-}: SkillNodeProps) {
-  const getSubjectColor = (subject: string) => {
-    switch (subject) {
-      case 'math': return 'bg-red-500'
-      case 'english': return 'bg-blue-500'
-      case 'vietnamese': return 'bg-green-500'
-      default: return 'bg-gray-500'
-    }
-  }
+interface SkillNodeProps {
+  node: Node;
+  level: number;
+}
 
-  const getSubjectIcon = (subject: string) => {
-    switch (subject) {
-      case 'math': return '🔢'
-      case 'english': return '🇬🇧'
-      case 'vietnamese': return '🇻🇳'
-      default: return '📚'
+export default function SkillNode({ node, level }: SkillNodeProps) {
+  // Xác định màu sắc, biểu tượng và kiểu dáng dựa trên node_type
+  const getTypeStyle = (nodeType: string) => {
+    switch (nodeType.toLowerCase()) {
+      case 'subject':
+        return {
+          color: 'text-blue-600',
+          bgColor: 'bg-blue-50',
+          borderColor: 'border-blue-200',
+          hoverColor: 'hover:bg-blue-100',
+          icon: '📚',
+          iconBg: 'bg-blue-100',
+          iconColor: 'text-blue-600'
+        };
+      case 'chapter':
+        return {
+          color: 'text-green-600',
+          bgColor: 'bg-green-50',
+          borderColor: 'border-green-200',
+          hoverColor: 'hover:bg-green-100',
+          icon: '📖',
+          iconBg: 'bg-green-100',
+          iconColor: 'text-green-600'
+        };
+      case 'week':
+        return {
+          color: 'text-purple-600',
+          bgColor: 'bg-purple-50',
+          borderColor: 'border-purple-200',
+          hoverColor: 'hover:bg-purple-100',
+          icon: '📅',
+          iconBg: 'bg-purple-100',
+          iconColor: 'text-purple-600'
+        };
+      case 'lesson':
+        return {
+          color: 'text-orange-600',
+          bgColor: 'bg-orange-50',
+          borderColor: 'border-orange-200',
+          hoverColor: 'hover:bg-orange-100',
+          icon: '🎯',
+          iconBg: 'bg-orange-100',
+          iconColor: 'text-orange-600'
+        };
+      case 'content':
+        return {
+          color: 'text-gray-600',
+          bgColor: 'bg-gray-50',
+          borderColor: 'border-gray-200',
+          hoverColor: 'hover:bg-gray-100',
+          icon: '📄',
+          iconBg: 'bg-gray-100',
+          iconColor: 'text-gray-600'
+        };
+      default:
+        return {
+          color: 'text-gray-600',
+          bgColor: 'bg-gray-50',
+          borderColor: 'border-gray-200',
+          hoverColor: 'hover:bg-gray-100',
+          icon: '📄',
+          iconBg: 'bg-gray-100',
+          iconColor: 'text-gray-600'
+        };
     }
-  }
+  };
+
+  const style = getTypeStyle(node.node_type);
 
   return (
-    <motion.div
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-      className="relative"
-    >
-      {/* Connection line to next node */}
-      {node.order < 6 && (
-        <div className="absolute left-1/2 top-16 w-0.5 h-8 bg-gray-300 dark:bg-gray-600 transform -translate-x-1/2" />
+    <div className="space-y-2">
+      {/* Đường kẻ dọc nối giữa các node cha và con */}
+      {level > 0 && (
+        <div 
+          className="absolute left-0 top-0 bottom-0 border-l-2 border-dashed border-gray-200"
+          style={{ 
+            left: `${(level - 1) * 24}px`,
+            top: '-1rem',
+            bottom: '1rem'
+          }}
+        />
       )}
-
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => onNodeClick(node)}
-        disabled={!isUnlocked}
-        className={`skill-node ${getSubjectColor(node.subject)} relative group ${
-          !isUnlocked ? 'locked' : ''
-        } ${isCompleted ? 'completed' : ''}`}
-        style={{
-          boxShadow: isCompleted 
-            ? '0 0 0 4px rgba(34, 197, 94, 0.5), 0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-            : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+      
+      {/* Node hiện tại */}
+      <div 
+        className={`
+          ${style.bgColor} 
+          ${style.borderColor} 
+          ${style.hoverColor}
+          border-l-4 
+          pl-4 
+          pr-4 
+          py-3 
+          rounded-xl 
+          hover:shadow-lg 
+          hover:scale-[1.02]
+          transition-all 
+          duration-200
+          cursor-pointer
+          group
+          relative
+          overflow-hidden
+          border
+          hover:border-opacity-100
+          border-opacity-50
+        `}
+        style={{ 
+          marginLeft: `${level * 24}px` // Thụt lề theo cấp độ
         }}
+        role="button"
+        tabIndex={0}
+        aria-label={`Open ${node.title}`}
       >
-        {/* Subject Icon */}
-        <span className="text-white text-lg font-bold">
-          {getSubjectIcon(node.subject)}
-        </span>
-
-        {/* Lock Icon for locked nodes */}
-        {!isUnlocked && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow-lg"
-          >
-            <Lock className="w-4 h-4 text-gray-600" />
-          </motion.div>
-        )}
-
-        {/* Completion Checkmark */}
-        {isCompleted && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute -top-2 -right-2 bg-green-500 rounded-full p-1"
-          >
-            <CheckCircle className="w-5 h-5 text-white" />
-          </motion.div>
-        )}
-
-        {/* Required Points Tooltip */}
-        {!isUnlocked && (
-          <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-            Cần {node.required_points} điểm
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900" />
+        {/* Hiệu ứng nền khi hover */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        
+        <div className="flex items-center justify-between relative z-10">
+          <div className="flex items-center space-x-4 flex-1">
+            {/* Icon */}
+            <div className={`
+              ${style.iconBg} 
+              ${style.iconColor}
+              w-10 h-10 
+              rounded-full 
+              flex 
+              items-center 
+              justify-center 
+              text-lg 
+              font-bold 
+              shadow-sm
+              group-hover:scale-110
+              transition-transform
+              duration-200
+            `} aria-hidden="true">
+              {style.icon}
+            </div>
+            
+            {/* Nội dung */}
+            <div className="flex-1 min-w-0">
+              <h3 className={`font-semibold ${style.color} text-base md:text-lg truncate`}>
+                {node.title}
+              </h3>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-xs text-gray-500 capitalize flex items-center space-x-2">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${style.color} ${style.bgColor} border ${style.borderColor}`}>
+                    {node.node_type}
+                  </span>
+                  {node.description && (
+                    <span className="text-gray-400">•</span>
+                  )}
+                  {node.description && (
+                    <span className="text-gray-500">{node.description}</span>
+                  )}
+                </p>
+                
+                {/* XP Badge */}
+                <div className="flex items-center space-x-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                    <span className="mr-1">⭐</span>
+                    {node.required_xp} XP
+                  </span>
+                  {node.children && node.children.length > 0 && (
+                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200">
+                      {node.children.length} sub-items
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
+          
+          {/* Arrow indicator */}
+          <div className="ml-4 flex-shrink-0">
+            {node.children && node.children.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <span className={`w-2 h-2 rounded-full ${style.color} opacity-60`} />
+                <span className={`w-2 h-2 rounded-full ${style.color} opacity-40`} />
+                <span className={`w-2 h-2 rounded-full ${style.color} opacity-20`} />
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Mô tả chi tiết (ẩn trên mobile, hiện trên desktop) */}
+        {node.description && (
+          <p className="text-sm text-gray-600 mt-2 ml-14 hidden md:block">
+            {node.description}
+          </p>
         )}
-      </motion.button>
-
-      {/* Node Label */}
-      <div className="absolute top-20 left-1/2 transform -translate-x-1/2 text-center">
-        <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-          {node.title}
-        </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          +{node.required_points} điểm
-        </div>
       </div>
 
-      {/* Progress Ring for current node */}
-      {isUnlocked && !isCompleted && (
-        <motion.div
-          initial={{ rotate: -90 }}
-          animate={{ rotate: 0 }}
-          className="absolute -inset-2 rounded-full border-2 border-gray-200 dark:border-gray-700"
-        >
+      {/* Render các node con nếu có */}
+      {node.children && node.children.length > 0 && (
+        <div className="relative">
+          {/* Đường nối từ node cha đến node con */}
           <div 
-            className="absolute top-0 left-0 w-full h-full rounded-full border-2 border-primary-500"
-            style={{
-              clipPath: `polygon(50% 50%, 50% 0%, ${Math.min(100, (currentPoints / node.required_points) * 100)}% 0%, ${Math.min(100, (currentPoints / node.required_points) * 100)}% 100%, 50% 100%)`
+            className="absolute left-0 top-0 bottom-0 border-l-2 border-dashed border-gray-200 opacity-50"
+            style={{ 
+              left: '12px',
+              top: '1rem',
+              bottom: '-1rem'
             }}
           />
-        </motion.div>
+          
+          <div className="ml-6 space-y-2">
+            {node.children.map((childNode) => (
+              <SkillNode
+                key={childNode.id}
+                node={childNode}
+                level={level + 1}
+              />
+            ))}
+          </div>
+        </div>
       )}
-    </motion.div>
-  )
+    </div>
+  );
 }

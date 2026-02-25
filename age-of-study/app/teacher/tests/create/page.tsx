@@ -18,7 +18,7 @@ import { QuestionBankTab } from "@/components/teacher/QuestionBankTab";
 import { QuestionPointsGrid } from "@/components/teacher/QuestionPointsGrid";
 import { PaginatedQuestionPreview } from "@/components/teacher/PaginatedQuestionPreview";
 import { Button } from "@/components/ui/button";
-import { Question } from "@/types/teacher";
+import { Question, QuestionOption, QuestionDifficulty } from "@/types/teacher";
 import { subjectService } from "@/lib/subjectService";
 import { Subject } from "@/types/teacher";
 import { TestService } from "@/lib/testService";
@@ -66,11 +66,15 @@ export default function CreateTestPage() {
     true: "",
     false: "",
   });
+  const [manualTrueFalseCorrectAnswer, setManualTrueFalseCorrectAnswer] =
+    useState<"TRUE" | "FALSE">("TRUE");
   const [manualEssayHint, setManualEssayHint] = useState("");
+  const [manualExplanation, setManualExplanation] = useState("");
 
   // State for question management
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [points, setPoints] = useState<{ [questionId: string]: number }>({});
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Fetch subjects from Supabase
   useEffect(() => {
@@ -154,15 +158,65 @@ export default function CreateTestPage() {
       // Create the test in Supabase
       const createdTest = await testService.createTest(createTestRequest);
 
-      // Create test_questions relationships only (questions already exist in question bank)
+      // Create test_questions relationships
       const supabase = await getSupabaseBrowserClient();
 
-      // Insert test_questions relationships
+      // Update existing questions or create new ones
+      // Use upsert for all questions to handle both new and existing questions from bank
+      const questionsToSave = questions.map((q, index) => ({
+        id: q.id,
+        node_id: testDetails.node ? parseInt(testDetails.node) : null,
+        content: {
+          questionText: q.questionText,
+          options: q.options.map((opt) => ({
+            label: opt.label,
+            text: opt.text,
+          })),
+        },
+        correct_option_index:
+          q.type === "MULTIPLE_CHOICE"
+            ? q.options.findIndex((opt) => opt.isCorrect)
+            : q.type === "TRUE_FALSE"
+              ? 0 // Assume first option (True) is correct for TRUE_FALSE
+              : -1, // -1 for ESSAY questions
+        difficulty: q.difficulty.toLowerCase() as "easy" | "medium" | "hard",
+        status: "available",
+        created_by: user?.id || null,
+        created_at: new Date().toISOString(),
+        q_type:
+          q.type === "MULTIPLE_CHOICE"
+            ? "multiple_choice"
+            : q.type === "TRUE_FALSE"
+              ? "true_false"
+              : "essay",
+        model_answer: q.model_answer || "",
+        subject_id: testDetails.subject
+          ? parseInt(testDetails.subject)
+          : null,
+        explanation: q.explanation || null,
+      }));
+
+      try {
+        // Use upsert with conflict resolution to handle both new and existing questions
+        const { error: questionsError } = await supabase
+          .from("questions")
+          .upsert(questionsToSave, { onConflict: "id" });
+
+        if (questionsError) {
+          console.error("Error upserting questions:", questionsError);
+          throw questionsError;
+        }
+      } catch (error) {
+        console.error("Error saving questions:", error);
+        throw error;
+      }
+
+      // Insert test_questions relationships for all questions
       const testQuestionsToInsert = questions.map(
         (q: Question, index: number) => ({
           test_id: createdTest.id,
-          question_id: q.id, // Use existing question ID from question bank
-          points: q.points || 10, // Use question points if available, otherwise default to 10
+          question_id: q.id,
+          points: q.points || 10,
           display_order: index,
         }),
       );
@@ -741,10 +795,14 @@ export default function CreateTestPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Đáp án đúng
                         </label>
-                        <select 
+                        <select
+                          value={manualTrueFalseCorrectAnswer}
+                          onChange={(e) =>
+                            setManualTrueFalseCorrectAnswer(
+                              e.target.value as "TRUE" | "FALSE",
+                            )
+                          }
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          value={tfSelection}
-                          onChange={(e) => setTfSelection(e.target.value as "TRUE" | "FALSE")}
                         >
                           <option value="TRUE">Đúng</option>
                           <option value="FALSE">Sai</option>
@@ -752,12 +810,19 @@ export default function CreateTestPage() {
                       </div>
                     )}
 
-                    {/* Essay Answer (No specific answer needed) */}
-                    {manualQuestionType === "ESSAY" && (
-                      <div className="text-sm text-gray-500 italic">
-                        * Câu hỏi tự luận không cần chọn đáp án đúng
-                      </div>
-                    )}
+                    {/* Explanation Field */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Giải thích (không bắt buộc)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={manualExplanation}
+                        onChange={(e) => setManualExplanation(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Nhập giải thích cho câu hỏi..."
+                      />
+                    </div>
 
                     <button
                       onClick={() => {
@@ -818,18 +883,21 @@ export default function CreateTestPage() {
                                       id: "1",
                                       label: "A",
                                       text: manualTrueFalseContent.true,
-                                      isCorrect: true,
+                                      isCorrect:
+                                        manualTrueFalseCorrectAnswer === "TRUE",
                                     },
                                     {
                                       id: "2",
                                       label: "B",
                                       text: manualTrueFalseContent.false,
-                                      isCorrect: false,
+                                      isCorrect:
+                                        manualTrueFalseCorrectAnswer ===
+                                        "FALSE",
                                     },
                                   ]
                                 : [],
                           difficulty: manualDifficulty,
-                          topic: "Thủ công",
+                          explanation: manualExplanation || undefined,
                         };
 
                         handleAddQuestion(newQuestion);
@@ -845,6 +913,7 @@ export default function CreateTestPage() {
                         setManualCorrectAnswer("A");
                         setManualTrueFalseContent({ true: "", false: "" });
                         setManualEssayHint("");
+                        setManualExplanation("");
                       }}
                       className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                     >
@@ -858,107 +927,106 @@ export default function CreateTestPage() {
                 <div>
                   <QuizGeneratorForm
                     onGenerate={async (data) => {
+                      setIsGenerating(true);
                       try {
-                        if (!testDetails.subject || testDetails.subject === '' || testDetails.subject === '0') {
-                          alert('Vui lòng chọn môn học trước khi tạo câu hỏi bằng AI');
-                          return;
+                        // Call the new AI generation API
+                        const formData = new FormData();
+                        formData.append("textPrompt", data.topic || "");
+                        formData.append(
+                          "questionCount",
+                          data.questionCount.toString(),
+                        );
+                        formData.append("difficulty", data.difficulty);
+                        formData.append("subject", data.subject || "");
+
+                        if (data.file) {
+                          formData.append("file", data.file);
                         }
 
-                        // Get auth token
                         const supabase = await getSupabaseBrowserClient();
-                        const { data: { session } } = await supabase.auth.getSession();
-                        if (!session?.access_token) {
-                          alert('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+                        const {
+                          data: { session },
+                        } = await supabase.auth.getSession();
+
+                        // Ensure we have a valid session and access token
+                        if (!session || !session.access_token) {
+                          alert(
+                            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+                          );
                           return;
                         }
 
-                        // Map difficulty to API format
-                        const difficultyMap: Record<string, string> = {
-                          'Easy': 'easy',
-                          'Medium': 'medium',
-                          'Hard': 'hard',
-                          'Mixed': 'mixed'
-                        };
-
-                        // Call AI generation API
-                        const response = await fetch('/api/questions/generate', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${session.access_token}`,
+                        const response = await fetch(
+                          "/api/generate-questions",
+                          {
+                            method: "POST",
+                            body: formData,
+                            headers: {
+                              Authorization: `Bearer ${session.access_token}`,
+                            },
                           },
-                          body: JSON.stringify({
-                            subjectId: parseInt(testDetails.subject),
-                            nodeId: testDetails.node ? parseInt(testDetails.node) : undefined,
-                            difficulty: difficultyMap[data.difficulty] || 'mixed',
-                            questionCount: data.questionCount,
-                            questionType: 'multiple_choice',
-                            customPrompt: data.topic || undefined,
-                          }),
-                        });
-
-                        if (!response.ok) {
-                          const error = await response.json();
-                          throw new Error(error.error || 'Lỗi tạo câu hỏi');
-                        }
+                        );
 
                         const result = await response.json();
-                        const generatedQuestions = result.questions || [];
 
-                        if (generatedQuestions.length === 0) {
-                          alert('Không thể tạo câu hỏi. Vui lòng thử lại.');
-                          return;
+                        if (!response.ok) {
+                          throw new Error(
+                            result.error || "Failed to generate questions",
+                          );
                         }
 
-                        // Transform API questions to UI format
-                        const transformedQuestions = generatedQuestions.map((gq: {
-                          id: string;
-                          question: string;
-                          options?: string[];
-                          correct_option_index: number;
-                          difficulty: string;
-                          q_type: string;
-                        }, index: number) => {
-                          // Normalize difficulty to expected format
-                          const difficultyStr = gq.difficulty?.toLowerCase() || 'easy';
-                          let normalizedDifficulty: 'Easy' | 'Medium' | 'Hard' = 'Easy';
-                          if (difficultyStr === 'medium') normalizedDifficulty = 'Medium';
-                          else if (difficultyStr === 'hard') normalizedDifficulty = 'Hard';
-                          
-                          return {
-                            id: gq.id,
-                            createdAt: Date.now(),
-                            number: questions.length + index + 1,
-                            type: gq.q_type === 'true_false' ? 'TRUE_FALSE' as const : 
-                                  gq.q_type === 'essay' ? 'ESSAY' as const : 
-                                  'MULTIPLE_CHOICE' as const,
-                            questionText: gq.question,
-                            options: (gq.options || []).map((text, optIndex) => ({
-                              id: (optIndex + 1).toString(),
-                              label: String.fromCharCode(65 + optIndex), // A, B, C, D
-                              text: text,
-                              isCorrect: optIndex === gq.correct_option_index,
-                            })),
-                            difficulty: normalizedDifficulty,
-                            topic: testDetails.node 
-                              ? nodes.find(n => n.id.toString() === testDetails.node)?.title || 'AI Generated'
-                              : 'AI Generated',
-                          };
-                        });
+                        if (result.questions && result.questions.length > 0) {
+                          // Transform AI-generated questions to match the expected format
+                          const transformedQuestions = result.questions.map(
+                            (
+                              q: {
+                                type: string;
+                                questionText: string;
+                                options: QuestionOption[];
+                                difficulty: string;
+                                explanation?: string;
+                              },
+                              index: number,
+                            ) => ({
+                              id: crypto.randomUUID(), // Generate proper UUID
+                              createdAt: Date.now(),
+                              number: questions.length + index + 1,
+                              type: q.type,
+                              questionText: q.questionText,
+                              options: q.options || [],
+                              difficulty: q.difficulty,
+                              topic: data.topic || "AI Generated",
+                              explanation: q.explanation || "",
+                            }),
+                          );
 
-                        transformedQuestions.forEach((q: Question) => handleAddQuestion(q));
-                        
-                        alert(`✅ Đã tạo thành công ${transformedQuestions.length} câu hỏi bằng AI!`);
+                          transformedQuestions.forEach((q: Question) =>
+                            handleAddQuestion(q),
+                          );
 
+                          if (result.totalGenerated < result.requested) {
+                            alert(
+                              `AI đã tạo được ${result.totalGenerated} câu hỏi (yêu cầu ${result.requested}). Vui lòng kiểm tra chất lượng câu hỏi.`,
+                            );
+                          }
+                        } else {
+                          alert(
+                            "AI không thể tạo câu hỏi từ tài liệu này. Vui lòng thử với tài liệu khác hoặc nội dung rõ ràng hơn.",
+                          );
+                        }
                       } catch (error) {
-                        console.error("Error generating questions with AI:", error);
-                        alert(
-                          error instanceof Error 
-                            ? error.message 
-                            : "Có lỗi xảy ra khi tạo câu hỏi bằng AI. Vui lòng thử lại."
+                        console.error(
+                          "Error generating questions with AI:",
+                          error,
                         );
+                        alert(
+                          "Có lỗi xảy ra khi tạo câu hỏi bằng AI. Vui lòng thử lại sau.",
+                        );
+                      } finally {
+                        setIsGenerating(false);
                       }
                     }}
+                    isLoading={isGenerating}
                   />
                 </div>
               )}
@@ -1044,9 +1112,9 @@ export default function CreateTestPage() {
                     ),
                   );
                   // Update points state for display
-                  setPoints(prev => ({
+                  setPoints((prev) => ({
                     ...prev,
-                    [questionId]: points
+                    [questionId]: points,
                   }));
                 }}
                 onNavigateToQuestion={(index) => setCurrentQuestionIndex(index)}
@@ -1090,6 +1158,7 @@ export default function CreateTestPage() {
                 questions={questions}
                 currentQuestionIndex={currentQuestionIndex}
                 onQuestionChange={setCurrentQuestionIndex}
+                onQuestionDelete={handleRemoveQuestion}
                 points={points}
               />
             ) : (

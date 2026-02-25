@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -25,7 +25,7 @@ export default function AuthLayout({
       } else if (user.role === "teacher") {
         router.push("/teacher/dashboard");
       } else {
-        router.push("/learn");
+        router.push("/student");
       }
     }
   }, [isAuthenticated, user, router]);
