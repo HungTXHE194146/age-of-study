@@ -232,6 +232,53 @@ export async function POST(request: NextRequest) {
 }
 
 // ============================================================================
+// DELETE /api/chat — Clear today's chat history (service role bypasses RLS)
+// ============================================================================
+export async function DELETE(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+
+    // Verify JWT using anon client
+    const anonClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+    const { data: { user: authUser }, error: authError } = await anonClient.auth.getUser(token)
+
+    if (authError || !authUser) {
+      return NextResponse.json({ error: 'Phiên đăng nhập hết hạn' }, { status: 401 })
+    }
+
+    const today = new Date().toISOString().split('T')[0]
+    const conversationId = `conv_${authUser.id}_${today}`
+
+    // Service role client bypasses RLS
+    const supabase = getServerSupabase()
+    const { error } = await supabase
+      .from('chat_logs')
+      .delete()
+      .eq('user_id', authUser.id)
+      .eq('conversation_id', conversationId)
+
+    if (error) {
+      console.error('Error clearing chat history:', error)
+      return NextResponse.json({ error: 'Không thể xóa lịch sử' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Clear chat history error:', error)
+    return NextResponse.json({ error: 'Có lỗi xảy ra' }, { status: 500 })
+  }
+}
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
