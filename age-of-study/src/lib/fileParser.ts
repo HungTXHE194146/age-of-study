@@ -1,6 +1,8 @@
 import mammoth from "mammoth";
-import { PDFParse } from "pdf-parse";
-import WordExtractor from "word-extractor";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdfParse = require("pdf-parse") as (buffer: Buffer, options?: object) => Promise<{ text: string }>;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const WordExtractor = require("word-extractor") as new () => { extract(path: string | Buffer): Promise<{ getBody(): string }> };
 
 export interface ParsedFileContent {
   text: string;
@@ -22,11 +24,8 @@ export async function extractTextFromFile(
   try {
     // 1. Handle PDF
     if (mimeType === "application/pdf" || fileName.toLowerCase().endsWith('.pdf')) {
-      const parser = new PDFParse({ data: fileBuffer });
-      const textResult = await parser.getText();
-      await parser.destroy(); // Giải phóng bộ nhớ
-      
-      const text = textResult.text ? textResult.text.trim() : "";
+      const result = await pdfParse(fileBuffer);
+      const text = result.text ? result.text.trim() : "";
       if (!text) throw new Error("PDF parsed but returned empty text.");
       return { text };
     } 
