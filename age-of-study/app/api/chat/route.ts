@@ -132,8 +132,10 @@ export async function POST(request: NextRequest) {
         { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE },
       ],
       generationConfig: {
-        maxOutputTokens: 500,   // Keep responses short (elementary school)
-        temperature: 0.7,       // Slightly creative but not too random
+        maxOutputTokens: 1500,  // Increased: thinking model needs more budget
+        temperature: 0.7,
+        // @ts-expect-error thinkingConfig not yet in type definitions but supported by API
+        thinkingConfig: { thinkingBudget: 256 },  // Cap thinking tokens, save budget for response
       },
     })
 
