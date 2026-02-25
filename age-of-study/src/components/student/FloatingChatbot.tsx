@@ -1,14 +1,48 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { X, Send, Minimize2, Maximize2, RotateCcw } from "lucide-react";
 import Image from "next/image";
 import { chatService, type ChatMessage } from "@/lib/chatService";
+
+// Render simple markdown: **bold**, *italic*, \n newlines
+// Inline parser — no library needed for chatbot scope
+function renderMarkdown(text: string): React.ReactNode {
+  const lines = text.split("\n");
+  return lines.map((line, lineIdx) => {
+    const parts: React.ReactNode[] = [];
+    const regex = /\*\*(.+?)\*\*|\*(.+?)\*/g;
+    let lastIdx = 0;
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(line)) !== null) {
+      if (m.index > lastIdx) parts.push(line.slice(lastIdx, m.index));
+      if (m[1] !== undefined)
+        parts.push(<strong key={`${lineIdx}-${m.index}`}>{m[1]}</strong>);
+      else if (m[2] !== undefined)
+        parts.push(<em key={`${lineIdx}-${m.index}`}>{m[2]}</em>);
+      lastIdx = m.index + m[0].length;
+    }
+    if (lastIdx < line.length) parts.push(line.slice(lastIdx));
+    return (
+      <React.Fragment key={lineIdx}>
+        {parts.length > 0 ? parts : line}
+        {lineIdx < lines.length - 1 && <br />}
+      </React.Fragment>
+    );
+  });
+}
 
 interface Position {
   x: number;
   y: number;
 }
+
+const BUTTON_SIZE = 80;
+
+const clampToViewport = (pos: Position): Position => ({
+  x: Math.max(0, Math.min(pos.x, window.innerWidth - BUTTON_SIZE)),
+  y: Math.max(0, Math.min(pos.y, window.innerHeight - BUTTON_SIZE)),
+});
 
 export default function FloatingChatbot({
   subjectId,
@@ -43,18 +77,26 @@ export default function FloatingChatbot({
     }
   }, [messages, isOpen, isMinimized]);
 
-  // Load saved position from localStorage
+  // Load saved position from localStorage and clamp to current viewport
   useEffect(() => {
     const savedPosition = localStorage.getItem("chatbot-position");
     if (savedPosition) {
-      setPosition(JSON.parse(savedPosition));
+      setPosition(clampToViewport(JSON.parse(savedPosition)));
     } else {
-      // Default position: bottom right
-      setPosition({
-        x: window.innerWidth - 100,
-        y: window.innerHeight - 100,
-      });
+      setPosition(
+        clampToViewport({
+          x: window.innerWidth - 100,
+          y: window.innerHeight - 100,
+        }),
+      );
     }
+  }, []);
+
+  // Re-clamp on resize (prevents button from going off-screen on mobile/responsive)
+  useEffect(() => {
+    const handleResize = () => setPosition((p) => clampToViewport(p));
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // Save position to localStorage
@@ -378,7 +420,9 @@ export default function FloatingChatbot({
                       }`}
                     >
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                        {message.text}
+                        {message.sender === "bot"
+                          ? renderMarkdown(message.text)
+                          : message.text}
                         {message.isStreaming && (
                           <span className="inline-block w-1.5 h-4 bg-amber-500 ml-0.5 animate-pulse rounded-sm" />
                         )}
@@ -391,10 +435,13 @@ export default function FloatingChatbot({
                               : "text-gray-400"
                           }`}
                         >
-                          {new Date(message.timestamp).toLocaleTimeString("vi-VN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {new Date(message.timestamp).toLocaleTimeString(
+                            "vi-VN",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          )}
                         </p>
                       )}
                     </div>
