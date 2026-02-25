@@ -61,6 +61,7 @@ export default function CreateTestPage() {
     { id: "4", label: "D", text: "", isCorrect: false },
   ]);
   const [manualCorrectAnswer, setManualCorrectAnswer] = useState("A");
+  const [tfSelection, setTfSelection] = useState<"TRUE" | "FALSE">("TRUE");
   const [manualTrueFalseContent, setManualTrueFalseContent] = useState({
     true: "",
     false: "",
@@ -740,7 +741,11 @@ export default function CreateTestPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Đáp án đúng
                         </label>
-                        <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <select 
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          value={tfSelection}
+                          onChange={(e) => setTfSelection(e.target.value as "TRUE" | "FALSE")}
+                        >
                           <option value="TRUE">Đúng</option>
                           <option value="FALSE">Sai</option>
                         </select>
@@ -854,105 +859,104 @@ export default function CreateTestPage() {
                   <QuizGeneratorForm
                     onGenerate={async (data) => {
                       try {
-                        // Use the question bank service to get random questions
-                        // based on the selected subject or node
-                        const questionBankService = (
-                          await import("@/lib/questionBankService")
-                        ).questionBankService;
-
-                        // Determine filter based on current test details
-                        const filter = {
-                          subjectId: testDetails.subject || undefined,
-                          nodeId: testDetails.node || undefined,
-                          difficulty: data.difficulty,
-                          type: "MULTIPLE_CHOICE" as const,
-                          limit: data.questionCount,
-                          offset: 0,
-                        };
-
-                        // Get random questions from the bank
-                        const randomQuestions =
-                          await questionBankService.getQuestions(filter);
-
-                        if (randomQuestions.length === 0) {
-                          alert(
-                            "Không tìm thấy câu hỏi phù hợp trong ngân hàng câu hỏi. Vui lòng kiểm tra lại bộ lọc.",
-                          );
+                        if (!testDetails.subject || testDetails.subject === '' || testDetails.subject === '0') {
+                          alert('Vui lòng chọn môn học trước khi tạo câu hỏi bằng AI');
                           return;
                         }
 
-                        // Transform questions to match the expected format
-                        const transformedQuestions = randomQuestions
-                          .slice(0, data.questionCount)
-                          .map((q, index) => ({
-                            id: q.id,
-                            createdAt: q.createdAt,
-                            number: questions.length + index + 1,
-                            type: q.type,
-                            questionText: q.questionText,
-                            options: q.options.map((opt) => ({
-                              ...opt,
-                              isCorrect: opt.isCorrect || false, // Ensure isCorrect is set
-                            })),
-                            difficulty: q.difficulty,
-                            topic: q.topic || data.topic || "AI Generated",
-                          }));
-
-                        transformedQuestions.forEach((q) =>
-                          handleAddQuestion(q),
-                        );
-
-                        if (transformedQuestions.length < data.questionCount) {
-                          alert(
-                            `Chỉ tìm thấy ${transformedQuestions.length} câu hỏi phù hợp trong ngân hàng câu hỏi.`,
-                          );
+                        // Get auth token
+                        const supabase = await getSupabaseBrowserClient();
+                        const { data: { session } } = await supabase.auth.getSession();
+                        if (!session?.access_token) {
+                          alert('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+                          return;
                         }
-                      } catch (error) {
-                        console.error("Error generating questions:", error);
-                        alert(
-                          "Có lỗi xảy ra khi tạo câu hỏi từ ngân hàng câu hỏi. Đang sử dụng câu hỏi mẫu.",
-                        );
 
-                        // Fallback to mock questions
-                        const mockQuestions = Array.from(
-                          { length: data.questionCount },
-                          (_, i) => ({
-                            id: Date.now().toString() + i,
-                            createdAt: Date.now(),
-                            number: questions.length + i + 1,
-                            type: "MULTIPLE_CHOICE" as const,
-                            questionText: `Câu hỏi AI ${i + 1}: ${data.topic}`,
-                            options: [
-                              {
-                                id: "1",
-                                label: "A",
-                                text: "Đáp án A",
-                                isCorrect: true,
-                              },
-                              {
-                                id: "2",
-                                label: "B",
-                                text: "Đáp án B",
-                                isCorrect: false,
-                              },
-                              {
-                                id: "3",
-                                label: "C",
-                                text: "Đáp án C",
-                                isCorrect: false,
-                              },
-                              {
-                                id: "4",
-                                label: "D",
-                                text: "Đáp án D",
-                                isCorrect: false,
-                              },
-                            ],
-                            difficulty: data.difficulty,
-                            topic: data.topic || "AI Generated",
+                        // Map difficulty to API format
+                        const difficultyMap: Record<string, string> = {
+                          'Easy': 'easy',
+                          'Medium': 'medium',
+                          'Hard': 'hard',
+                          'Mixed': 'mixed'
+                        };
+
+                        // Call AI generation API
+                        const response = await fetch('/api/questions/generate', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`,
+                          },
+                          body: JSON.stringify({
+                            subjectId: parseInt(testDetails.subject),
+                            nodeId: testDetails.node ? parseInt(testDetails.node) : undefined,
+                            difficulty: difficultyMap[data.difficulty] || 'mixed',
+                            questionCount: data.questionCount,
+                            questionType: 'multiple_choice',
+                            customPrompt: data.topic || undefined,
                           }),
+                        });
+
+                        if (!response.ok) {
+                          const error = await response.json();
+                          throw new Error(error.error || 'Lỗi tạo câu hỏi');
+                        }
+
+                        const result = await response.json();
+                        const generatedQuestions = result.questions || [];
+
+                        if (generatedQuestions.length === 0) {
+                          alert('Không thể tạo câu hỏi. Vui lòng thử lại.');
+                          return;
+                        }
+
+                        // Transform API questions to UI format
+                        const transformedQuestions = generatedQuestions.map((gq: {
+                          id: string;
+                          question: string;
+                          options?: string[];
+                          correct_option_index: number;
+                          difficulty: string;
+                          q_type: string;
+                        }, index: number) => {
+                          // Normalize difficulty to expected format
+                          const difficultyStr = gq.difficulty?.toLowerCase() || 'easy';
+                          let normalizedDifficulty: 'Easy' | 'Medium' | 'Hard' = 'Easy';
+                          if (difficultyStr === 'medium') normalizedDifficulty = 'Medium';
+                          else if (difficultyStr === 'hard') normalizedDifficulty = 'Hard';
+                          
+                          return {
+                            id: gq.id,
+                            createdAt: Date.now(),
+                            number: questions.length + index + 1,
+                            type: gq.q_type === 'true_false' ? 'TRUE_FALSE' as const : 
+                                  gq.q_type === 'essay' ? 'ESSAY' as const : 
+                                  'MULTIPLE_CHOICE' as const,
+                            questionText: gq.question,
+                            options: (gq.options || []).map((text, optIndex) => ({
+                              id: (optIndex + 1).toString(),
+                              label: String.fromCharCode(65 + optIndex), // A, B, C, D
+                              text: text,
+                              isCorrect: optIndex === gq.correct_option_index,
+                            })),
+                            difficulty: normalizedDifficulty,
+                            topic: testDetails.node 
+                              ? nodes.find(n => n.id.toString() === testDetails.node)?.title || 'AI Generated'
+                              : 'AI Generated',
+                          };
+                        });
+
+                        transformedQuestions.forEach((q: Question) => handleAddQuestion(q));
+                        
+                        alert(`✅ Đã tạo thành công ${transformedQuestions.length} câu hỏi bằng AI!`);
+
+                      } catch (error) {
+                        console.error("Error generating questions with AI:", error);
+                        alert(
+                          error instanceof Error 
+                            ? error.message 
+                            : "Có lỗi xảy ra khi tạo câu hỏi bằng AI. Vui lòng thử lại."
                         );
-                        mockQuestions.forEach((q) => handleAddQuestion(q));
                       }
                     }}
                   />

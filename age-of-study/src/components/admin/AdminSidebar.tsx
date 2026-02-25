@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Users,
   BookOpen,
+  FileText,
   Settings,
   LogOut,
   X,
@@ -35,6 +36,11 @@ const navItems: NavItem[] = [
     name: "Quản lý lớp học",
     href: "/admin/classes",
     icon: BookOpen,
+  },
+  {
+    name: "Tài liệu SGK",
+    href: "/admin/documents",
+    icon: FileText,
   },
   {
     name: "Cài đặt",

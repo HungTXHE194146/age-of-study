@@ -40,3 +40,5 @@ next-env.d.ts
 /.agent
 age-of-study/package.json
 age-of-study/package-lock.json
+age-of-study/CRAWLER-GUIDE.md
+/age-of-study/data
