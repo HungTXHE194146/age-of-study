@@ -38,7 +38,8 @@ export async function updateNodePositions(
 
     // Use individual updates instead of RPC for better compatibility
     for (const pos of positions) {
-      const { error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
         .from("nodes")
         .update({ position_x: pos.x, position_y: pos.y })
         .eq("id", pos.id);
@@ -113,9 +114,10 @@ export async function updateNodeConnection(
     }
 
     // Update the parent_node_id for the target node with handle positions
-    const { error: updateError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: updateError } = await (supabase as any)
       .from("nodes")
-      .update({ 
+      .update({
         parent_node_id: sourceId,
         source_position: sourceHandle,
         target_position: targetHandle

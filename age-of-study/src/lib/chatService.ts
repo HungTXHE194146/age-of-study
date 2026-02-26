@@ -196,19 +196,18 @@ class ChatService {
    */
   async clearHistory(): Promise<boolean> {
     try {
-      const { data: { user } } = await this.supabase.auth.getUser()
-      if (!user) return false
+      const { data: { session } } = await this.supabase.auth.getSession()
+      if (!session?.access_token) return false
 
-      const today = new Date().toISOString().split('T')[0]
-      const conversationId = `conv_${user.id}_${today}`
+      // Use server endpoint (service role) to bypass RLS on DELETE
+      const response = await fetch('/api/chat', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      })
 
-      const { error } = await this.supabase
-        .from('chat_logs')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('conversation_id', conversationId)
-
-      return !error
+      return response.ok
     } catch (error) {
       console.error('Error clearing chat history:', error)
       return false

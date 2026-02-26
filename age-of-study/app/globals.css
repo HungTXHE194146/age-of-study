@@ -55,3 +55,56 @@ html {
 .animation-delay-2000 {
   animation-delay: 2000ms;
 }
+
+/* Fade in animation for upload modal */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Shake animation for errors */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Respect user's reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fadeIn {
+    animation: none;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .animate-shake {
+    animation: none;
+    /* Replace shake with subtle opacity pulse for reduced motion */
+    opacity: 0.7;
+    transition: opacity 0.2s ease-in-out;
+  }
+  
+  .animate-shake:hover {
+    opacity: 1;
+  }
+}
