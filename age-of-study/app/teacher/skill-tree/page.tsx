@@ -197,7 +197,7 @@ export default function TeacherSkillTreePage() {
 
             {/* Nút Quản Lý */}
             <Button
-              onClick={() => router.push("/teacher/nodes/create")} // ĐƯỜNG DẪN GIẢ
+              onClick={() => router.push("/teacher/nodes/create")}
               className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 rounded-xl gap-2"
             >
               <PlusCircle className="w-4 h-4" />

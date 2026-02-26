@@ -25,6 +25,7 @@ import { TestService } from "@/lib/testService";
 import { CreateTestRequest } from "@/types/test";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { AIQuestionService } from "@/lib/aiQuestionService";
 
 export default function CreateTestPage() {
   const router = useRouter();
@@ -189,9 +190,7 @@ export default function CreateTestPage() {
               ? "true_false"
               : "essay",
         model_answer: q.model_answer || "",
-        subject_id: testDetails.subject
-          ? parseInt(testDetails.subject)
-          : null,
+        subject_id: testDetails.subject ? parseInt(testDetails.subject) : null,
         explanation: q.explanation || null,
       }));
 
@@ -928,51 +927,15 @@ export default function CreateTestPage() {
                     onGenerate={async (data) => {
                       setIsGenerating(true);
                       try {
-                        // Call the new AI generation API
-                        const formData = new FormData();
-                        formData.append("textPrompt", data.topic || "");
-                        formData.append(
-                          "questionCount",
-                          data.questionCount.toString(),
-                        );
-                        formData.append("difficulty", data.difficulty);
-                        formData.append("subject", data.subject || "");
-
-                        if (data.file) {
-                          formData.append("file", data.file);
-                        }
-
-                        const supabase = await getSupabaseBrowserClient();
-                        const {
-                          data: { session },
-                        } = await supabase.auth.getSession();
-
-                        // Ensure we have a valid session and access token
-                        if (!session || !session.access_token) {
-                          alert(
-                            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
-                          );
-                          return;
-                        }
-
-                        const response = await fetch(
-                          "/api/generate-questions",
-                          {
-                            method: "POST",
-                            body: formData,
-                            headers: {
-                              Authorization: `Bearer ${session.access_token}`,
-                            },
-                          },
-                        );
-
-                        const result = await response.json();
-
-                        if (!response.ok) {
-                          throw new Error(
-                            result.error || "Failed to generate questions",
-                          );
-                        }
+                        const aiQuestionService = new AIQuestionService();
+                        const result =
+                          await aiQuestionService.generateQuestions({
+                            textPrompt: data.topic || "",
+                            questionCount: data.questionCount,
+                            difficulty: data.difficulty,
+                            subject: data.subject || "",
+                            file: data.file || null,
+                          });
 
                         if (result.questions && result.questions.length > 0) {
                           // Transform AI-generated questions to match the expected format
@@ -981,7 +944,11 @@ export default function CreateTestPage() {
                               q: {
                                 type: string;
                                 questionText: string;
-                                options: QuestionOption[];
+                                options: {
+                                  label: string;
+                                  text: string;
+                                  isCorrect: boolean;
+                                }[];
                                 difficulty: string;
                                 explanation?: string;
                               },
@@ -990,16 +957,24 @@ export default function CreateTestPage() {
                               id: crypto.randomUUID(), // Generate proper UUID
                               createdAt: Date.now(),
                               number: questions.length + index + 1,
-                              type: q.type,
+                              type: q.type as
+                                | "MULTIPLE_CHOICE"
+                                | "TRUE_FALSE"
+                                | "ESSAY",
                               questionText: q.questionText,
-                              options: q.options || [],
-                              difficulty: q.difficulty,
+                              options: (q.options || []).map((opt, idx) => ({
+                                id: `${idx}`,
+                                label: opt.label,
+                                text: opt.text,
+                                isCorrect: opt.isCorrect,
+                              })),
+                              difficulty: q.difficulty as QuestionDifficulty,
                               topic: data.topic || "AI Generated",
                               explanation: q.explanation || "",
                             }),
                           );
 
-                          transformedQuestions.forEach((q: Question) =>
+                          transformedQuestions.forEach((q) =>
                             handleAddQuestion(q),
                           );
 

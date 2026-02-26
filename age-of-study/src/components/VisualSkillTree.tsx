@@ -2,6 +2,7 @@
 
 import React, { useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { debounce } from "lodash";
 import {
   ReactFlow,
   MiniMap,
@@ -56,10 +57,10 @@ interface VisualSkillTreeProps {
 }
 
 // --- STYLED CUSTOM NODE COMPONENT ---
-const CustomNode: React.FC<NodeProps<CustomNodeType>> = ({
+const CustomNode = React.memo(({
   data,
   selected,
-}) => {
+}: NodeProps<CustomNodeType>) => {
   const isTeacher = data.isTeacherMode || false;
   // Ràng buộc logic: Nếu là giáo viên -> luôn luôn KHÔNG khóa
   const isLocked = isTeacher ? false : data.isLocked || false;
@@ -218,10 +219,10 @@ const CustomNode: React.FC<NodeProps<CustomNodeType>> = ({
       </div>
     </div>
   );
-};
+});
 
 // --- STYLED CUSTOM EDGE COMPONENT ---
-const CustomEdge: React.FC<EdgeProps & { setEdges?: (callback: (eds: Edge[]) => Edge[]) => void }> = ({
+const CustomEdge = React.memo(({
   id,
   sourceX,
   sourceY,
@@ -234,7 +235,7 @@ const CustomEdge: React.FC<EdgeProps & { setEdges?: (callback: (eds: Edge[]) => 
   data,
   selected,
   setEdges,
-}) => {
+}: EdgeProps & { setEdges?: (callback: (eds: Edge[]) => Edge[]) => void }) => {
   const [edgePath] = getBezierPath({
     sourceX,
     sourceY,
@@ -332,7 +333,7 @@ const CustomEdge: React.FC<EdgeProps & { setEdges?: (callback: (eds: Edge[]) => 
       )}
     </>
   );
-};
+});
 
 // --- MAIN COMPONENT ---
 const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
@@ -530,8 +531,20 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     }
   }, [isTeacherMode, setEdges]);
 
+  // Debounce API call for performance (1 second delay)
+  const debouncedUpdatePositions = useMemo(
+    () =>
+      debounce(async (positions: { id: string; x: number; y: number }[]) => {
+        const result = await updateNodePositions(positions);
+        if (!result.success) {
+          console.error("Failed to update node positions:", result.error);
+        }
+      }, 1000),
+    []
+  );
+
   // Xử lý sự kiện thả chuột sau khi di chuyển (onNodeDragStop)
-  const onNodeDragStop = useCallback(async (event: React.MouseEvent, node: CustomNodeType, nodes: CustomNodeType[]) => {
+  const onNodeDragStop = useCallback((event: React.MouseEvent, node: CustomNodeType, nodes: CustomNodeType[]) => {
     if (!isTeacherMode) return;
 
     try {
@@ -546,17 +559,13 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
       }));
 
       if (positions.length > 0) {
-        // Gọi Server Action để lưu tọa độ mới vào Database
-        const result = await updateNodePositions(positions);
-        
-        if (!result.success) {
-          console.error("Failed to update node positions:", result.error);
-        }
+        // Gọi Server Action ẩn danh qua debounce để giảm tải
+        debouncedUpdatePositions(positions);
       }
     } catch (error) {
       console.error("Error in onNodeDragStop:", error);
     }
-  }, [isTeacherMode]);
+  }, [isTeacherMode, debouncedUpdatePositions]);
 
   return (
     <div className="w-full h-full bg-transparent relative overflow-hidden">
