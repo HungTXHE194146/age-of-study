@@ -273,7 +273,14 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
         .select(`
           *,
           profile:profiles!inner(
-            id, username, full_name, avatar_url, grade, total_xp
+            id, username, full_name, avatar_url, grade, total_xp, last_study_date,
+            activity_logs (
+              id, activity_type, description, created_at
+            ),
+            student_node_progress (
+              node_id, status, score, last_accessed_at, completed_at,
+              nodes ( title )
+            )
           )
         `)
         .eq('class_id', classId)
@@ -321,7 +328,38 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
       ...classData,
       homeroom_teacher: homeroomTeacher,
       subject_teachers: subjectTeachers,
-      students: studentsData,
+      students: studentsData.map((s: any) => {
+        // Find the latest activity
+        let latestActivity = null;
+        if (s.profile.activity_logs && s.profile.activity_logs.length > 0) {
+          // Sort descending by created_at just to be safe
+          const sortedActs = [...s.profile.activity_logs].sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          latestActivity = sortedActs[0];
+        }
+
+        // Find the latest progress node
+        let latestProgress = null;
+        if (s.profile.student_node_progress && s.profile.student_node_progress.length > 0) {
+          // Sort descending by last_accessed_at or completed_at
+          const sortedProg = [...s.profile.student_node_progress].sort((a, b) => {
+            const timeA = new Date(a.last_accessed_at || a.completed_at || 0).getTime();
+            const timeB = new Date(b.last_accessed_at || b.completed_at || 0).getTime();
+            return timeB - timeA;
+          });
+          latestProgress = sortedProg[0];
+        }
+
+        return {
+          ...s,
+          profile: {
+            ...s.profile,
+            latest_activity: latestActivity,
+            latest_progress: latestProgress
+          }
+        };
+      }),
     };
 
     console.log('Class detail loaded:', {

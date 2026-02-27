@@ -1,11 +1,7 @@
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseBrowserClient } from "./supabase";
 
 const getSupabaseClient = () => {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+  return getSupabaseBrowserClient();
 };
 
 export interface NodeData {
@@ -14,7 +10,7 @@ export interface NodeData {
   description?: string;
   xp: number;
   node_type: "skill" | "quest" | "reward" | "grade" | "subject" | "chapter" | "week" | "lesson" | "content";
-  parent_id?: number | null;
+  parent_node_id?: number | null;
   position_x: number;
   position_y: number;
   class_id?: number;
@@ -44,6 +40,16 @@ export interface NodeManagementResult<T = unknown> {
   details?: unknown;
 }
 
+// Helper to map DB node layout back to UI Node layout
+const mapDbNodeToUiNode = (dbNode: any): Node => {
+  if (!dbNode) return dbNode;
+  return {
+    ...dbNode,
+    xp: dbNode.required_xp || 0,
+    parent_id: dbNode.parent_node_id,
+  } as Node;
+};
+
 /**
  * Tạo một node mới trong cây kỹ năng
  */
@@ -62,16 +68,21 @@ export async function createNode(
       };
     }
 
+    const insertData: Record<string, any> = {
+      title: data.title,
+      node_type: data.node_type,
+      position_x: data.position_x,
+      position_y: data.position_y,
+    };
+    
+    if (data.description !== undefined) insertData.description = data.description;
+    if (data.subject_id !== undefined) insertData.subject_id = data.subject_id;
+    if (data.xp !== undefined) insertData.required_xp = data.xp;
+    if (data.parent_node_id !== undefined) insertData.parent_node_id = data.parent_node_id;
+
     const { data: newNode, error } = await supabase
       .from("nodes")
-      .insert([
-        {
-          ...data,
-          is_active: data.is_active ?? true,
-          prerequisites: data.prerequisites || [],
-          tags: data.tags || [],
-        },
-      ])
+      .insert([insertData])
       .select()
       .single();
 
@@ -86,7 +97,7 @@ export async function createNode(
 
     return {
       success: true,
-      data: newNode,
+      data: mapDbNodeToUiNode(newNode),
     };
   } catch (error) {
     console.error("Lỗi hệ thống khi tạo node:", error);
@@ -123,13 +134,21 @@ export async function updateNode(
       };
     }
 
+    // Map update data explicitly to match DB schema
+    const updateData: Record<string, any> = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.subject_id !== undefined) updateData.subject_id = data.subject_id;
+    if (data.xp !== undefined) updateData.required_xp = data.xp;
+    if (data.parent_node_id !== undefined) updateData.parent_node_id = data.parent_node_id;
+    if (data.position_x !== undefined) updateData.position_x = data.position_x;
+    if (data.position_y !== undefined) updateData.position_y = data.position_y;
+    if (data.node_type !== undefined) updateData.node_type = data.node_type;
+
     // Cập nhật node
     const { data: updatedNode, error } = await supabase
       .from("nodes")
-      .update({
-        ...data,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq("id", id)
       .select()
       .single();
@@ -145,7 +164,7 @@ export async function updateNode(
 
     return {
       success: true,
-      data: updatedNode,
+      data: mapDbNodeToUiNode(updatedNode),
     };
   } catch (error) {
     console.error("Lỗi hệ thống khi cập nhật node:", error);
@@ -183,7 +202,7 @@ export async function deleteNode(id: number): Promise<NodeManagementResult> {
     const { data: children, error: childrenError } = await supabase
       .from("nodes")
       .select("id, title")
-      .eq("parent_id", id);
+      .eq("parent_node_id", id);
 
     if (childrenError) {
       console.error("Lỗi kiểm tra children:", childrenError);
@@ -265,7 +284,6 @@ export async function updateNodePosition(
       .update({
         position_x: x,
         position_y: y,
-        updated_at: new Date().toISOString(),
       })
       .eq("id", id)
       .select()
@@ -282,7 +300,7 @@ export async function updateNodePosition(
 
     return {
       success: true,
-      data: updatedNode,
+      data: mapDbNodeToUiNode(updatedNode),
     };
   } catch (error) {
     console.error("Lỗi hệ thống khi cập nhật vị trí node:", error);
@@ -306,10 +324,12 @@ export async function getNodesByClassOrSubject(
 
     let query = supabase.from("nodes").select("*");
 
-    if (classId) {
-      query = query.eq("class_id", classId);
-    } else if (subjectId) {
+    if (subjectId) {
       query = query.eq("subject_id", subjectId);
+    }
+    
+    if (classId) {
+      console.warn("nodes table does not have class_id, ignoring class_id filter in getNodesByClassOrSubject");
     }
 
     const { data, error } = await query.order("created_at", {
@@ -331,7 +351,7 @@ export async function getNodesByClassOrSubject(
 
     return {
       success: true,
-      data: data || [],
+      data: data ? data.map(mapDbNodeToUiNode) : [],
     };
   } catch (error) {
     console.error("Lỗi hệ thống khi lấy danh sách nodes:", error);
@@ -377,7 +397,7 @@ export async function getNodeById(
 
     return {
       success: true,
-      data,
+      data: mapDbNodeToUiNode(data),
     };
   } catch (error) {
     console.error("Lỗi hệ thống khi lấy thông tin node:", error);

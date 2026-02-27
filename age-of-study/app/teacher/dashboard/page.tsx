@@ -2,21 +2,32 @@
 
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Loading from "@/components/ui/loading";
 import {
   ClipboardList,
   Users,
   BarChart3,
   Settings,
-  Plus,
+  PlusCircle,
   LogOut,
+  BookOpen,
+  Calendar,
+  ChevronRight,
+  TrendingUp,
+  Award,
+  Download,
+  QrCode,
 } from "lucide-react";
 import { checkRoutePermission } from "@/lib/routeMiddleware";
+import { NotebookCard, NotebookCardHeader, NotebookCardTitle, NotebookCardContent, NotebookButton, NotebookBadge } from "@/components/ui/notebook-card";
+import { getTeacherDashboardSummary, DashboardSummary } from "@/lib/dashboardService";
 
 export default function TeacherDashboard() {
   const { user, checkAuth, isAuthenticated, isLoading } = useAuthStore();
   const router = useRouter();
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(true);
 
   useEffect(() => {
     checkAuth();
@@ -36,15 +47,31 @@ export default function TeacherDashboard() {
         router.push(redirectPath);
         return;
       }
+
+      // Fetch dashboard summary
+      const fetchSummary = async () => {
+        try {
+          const result = await getTeacherDashboardSummary(user.id);
+          if (result.data) {
+            setSummary(result.data);
+          }
+        } catch (error) {
+          console.error("Failed to fetch dashboard summary:", error);
+        } finally {
+          setLoadingSummary(false);
+        }
+      };
+      
+      fetchSummary();
     } else if (!isLoading && !isAuthenticated) {
       router.push("/login");
     }
   }, [isLoading, isAuthenticated, user, router]);
 
-  if (isLoading) {
+  if (isLoading || (loadingSummary && !summary)) {
     return (
       <Loading
-        message="Đang tải bảng điều khiển giáo viên..."
+        message="Đang chuẩn bị bảng điều khiển cho thầy cô..."
         size="lg"
         fullScreen
       />
@@ -60,164 +87,177 @@ export default function TeacherDashboard() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Bảng Điều Khiển Giáo Viên
+    <div className="min-h-screen bg-[#f8fafc] pb-12">
+      {/* Top Decoration Bar */}
+      <div className="h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500 w-full" />
+      
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-teal-600 uppercase tracking-widest flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </h2>
+            <h1 className="text-5xl font-black text-gray-900 leading-tight">
+              Chào thầy cô, <span className="text-indigo-600">{user.full_name || user.username}</span>!
             </h1>
-            <p className="text-lg text-gray-600">
-              Chào mừng {user.full_name || user.username}! Quản lý lớp học và
-              bài kiểm tra của bạn.
+            <p className="text-xl text-gray-600 font-medium">
+              Hôm nay thầy cô có <span className="text-emerald-600 font-bold">{summary?.totalClasses || 0} lớp học</span> cần quan tâm.
             </p>
           </div>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Test Management Card */}
-        <div
-          className="bg-white rounded-2xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-all border-2 border-blue-100 cursor-pointer hover:border-blue-300"
-          onClick={() => handleNavigate("/teacher/tests")}
-        >
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-            </div>
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+          
+          <div className="flex gap-4">
+            <NotebookButton onClick={() => handleNavigate("/teacher/classes")} className="bg-emerald-100 text-teal-800 border-teal-800">
+               <Users className="w-5 h-5 mr-2" />
+               Dánh sách lớp
+            </NotebookButton>
+            <NotebookButton onClick={() => handleNavigate("/teacher/skill-tree")} className="bg-indigo-100 text-indigo-800 border-indigo-800">
+               <Award className="w-5 h-5 mr-2" />
+               Skill Tree
+            </NotebookButton>
           </div>
-          <h3 className="text-base sm:text-xl font-bold text-blue-600 mb-2">
-            Quản lý bài kiểm tra
-          </h3>
-          <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4">
-            Tạo, chỉnh sửa và quản lý các bài kiểm tra cho học sinh
-          </p>
-          <button className="w-full px-3 sm:px-4 py-2 bg-blue-500 text-white rounded-full font-semibold hover:bg-blue-600 transition-colors text-sm">
-            Quản lý ngay
-          </button>
         </div>
 
-        {/* Student Management Card */}
-        <div
-          className="bg-white rounded-2xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-all border-2 border-green-100 cursor-pointer hover:border-green-300"
-          onClick={() => handleNavigate("/teacher/classes")}
-        >
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+        {/* Quick Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+          <NotebookCard className="bg-emerald-50/50 border-emerald-800">
+            <NotebookCardContent className="pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-emerald-200 rounded-xl border-2 border-emerald-800">
+                  <Users className="w-8 h-8 text-emerald-900" />
+                </div>
+                <NotebookBadge variant="success">Sĩ số</NotebookBadge>
+              </div>
+              <div className="text-5xl font-black text-emerald-900">{summary?.totalStudents || 0}</div>
+              <div className="text-lg font-bold text-emerald-700 mt-1 uppercase text-left">Tổng số học sinh</div>
+            </NotebookCardContent>
+          </NotebookCard>
+
+          <NotebookCard className="bg-amber-50/50 border-amber-800">
+            <NotebookCardContent className="pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-amber-200 rounded-xl border-2 border-amber-800">
+                  <TrendingUp className="w-8 h-8 text-amber-900" />
+                </div>
+                <NotebookBadge variant="warning">Hoạt động</NotebookBadge>
+              </div>
+              <div className="text-5xl font-black text-amber-900">{summary?.studentsActiveToday || 0}</div>
+              <div className="text-lg font-bold text-amber-700 mt-1 uppercase text-left">Bạn học bài hôm nay</div>
+            </NotebookCardContent>
+          </NotebookCard>
+
+          <NotebookCard className="bg-indigo-50/50 border-indigo-800">
+            <NotebookCardContent className="pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-indigo-200 rounded-xl border-2 border-indigo-800">
+                  <BookOpen className="w-8 h-8 text-indigo-900" />
+                </div>
+                <NotebookBadge>Khóa học</NotebookBadge>
+              </div>
+              <div className="text-5xl font-black text-indigo-900">{summary?.totalClasses || 0}</div>
+              <div className="text-lg font-bold text-indigo-700 mt-1 uppercase text-left">Lớp giảng dạy</div>
+            </NotebookCardContent>
+          </NotebookCard>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          {/* Classes List Section */}
+          <div className="lg:col-span-2 space-y-6 text-left">
+            <h2 className="text-3xl font-black text-gray-900 flex items-center gap-3">
+              Lớp học của tôi
+              <div className="h-1 bg-gray-300 flex-1 ml-2" />
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {summary?.classes.map((cls) => (
+                <NotebookCard key={cls.id} className="group hover:scale-[1.02] transition-transform duration-300">
+                  <NotebookCardHeader className="bg-blue-50">
+                    <div className="flex justify-between items-start">
+                      <NotebookCardTitle className="text-2xl">{cls.name}</NotebookCardTitle>
+                      <NotebookBadge>{cls.school_year}</NotebookBadge>
+                    </div>
+                  </NotebookCardHeader>
+                  <NotebookCardContent className="py-4">
+                    <div className="flex items-center gap-2 text-gray-600 font-bold">
+                      <Users className="w-4 h-4" />
+                      {cls.student_count} học sinh
+                    </div>
+                  </NotebookCardContent>
+                  <div className="p-6 pt-0 flex gap-3">
+                    <NotebookButton 
+                      onClick={() => handleNavigate(`/teacher/classes/${cls.id}`)}
+                      className="flex-1 py-1 text-base bg-blue-600 text-white border-blue-900"
+                    >
+                      Vào lớp
+                    </NotebookButton>
+                    <NotebookButton 
+                      onClick={() => handleNavigate(`/teacher/classes/${cls.id}/reports`)}
+                      className="aspect-square p-2 bg-amber-100 border-amber-800 group-hover:bg-amber-300"
+                      title="Xuất báo cáo"
+                    >
+                      <Download className="w-5 h-5 text-amber-900" />
+                    </NotebookButton>
+                  </div>
+                </NotebookCard>
+              ))}
+              
+              {summary?.classes.length === 0 && (
+                <div className="col-span-full py-12 text-center text-gray-500 font-bold border-4 border-dashed border-gray-200 rounded-2xl">
+                   Thầy cô chưa được phân công lớp học nào.
+                </div>
+              )}
             </div>
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
           </div>
-          <h3 className="text-base sm:text-xl font-bold text-green-600 mb-2">
-            Quản lý học sinh
-          </h3>
-          <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4">
-            Theo dõi tiến độ và hiệu suất học tập của học sinh
-          </p>
-          <button className="w-full px-3 sm:px-4 py-2 bg-green-500 text-white rounded-full font-semibold hover:bg-green-600 transition-colors text-sm">
-            Xem danh sách
-          </button>
-        </div>
 
-        {/* Analytics Card */}
-        <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-all border-2 border-purple-100">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
+          {/* Side Panel: Recent Activity */}
+          <div className="space-y-6 text-left">
+            <h2 className="text-3xl font-black text-gray-900">Hoạt động mới</h2>
+            
+            <NotebookCard className="border-indigo-200 shadow-none">
+              <NotebookCardContent className="p-4 space-y-4 pt-4">
+                {summary?.recentActivities.map((activity, idx) => (
+                  <div key={idx} className="flex gap-3 pb-3 border-b-2 border-dashed border-gray-100 last:border-0 last:pb-0">
+                    <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center border-2 border-indigo-200 flex-shrink-0">
+                      <TrendingUp className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-indigo-900">{activity.student.full_name || activity.student.username}</p>
+                      <p className="text-sm text-gray-500 font-medium">{activity.activity_type === 'node_complete' ? '✅ Đã hoàn thành bài học' : '📝 Đã làm kiểm tra'}</p>
+                      <p className="text-xs text-indigo-400 font-bold mt-1 uppercase">
+                             {new Date(activity.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                
+                {summary?.recentActivities.length === 0 && (
+                  <p className="text-center py-8 text-gray-400 font-bold italic">Chưa có hoạt động mới nào.</p>
+                )}
+              </NotebookCardContent>
+            </NotebookCard>
+
+            {/* Quick Actions Panel */}
+            <div className="bg-indigo-600 rounded-3xl p-8 text-white shadow-[8px_8px_0_0_#312e81] border-4 border-[#312e81]">
+               <h3 className="text-2xl font-black mb-4">Hành động nhanh</h3>
+               <div className="space-y-4">
+                 <button 
+                   onClick={() => handleNavigate("/teacher/tests/create")}
+                   className="w-full py-3 bg-white text-indigo-600 rounded-2xl font-black hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2"
+                 >
+                   <PlusCircle className="w-5 h-5" />
+                   TẠO BÀI KIỂM TRA
+                 </button>
+                 <button 
+                   onClick={() => handleNavigate("/teacher/classes")}
+                   className="w-full py-3 bg-white/20 text-white rounded-2xl font-black hover:bg-white/30 transition-colors flex items-center justify-center gap-2 border-2 border-white/50"
+                 >
+                   <QrCode className="w-5 h-5" />
+                   IN THẺ QR LỚP
+                 </button>
+               </div>
             </div>
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
           </div>
-          <h3 className="text-base sm:text-xl font-bold text-purple-600 mb-2">
-            Thống kê & Báo cáo
-          </h3>
-          <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4">
-            Phân tích kết quả học tập và hiệu quả giảng dạy
-          </p>
-          <button className="w-full px-3 sm:px-4 py-2 bg-purple-500 text-white rounded-full font-semibold hover:bg-purple-600 transition-colors text-sm">
-            Xem báo cáo
-          </button>
-        </div>
-
-        {/* Settings Card */}
-        <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-all border-2 border-orange-100">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
-            </div>
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
-          </div>
-          <h3 className="text-base sm:text-xl font-bold text-orange-600 mb-2">
-            Cài đặt
-          </h3>
-          <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4">
-            Cấu hình lớp học và tùy chọn giảng dạy
-          </p>
-          <button className="w-full px-3 sm:px-4 py-2 bg-orange-500 text-white rounded-full font-semibold hover:bg-orange-600 transition-colors text-sm">
-            Cài đặt
-          </button>
-        </div>
-
-        {/* Skill Tree Management Card */}
-        <div
-          className="bg-white rounded-2xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-all border-2 border-blue-100 cursor-pointer hover:border-blue-300"
-          onClick={() => handleNavigate("/teacher/skill-tree")}
-        >
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg
-                className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-9l-2-2H5a2 2 0 00-2 2z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 5v2M12 5v2M16 5v2"
-                />
-              </svg>
-            </div>
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
-          </div>
-          <h3 className="text-base sm:text-xl font-bold text-blue-600 mb-2">
-            Quản lý Skill Tree
-          </h3>
-          <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4">
-            Quản lý cây kỹ năng và cấu trúc học tập
-          </p>
-          <button className="w-full px-3 sm:px-4 py-2 bg-blue-500 text-white rounded-full font-semibold hover:bg-blue-600 transition-colors text-sm">
-            Quản lý ngay
-          </button>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="mt-8 sm:mt-12 bg-white rounded-2xl p-4 sm:p-6 lg:p-8 shadow-md">
-        <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-900">
-          Hành động nhanh
-        </h2>
-        <div className="flex flex-wrap gap-3 sm:gap-4">
-          <button
-            className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-500 text-white rounded-full font-semibold hover:bg-blue-600 transition-colors text-sm sm:text-base"
-            onClick={() => handleNavigate("/teacher/tests/create")}
-          >
-            ✨ Tạo bài kiểm tra mới
-          </button>
-          <button className="px-4 sm:px-6 py-2 sm:py-3 bg-green-500 text-white rounded-full font-semibold hover:bg-green-600 transition-colors text-sm sm:text-base">
-            📊 Xem thống kê lớp học
-          </button>
-          <button className="px-4 sm:px-6 py-2 sm:py-3 bg-purple-500 text-white rounded-full font-semibold hover:bg-purple-600 transition-colors text-sm sm:text-base">
-            📈 Xuất báo cáo
-          </button>
         </div>
       </div>
     </div>
