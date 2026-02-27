@@ -76,7 +76,6 @@ const CustomNode = React.memo(({
   // Ràng buộc logic: Nếu là giáo viên -> luôn luôn KHÔNG khóa
   const isLocked = isTeacher ? false : data.isLocked || false;
   const baseColor = isLocked ? "#9ca3af" : data.color || "#fbbf24";
-  const router = useRouter();
 
   const Icon = useMemo(() => {
     if (isLocked) return Lock;
@@ -94,15 +93,33 @@ const CustomNode = React.memo(({
     }
   }, [data.nodeType, isLocked]);
 
-  const nodeStyle = {
-    boxShadow: selected
-      ? `0 0 20px 5px ${baseColor}, 0 10px 15px -3px rgba(0,0,0,0.3)`
-      : `0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -4px ${baseColor}80`,
-    borderColor: baseColor,
-    background: isLocked
-      ? "linear-gradient(145deg, #e5e7eb, #9ca3af)"
-      : `linear-gradient(145deg, #ffffff, ${baseColor}20)`,
-  };
+  const teacherStickyColor = (() => {
+      switch (data.nodeType) {
+          case "grade": return "#fef08a"; // yellow
+          case "subject": return "#bbf7d0"; // green
+          case "chapter": return "#bfdbfe"; // blue
+          case "lesson": return "#fbcfe8"; // pink
+          default: return "#fef08a";
+      }
+  })();
+
+  const nodeStyle = isTeacher
+    ? {
+        boxShadow: selected
+          ? `6px 6px 0 0 rgba(0,0,0,1)`
+          : `4px 4px 0 0 rgba(0,0,0,1)`,
+        borderColor: '#000',
+        background: isLocked ? "#e5e7eb" : teacherStickyColor,
+      }
+    : {
+        boxShadow: selected
+          ? `0 0 20px 5px ${baseColor}, 0 10px 15px -3px rgba(0,0,0,0.3)`
+          : `0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -4px ${baseColor}80`,
+        borderColor: baseColor,
+        background: isLocked
+          ? "linear-gradient(145deg, #e5e7eb, #9ca3af)"
+          : `linear-gradient(145deg, #ffffff, ${baseColor}20)`,
+      };
 
   return (
     <div className="relative group">
@@ -111,10 +128,10 @@ const CustomNode = React.memo(({
         type="target"
         position={Position.Top}
         id="top"
-        className={`w-4 h-4 rounded-full border-2 border-white transition-all duration-200 ${
+        className={`w-4 h-4 transition-all duration-200 ${
           isTeacher 
-            ? 'opacity-0 group-hover:opacity-100 bg-green-500 hover:bg-green-400 cursor-pointer' 
-            : '!bg-transparent !border-none'
+            ? 'opacity-0 group-hover:opacity-100 bg-black cursor-pointer rounded-none border-2 border-white' 
+            : 'rounded-full border-2 border-white !bg-transparent !border-none'
         }`}
         style={{ 
           top: '-12px',
@@ -126,10 +143,10 @@ const CustomNode = React.memo(({
         type="source"
         position={Position.Bottom}
         id="bottom"
-        className={`w-4 h-4 rounded-full border-2 border-white transition-all duration-200 ${
+        className={`w-4 h-4 transition-all duration-200 ${
           isTeacher 
-            ? 'opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-400 cursor-pointer' 
-            : '!bg-transparent !border-none'
+            ? 'opacity-0 group-hover:opacity-100 bg-black cursor-pointer rounded-none border-2 border-white' 
+            : 'rounded-full border-2 border-white !bg-transparent !border-none'
         }`}
         style={{ 
           bottom: '-12px',
@@ -141,10 +158,10 @@ const CustomNode = React.memo(({
         type="source"
         position={Position.Left}
         id="left"
-        className={`w-4 h-4 rounded-full border-2 border-white transition-all duration-200 ${
+        className={`w-4 h-4 transition-all duration-200 ${
           isTeacher 
-            ? 'opacity-0 group-hover:opacity-100 bg-blue-500 hover:bg-blue-400 cursor-pointer' 
-            : '!bg-transparent !border-none'
+            ? 'opacity-0 group-hover:opacity-100 bg-black cursor-pointer rounded-none border-2 border-white' 
+            : 'rounded-full border-2 border-white !bg-transparent !border-none'
         }`}
         style={{ 
           left: '-12px',
@@ -156,10 +173,10 @@ const CustomNode = React.memo(({
         type="source"
         position={Position.Right}
         id="right"
-        className={`w-4 h-4 rounded-full border-2 border-white transition-all duration-200 ${
+        className={`w-4 h-4 transition-all duration-200 ${
           isTeacher 
-            ? 'opacity-0 group-hover:opacity-100 bg-purple-500 hover:bg-purple-400 cursor-pointer' 
-            : '!bg-transparent !border-none'
+            ? 'opacity-0 group-hover:opacity-100 bg-black cursor-pointer rounded-none border-2 border-white' 
+            : 'rounded-full border-2 border-white !bg-transparent !border-none'
         }`}
         style={{ 
           right: '-12px',
@@ -170,36 +187,54 @@ const CustomNode = React.memo(({
 
       <div
         style={nodeStyle}
-        className={`relative w-36 h-36 rounded-[2rem] border-[6px] flex flex-col items-center justify-center p-2 transition-all duration-300 ease-out
-          ${!isLocked ? "hover:scale-110 hover:-translate-y-2" : "opacity-90"}
-          ${selected ? "scale-105 -translate-y-1" : ""}
-        `}
+        className={
+          isTeacher
+            ? `relative w-36 h-36 border-2 flex flex-col items-center justify-center p-2 transition-transform duration-200
+               ${!isLocked ? "hover:-translate-y-1" : ""}
+               ${selected ? "scale-105 -rotate-2" : "rotate-1"}
+              `
+            : `relative w-36 h-36 rounded-[2rem] border-[6px] flex flex-col items-center justify-center p-2 transition-all duration-300 ease-out
+               ${!isLocked ? "hover:scale-110 hover:-translate-y-2" : "opacity-90"}
+               ${selected ? "scale-105 -translate-y-1" : ""}
+              `
+        }
       >
+        {isTeacher && !isLocked && (
+            <div className="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-3 bg-red-200/60 border border-red-300 rounded-sm italic z-0 transform -rotate-2"></div>
+        )}
+      
         <div
-          className={`w-16 h-16 rounded-full flex items-center justify-center mb-2 shadow-inner border-4 border-white/50 ${isLocked ? "bg-gray-300" : "bg-white"}`}
-          style={{ color: baseColor }}
+          className={
+            isTeacher
+              ? `w-12 h-12 flex items-center justify-center mb-1 z-10 ${isLocked ? "text-gray-400" : "text-gray-900"}`
+              : `w-16 h-16 rounded-full flex items-center justify-center mb-2 shadow-inner border-4 border-white/50 z-10 ${isLocked ? "bg-gray-300" : "bg-white"}`
+          }
+          style={{ color: isTeacher ? undefined : baseColor }}
         >
           <Icon
-            size={32}
-            strokeWidth={2.5}
-            className={`${!isLocked ? "group-hover:animate-wiggle" : ""}`}
+            size={isTeacher ? 36 : 32}
+            strokeWidth={isTeacher ? 2 : 2.5}
+            className={`${!isLocked && !isTeacher ? "group-hover:animate-wiggle" : ""}`}
           />
         </div>
 
-        <div className="text-center px-1">
+        <div className="text-center px-1 z-10">
           <h3
-            className={`text-sm font-extrabold leading-tight line-clamp-2 ${isLocked ? "text-gray-600" : "text-gray-800"}`}
+            className={
+              isTeacher
+                ? `text-sm font-bold leading-tight line-clamp-3 text-black font-handwritten tracking-wide`
+                : `text-sm font-extrabold leading-tight line-clamp-2 ${isLocked ? "text-gray-600" : "text-gray-800"}`
+            }
             style={{
-              textShadow:
-                "1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff",
+              textShadow: isTeacher ? "none" : "1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff",
             }}
           >
             {data.title}
           </h3>
         </div>
 
-        {isLocked && (
-          <div className="absolute inset-0 bg-gray-900/40 rounded-[1.8rem] flex items-center justify-center backdrop-blur-[1px] pointer-events-none">
+        {!isTeacher && isLocked && (
+          <div className="absolute inset-0 bg-gray-900/40 rounded-[1.8rem] flex items-center justify-center backdrop-blur-[1px] pointer-events-none z-20">
             <Lock size={48} className="text-white/80 drop-shadow-lg" />
           </div>
         )}
@@ -212,7 +247,7 @@ const CustomNode = React.memo(({
                 e.stopPropagation();
                 if (data.onEditNode) data.onEditNode(Number(data.id));
               }}
-              className="w-8 h-8 bg-blue-500 hover:bg-blue-400 text-white rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-all"
+              className="w-8 h-8 bg-white border-2 border-black text-black rounded-none flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform"
               title="Chỉnh sửa"
             >
               <Edit2 size={14} />
@@ -222,7 +257,7 @@ const CustomNode = React.memo(({
                 e.stopPropagation();
                 if (data.onDeleteNode) data.onDeleteNode(Number(data.id));
               }}
-              className="w-8 h-8 bg-red-500 hover:bg-red-400 text-white rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-all"
+              className="w-8 h-8 bg-red-100 border-2 border-black text-red-600 rounded-none flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform"
               title="Xóa"
             >
               <Trash2 size={14} />
@@ -280,37 +315,54 @@ const CustomEdge = React.memo(({
           </filter>
         </defs>
       </svg>
+      {/* Nét chính của line */}
       <BaseEdge
         path={edgePath}
         markerEnd={markerEnd}
-        style={{
-          ...style,
-          strokeWidth: 6,
-          stroke: edgeColor,
-          strokeOpacity: 0.6,
-          filter: `url(#glow-${id})`,
-        }}
+        style={
+          data?.isTeacherMode
+            ? {
+                ...style,
+                strokeWidth: 4,
+                stroke: "#374151", // dark gray for pencil look
+                strokeOpacity: 0.9,
+                strokeDasharray: "8, 4", // dashed line for notebook feel
+                fill: "none",
+              }
+            : {
+                ...style,
+                strokeWidth: 6,
+                stroke: edgeColor,
+                strokeOpacity: 0.6,
+                filter: `url(#glow-${id})`,
+              }
+        }
       />
-      <BaseEdge
-        path={edgePath}
-        style={{
-          ...style,
-          strokeWidth: 2,
-          stroke: "#fff",
-          strokeOpacity: 0.8,
-          fill: "none",
-        }}
-      />
-      <circle r="6" fill="#fff" filter={!data?.isLowData ? `url(#glow-${id})` : "none"}>
-        {!data?.isLowData && (
-          <animateMotion
-            dur="3s"
-            repeatCount="indefinite"
-            path={edgePath}
-            calcMode="linear"
-          />
-        )}
-      </circle>
+      {/* Nét sáng của line (chỉ cho student mode) */}
+      {!data?.isTeacherMode && (
+        <BaseEdge
+          path={edgePath}
+          style={{
+            ...style,
+            strokeWidth: 2,
+            stroke: "#fff",
+            strokeOpacity: 0.8,
+            fill: "none",
+          }}
+        />
+      )}
+      {!data?.isTeacherMode && (
+        <circle r="6" fill="#fff" filter={!data?.isLowData ? `url(#glow-${id})` : "none"}>
+          {!data?.isLowData && (
+            <animateMotion
+              dur="3s"
+              repeatCount="indefinite"
+              path={edgePath}
+              calcMode="linear"
+            />
+          )}
+        </circle>
+      )}
       
       {/* Delete button for edges when selected */}
       {selected && (
@@ -428,8 +480,8 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     if (subjectNodes) {
       const { nodes: mappedNodes, edges: mappedEdges } = transformDBNodesToFlow(subjectNodes, isTeacherMode);
       setNodes(mappedNodes);
-      // Inject isLowData into edge data
-      setEdges(mappedEdges.map(e => ({...e, data: { ...e.data, isLowData }})));
+      // Inject isLowData and isTeacherMode into edge data
+      setEdges(mappedEdges.map(e => ({...e, data: { ...e.data, isLowData, isTeacherMode }})));
     } else {
       setNodes([]);
       setEdges([]);
@@ -597,7 +649,55 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   }
 
   return (
-    <div className="w-full h-full bg-transparent relative overflow-hidden flex flex-col">
+    <div className={`w-full h-full relative overflow-hidden flex flex-col ${isTeacherMode ? 'max-w-[400px] mx-auto border-x-4 border-black shadow-[4px_0_0_0_rgba(0,0,0,1),-4px_0_0_0_rgba(0,0,0,1)] bg-[#fffdf8]' : 'bg-transparent'}`}>
+      
+      {/* Cảnh vật trang trí cho Notebook */}
+      {isTeacherMode && (
+         <>
+          {/* Lưới gáy sổ bên trái */}
+          <div className="absolute left-0 top-0 bottom-0 w-8 border-r-2 border-dashed border-gray-300 z-0 pointer-events-none flex flex-col justify-around py-10 opacity-60">
+             {[...Array(6)].map((_, i) => (
+               <div key={i} className="w-4 h-4 rounded-full bg-gray-200 border-2 border-gray-300 ml-1 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]"></div>
+             ))}
+          </div>
+
+          {/* Doodle hành tinh/ngôi sao */}
+          <div className="absolute bottom-16 right-4 opacity-[0.15] pointer-events-none z-0 rotate-12">
+             <svg width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+               <path d="M10,90 Q50,10 90,90 Q50,50 10,90 Z" fill="none" stroke="#000" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+               <circle cx="50" cy="50" r="10" fill="none" stroke="#000" strokeWidth="4" />
+             </svg>
+          </div>
+
+          {/* Doodle mũi tên vẽ tay */}
+          <div className="absolute top-40 right-6 opacity-20 pointer-events-none z-0 rotate-[15deg] scale-100">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </div>
+          
+          {/* Doodle chữ thập */}
+          <div className="absolute bottom-40 left-12 opacity-15 pointer-events-none z-0 -rotate-12 scale-75">
+             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+               <line x1="18" y1="6" x2="6" y2="18"></line>
+               <line x1="6" y1="6" x2="18" y2="18"></line>
+             </svg>
+          </div>
+
+          {/* Decal Text nhỏ chìm dưới nền dọc theo viền phải */}
+          <div className="absolute top-[60%] -right-16 opacity-[0.05] pointer-events-none z-0 rotate-90 font-handwritten text-5xl tracking-[0.5em] text-black font-black whitespace-nowrap">
+            SKILL TREE
+          </div>
+
+          {/* Doodle đám mây */}
+          <div className="absolute top-16 left-12 opacity-[0.15] pointer-events-none z-0 -rotate-6 scale-90">
+             <svg width="60" height="40" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+               <path d="M17.5 19c2.485 0 4.5-2.015 4.5-4.5S19.985 10 17.5 10c-.394 0-.776.05-1.144.148C15.422 7.025 12.518 5 9 5c-3.866 0-7 3.134-7 7 0 .195.008.388.024.579A4.5 4.5 0 0 0 3.5 19h14z"/>
+             </svg>
+          </div>
+         </>
+      )}
+
       {/* Thanh Search Nổi */}
       <div className="absolute top-4 left-4 right-4 z-50">
         <form onSubmit={handleSearch} className="relative flex items-center">
@@ -614,27 +714,51 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
               // Delay nhỏ để kịp click vào gợi ý
               setTimeout(() => setShowSuggestions(false), 200);
             }}
-            className="w-full bg-slate-800/90 text-slate-100 placeholder-slate-400 border border-indigo-500/50 rounded-full pl-10 pr-4 py-3 shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all backdrop-blur-md text-sm"
+            className={
+              isTeacherMode
+                ? "w-full bg-white/80 text-gray-900 placeholder-gray-500 border-2 border-black rounded-lg pl-12 pr-4 py-3 shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus:outline-none focus:border-blue-600 transition-all font-bold text-lg"
+                : "w-full bg-slate-800/90 text-slate-100 placeholder-slate-400 border border-indigo-500/50 rounded-full pl-10 pr-4 py-3 shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all backdrop-blur-md text-sm"
+            }
           />
-          <Search className="w-5 h-5 text-indigo-400 absolute left-3" />
+          <Search className={isTeacherMode ? "w-6 h-6 text-gray-600 absolute left-3" : "w-5 h-5 text-indigo-400 absolute left-3"} />
           <button type="submit" className="hidden">Search</button>
         </form>
 
         {/* Dropdown Gợi ý */}
         {showSuggestions && searchResults.length > 0 && (
-          <div className="absolute mt-2 w-full bg-slate-800/95 border border-slate-700 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden max-h-60 overflow-y-auto z-50">
+          <div className={
+            isTeacherMode
+              ? "absolute mt-2 w-full bg-orange-50/95 border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] max-h-60 overflow-y-auto z-50 font-bold"
+              : "absolute mt-2 w-full bg-slate-800/95 border border-slate-700 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden max-h-60 overflow-y-auto z-50"
+          }>
             {searchResults.map((node) => (
               <div
                 key={node.id}
                 onMouseDown={() => handleSelectNode(node.id)}
-                className="px-4 py-3 hover:bg-slate-700/50 cursor-pointer transition-colors border-b border-slate-700/50 last:border-0 flex items-center gap-3"
+                className={
+                  isTeacherMode
+                    ? "px-4 py-3 hover:bg-yellow-200 cursor-pointer transition-colors border-b-2 border-dashed border-gray-400 last:border-0 flex items-center gap-3 text-gray-800 font-bold"
+                    : "px-4 py-3 hover:bg-slate-700/50 cursor-pointer transition-colors border-b border-slate-700/50 last:border-0 flex items-center gap-3"
+                }
               >
-                <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
-                  <Star size={14} className="text-indigo-400" />
+                <div className={
+                  isTeacherMode
+                    ? "w-8 h-8 rounded-full border-2 border-black flex items-center justify-center shrink-0 bg-white"
+                    : "w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0"
+                }>
+                  <Star size={14} className={isTeacherMode ? "text-black" : "text-indigo-400"} />
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-slate-200 line-clamp-1">{node.data.title as string}</div>
-                  <div className="text-xs text-slate-500 mt-0.5 capitalize">{node.data.nodeType as string}</div>
+                  <div className={
+                    isTeacherMode
+                      ? "text-base font-black text-black line-clamp-1"
+                      : "text-sm font-medium text-slate-200 line-clamp-1"
+                  }>{node.data.title as string}</div>
+                  <div className={
+                    isTeacherMode
+                      ? "text-xs text-gray-600 mt-0.5 capitalize font-bold"
+                      : "text-xs text-slate-500 mt-0.5 capitalize"
+                  }>{node.data.nodeType as string}</div>
                 </div>
               </div>
             ))}
@@ -642,69 +766,79 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
         )}
       </div>
 
-      <ReactFlow
-        nodes={processedNodes}
-        edges={edges}
-        onNodesChange={onNodesChange as any}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onEdgesDelete={onEdgesDelete}
-        onNodeDragStop={onNodeDragStop as any}
-        onNodeClick={onNodeClick as any}
-        onInit={setRfInstance}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        fitView
-        attributionPosition="bottom-right"
-        connectionMode={ConnectionMode.Strict}
-        connectionLineType={ConnectionLineType.Bezier}
-        minZoom={0.5}
-        maxZoom={1.5}
-        zoomOnScroll={false}
-        zoomOnPinch={false}
-        zoomOnDoubleClick={false}
-        panOnScroll={true}
-        panOnScrollMode={PanOnScrollMode.Vertical}
-        translateExtent={(() => {
-          if (!nodes || nodes.length === 0) {
-             return [[-200, -Infinity], [350, Infinity]];
-          }
+      <div className={`flex-1 w-full h-full relative ${isTeacherMode ? 'pl-8' : ''}`}>
+        <ReactFlow
+          nodes={processedNodes}
+          edges={edges}
+          onNodesChange={onNodesChange as any}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onEdgesDelete={onEdgesDelete}
+          onNodeDragStop={onNodeDragStop as any}
+          onNodeClick={onNodeClick as any}
+          onInit={setRfInstance}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          fitView
+          attributionPosition="bottom-right"
+          connectionMode={ConnectionMode.Strict}
+          connectionLineType={ConnectionLineType.Bezier}
+          minZoom={0.5}
+          maxZoom={1.5}
+          zoomOnScroll={false}
+          zoomOnPinch={false}
+          zoomOnDoubleClick={false}
+          panOnDrag={true}
+          panOnScroll={true}
+          translateExtent={(() => {
+            if (!nodes || nodes.length === 0) {
+              return [[-100, -Infinity], [400, Infinity]];
+            }
+            
+            let minY = Infinity;
+            let maxY = -Infinity;
+            
+            nodes.forEach(node => {
+              if (node.position.y < minY) minY = node.position.y;
+              if (node.position.y > maxY) maxY = node.position.y;
+            });
+            
+            // Add tighter margins to prevent scrolling too far past the top/bottom nodes
+            const headerMarginY = 150; 
+            const bottomMarginY = 250;
+            
+            // Lock X axis between a tight boundary on mobile to prevent horizontal scroll
+            // Y axis is bounded strictly by the top and bottom nodes plus some padding
+            return [[-100, minY - headerMarginY], [400, maxY + bottomMarginY]] as any;
+          })()}
+          defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+          selectionMode={isTeacherMode ? SelectionMode.Partial : undefined}
+        >
+          <Background
+            color={isTeacherMode ? "#94a3b8" : "#818cf8"}
+            gap={isTeacherMode ? 24 : 32}
+            size={isTeacherMode ? 1.5 : 1}
+            variant={BackgroundVariant.Dots}
+            className={isTeacherMode ? "opacity-40" : "opacity-20"}
+          />
           
-          let minY = Infinity;
-          let maxY = -Infinity;
-          
-          nodes.forEach(node => {
-            if (node.position.y < minY) minY = node.position.y;
-            if (node.position.y > maxY) maxY = node.position.y;
-          });
-          
-          // Add margins (header size + some padding)
-          const marginY = 500;
-          return [[-Infinity, minY - marginY], [Infinity, maxY + marginY]] as any;
-        })()}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
-        selectionMode={isTeacherMode ? SelectionMode.Partial : undefined}
-      >
-        <Background
-          color="#818cf8"
-          gap={32}
-          size={1}
-          variant={BackgroundVariant.Dots}
-          className="opacity-20"
-        />
-        
-        {isTeacherMode && (
-          <Panel position="bottom-center" className="flex gap-2 mb-4 w-full justify-center">
-            <button
-              onClick={onLayout}
-              className="bg-indigo-600/90 backdrop-blur hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-full shadow-lg flex items-center gap-2 transition-all border border-indigo-500/50"
-            >
-              <Star size={16} />
-              Căn Chỉnh Tự Động
-            </button>
-          </Panel>
-        )}
-      </ReactFlow>
+          {isTeacherMode && (
+            <Panel position="bottom-center" className="flex gap-2 mb-4 w-full justify-center">
+              <button
+                onClick={onLayout}
+                className={
+                  isTeacherMode
+                  ? "bg-white border-2 border-black text-black font-black py-2 px-6 shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:bg-yellow-100 flex items-center gap-2 transition-all text-lg"
+                  : "bg-indigo-600/90 backdrop-blur hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-full shadow-lg flex items-center gap-2 transition-all border border-indigo-500/50"
+                }
+              >
+                <Star size={isTeacherMode ? 20 : 16} />
+                Căn Chỉnh Tự Động
+              </button>
+            </Panel>
+          )}
+        </ReactFlow>
+      </div>
     </div>
   );
 };

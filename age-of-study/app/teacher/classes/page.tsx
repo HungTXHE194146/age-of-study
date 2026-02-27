@@ -23,6 +23,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
+import { NotebookCard, NotebookCardHeader, NotebookCardTitle, NotebookCardContent, NotebookButton, NotebookBadge } from "@/components/ui/notebook-card";
 
 interface ClassData {
   id: number;
@@ -220,403 +221,231 @@ export default function TeacherClassesPage() {
     teacherData.subject_classes.length > 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 p-6 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem] border-b-2 border-dashed border-gray-300">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-              <GraduationCap className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-blue-100 border-2 border-blue-900 rounded-lg flex items-center justify-center shadow-[4px_4px_0_0_rgba(0,0,0,1)] rotate-[-3deg]">
+              <GraduationCap className="w-8 h-8 text-blue-900" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-4xl font-black text-gray-900 tracking-tight font-handwritten">
                 Lớp học của tôi
               </h1>
-              <p className="text-gray-600">
-                {teacherData.full_name} • {teacherData.username}
+              <p className="text-xl font-bold text-gray-600 font-handwritten mt-1">
+                Giáo viên: {teacherData.full_name || teacherData.username}
               </p>
             </div>
           </div>
+        </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg p-6 shadow-md">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Lớp chủ nhiệm</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {teacherData.homeroom_classes.length}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <Users className="w-6 h-6 text-green-600" />
-                </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <NotebookCard className="bg-green-50">
+            <NotebookCardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <NotebookBadge variant="success">Chủ nhiệm</NotebookBadge>
+                <Users className="w-8 h-8 text-green-900" />
               </div>
-            </div>
+              <p className="text-4xl font-black text-green-900">{teacherData.homeroom_classes.length}</p>
+              <p className="text-lg font-bold text-gray-600">Lớp học</p>
+            </NotebookCardContent>
+          </NotebookCard>
+          
+          <NotebookCard className="bg-blue-50">
+            <NotebookCardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <NotebookBadge variant="default">Bộ môn</NotebookBadge>
+                <BookOpen className="w-8 h-8 text-blue-900" />
+              </div>
+              <p className="text-4xl font-black text-blue-900">{teacherData.subject_classes.length}</p>
+              <p className="text-lg font-bold text-gray-600">Lớp học</p>
+            </NotebookCardContent>
+          </NotebookCard>
 
-            <div className="bg-white rounded-lg p-6 shadow-md">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Lớp bộ môn</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {teacherData.subject_classes.length}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-blue-600" />
-                </div>
+          <NotebookCard className="bg-purple-50">
+            <NotebookCardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <NotebookBadge variant="warning">Học sinh</NotebookBadge>
+                <Users2 className="w-8 h-8 text-purple-900" />
               </div>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 shadow-md">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Tổng học sinh</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {teacherData.homeroom_classes.reduce(
-                      (sum, c) => sum + c.student_count,
-                      0,
-                    ) +
-                      teacherData.subject_classes.reduce(
-                        (sum, c) => sum + c.student_count,
-                        0,
-                      )}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Users2 className="w-6 h-6 text-purple-600" />
-                </div>
-              </div>
-            </div>
-          </div>
+              <p className="text-4xl font-black text-purple-900">
+                {teacherData.homeroom_classes.reduce((sum, c) => sum + c.student_count, 0) +
+                  teacherData.subject_classes.reduce((sum, c) => sum + c.student_count, 0)}
+              </p>
+              <p className="text-lg font-bold text-gray-600">Tổng số</p>
+            </NotebookCardContent>
+          </NotebookCard>
         </div>
 
         {/* Search and Filter Controls */}
-        <div className="mb-6 bg-white rounded-2xl shadow-md p-6 border border-gray-200">
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-            {/* Search Input */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm lớp học..."
-                value={searchTerm}
+        <NotebookCard className="mb-8 border-gray-400 bg-yellow-50/50">
+          <NotebookCardContent className="pt-6 border-b-0 pb-6 bg-transparent">
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 w-6 h-6" />
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm lớp học..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full pl-12 pr-4 py-3 border-2 border-black rounded-md focus:ring-0 focus:border-blue-600 text-lg font-bold bg-white/80"
+                />
+              </div>
+              
+              <select
+                value={filterType}
                 onChange={(e) => {
-                  setSearchTerm(e.target.value);
+                  setFilterType(e.target.value as "all" | "homeroom" | "subject");
                   setCurrentPage(1);
                 }}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Filter by Type */}
-            <select
-              value={filterType}
-              onChange={(e) => {
-                setFilterType(e.target.value as "all" | "homeroom" | "subject");
-                setCurrentPage(1);
-              }}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">Tất cả loại</option>
-              <option value="homeroom">Lớp chủ nhiệm</option>
-              <option value="subject">Lớp bộ môn</option>
-            </select>
-
-            {/* Filter by Grade */}
-            <select
-              value={filterGrade}
-              onChange={(e) => {
-                setFilterGrade(parseInt(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value={0}>Tất cả khối</option>
-              <option value={1}>Khối 1</option>
-              <option value={2}>Khối 2</option>
-              <option value={3}>Khối 3</option>
-              <option value={4}>Khối 4</option>
-              <option value={5}>Khối 5</option>
-            </select>
-          </div>
-
-          {/* Sort Controls */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span>Hiển thị {filteredAndSortedClasses.length} lớp học</span>
-              {searchTerm && (
-                <span className="text-blue-600 font-medium">
-                  Tìm thấy {filteredAndSortedClasses.length} kết quả cho &quot;
-                  {searchTerm}&quot;
-                </span>
-              )}
-              {(filterType !== "all" || filterGrade !== 0) && (
-                <span className="text-green-600 font-medium">
-                  Đã lọc theo {filterType !== "all" ? filterType : ""}{" "}
-                  {filterGrade !== 0 ? `khối ${filterGrade}` : ""}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Sắp xếp:</span>
-              <select
-                value={sortBy}
-                onChange={(e) =>
-                  setSortBy(
-                    e.target.value as "name" | "grade" | "students" | "date",
-                  )
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="px-4 py-3 border-2 border-black rounded-md focus:ring-0 focus:border-blue-600 text-lg font-bold bg-white/80"
               >
-                <option value="name">Tên lớp</option>
-                <option value="grade">Khối</option>
-                <option value="students">Số học sinh</option>
-                <option value="date">Ngày tạo</option>
+                <option value="all">Tất cả loại</option>
+                <option value="homeroom">Lớp chủ nhiệm</option>
+                <option value="subject">Lớp bộ môn</option>
               </select>
-              <button
-                onClick={() =>
-                  setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                }
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                {sortOrder === "asc" ? (
-                  <ChevronUp className="w-4 h-4" />
-                ) : (
-                  <ChevronDown className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
 
-        {/* Classes Table */}
-        <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tên lớp
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Khối
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Học sinh
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Môn học
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Mã lớp
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Loại
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ngày tạo
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Hành động
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan={8} className="px-6 py-4">
-                      <LoadingInline message="Đang tải danh sách lớp học..." />
-                    </td>
-                  </tr>
-                ) : filteredAndSortedClasses.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-6 py-4 text-center text-gray-500"
-                    >
-                      Không tìm thấy lớp học nào phù hợp với tiêu chí tìm kiếm.
-                    </td>
-                  </tr>
-                ) : (
-                  currentClasses.map((classData) => (
-                    <tr key={classData.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {classData.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {classData.school_year}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <Badge
-                          variant="outline"
-                          className="bg-blue-50 text-blue-700 border-blue-200"
-                        >
-                          Khối {classData.grade}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="flex items-center gap-1">
-                          <Users className="w-4 h-4 text-gray-400" />
-                          {classData.student_count} học sinh
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {classData.subject?.name || "Chưa xác định"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <Badge
-                          variant="secondary"
-                          className="bg-gray-100 text-gray-800"
-                        >
-                          {classData.class_code}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            classData.type === "homeroom"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-blue-100 text-blue-800"
-                          }`}
-                        >
-                          {classData.type === "homeroom"
-                            ? "Chủ nhiệm"
-                            : "Bộ môn"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          {new Date(classData.created_at).toLocaleDateString(
-                            "vi-VN",
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
-                        <Link href={`/teacher/classes/${classData.id}`}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-1"
-                          >
-                            <Eye className="w-4 h-4" />
-                            Xem chi tiết
-                          </Button>
-                        </Link>
-                        {classData.type === "homeroom" && (
-                          <>
-                            <Link
-                              href={`/teacher/classes/${classData.id}/students`}
-                            >
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex items-center gap-1"
-                              >
-                                <Users2 className="w-4 h-4" />
-                                Quản lý học sinh
-                              </Button>
-                            </Link>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+              <select
+                value={filterGrade}
+                onChange={(e) => {
+                  setFilterGrade(parseInt(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="px-4 py-3 border-2 border-black rounded-md focus:ring-0 focus:border-blue-600 text-lg font-bold bg-white/80"
+              >
+                <option value={0}>Tất cả khối</option>
+                <option value={1}>Khối 1</option>
+                <option value={2}>Khối 2</option>
+                <option value={3}>Khối 3</option>
+                <option value={4}>Khối 4</option>
+                <option value={5}>Khối 5</option>
+              </select>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row items-center justify-between mt-4 border-t-2 border-dashed border-gray-400 pt-6 bg-transparent pb-0">
+               <div className="text-lg font-bold text-gray-700 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem]">
+                 Tìm thấy {filteredAndSortedClasses.length} lớp.
+               </div>
+               <div className="flex items-center gap-2 mt-4 sm:mt-0">
+                 <span className="font-bold">Sắp xếp:</span>
+                 <select
+                   value={sortBy}
+                   onChange={(e) => setSortBy(e.target.value as "name" | "grade" | "students" | "date")}
+                   className="px-3 py-1 border-2 border-black rounded-md focus:ring-0 text-base font-bold bg-white"
+                 >
+                   <option value="name">Tên</option>
+                   <option value="grade">Khối</option>
+                   <option value="students">Sĩ số</option>
+                   <option value="date">Ngày</option>
+                 </select>
+                 <button onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")} className="border-2 border-black bg-white p-1 rounded-md hover:bg-gray-200">
+                   {sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />}
+                 </button>
+               </div>
+            </div>
+          </NotebookCardContent>
+        </NotebookCard>
+
+        {/* Classes Grid instead of Table */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 mb-8">
+          {filteredAndSortedClasses.length === 0 ? (
+             <div className="col-span-full py-12 text-center text-gray-500 font-bold border-4 border-dashed border-gray-400 bg-white/50 rounded-2xl text-xl">
+                Không tìm thấy lớp học nào.
+             </div>
+          ) : (
+            currentClasses.map((classData) => (
+              <NotebookCard key={classData.id} className="group hover:scale-[1.02] transition-transform">
+                <NotebookCardHeader className="bg-blue-50/80">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <NotebookCardTitle className="text-2xl sm:text-3xl mb-1">{classData.name}</NotebookCardTitle>
+                      <div className="text-lg text-gray-600 font-bold">Năm: {classData.school_year}</div>
+                    </div>
+                    {classData.type === "homeroom" ? (
+                      <NotebookBadge variant="success" className="text-sm border-2">Chủ nhiệm</NotebookBadge>
+                    ) : (
+                      <NotebookBadge variant="default" className="text-sm border-2">Bộ môn</NotebookBadge>
+                    )}
+                  </div>
+                </NotebookCardHeader>
+                <NotebookCardContent className="py-6 space-y-4">
+                   <div className="grid grid-cols-2 gap-4">
+                     <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
+                       <span className="block text-sm text-gray-500 font-bold uppercase">Sĩ số</span>
+                       <span className="text-2xl font-black text-gray-800 flex items-center gap-2">
+                         <Users className="w-5 h-5" /> {classData.student_count}
+                       </span>
+                     </div>
+                     <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
+                       <span className="block text-sm text-gray-500 font-bold uppercase">Khối</span>
+                       <span className="text-2xl font-black text-gray-800">
+                         {classData.grade}
+                       </span>
+                     </div>
+                     <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
+                       <span className="block text-sm text-gray-500 font-bold uppercase">Mã lớp</span>
+                       <span className="text-xl font-bold text-gray-800 tracking-wider">
+                         {classData.class_code}
+                       </span>
+                     </div>
+                     <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
+                       <span className="block text-sm text-gray-500 font-bold uppercase">Môn học</span>
+                       <span className="text-xl font-bold text-gray-800 truncate block" title={classData.subject?.name}>
+                         {classData.subject?.name || "N/A"}
+                       </span>
+                     </div>
+                   </div>
+                </NotebookCardContent>
+                <div className="p-6 pt-0 flex gap-3 flex-col sm:flex-row border-t-2 border-dashed border-gray-300 mt-4 h-auto items-end">
+                   <Link href={`/teacher/classes/${classData.id}`} className="flex-1 w-full mt-4">
+                     <NotebookButton className="w-full bg-blue-100 text-blue-900 border-blue-900 hover:bg-blue-200 text-lg">
+                       <Eye className="w-5 h-5 mr-2" />
+                       Xem lớp
+                     </NotebookButton>
+                   </Link>
+                   {classData.type === "homeroom" && (
+                     <Link href={`/teacher/classes/${classData.id}/students`} className="flex-1 w-full mt-4 sm:mt-4">
+                       <NotebookButton className="w-full bg-green-100 text-green-900 border-green-900 hover:bg-green-200 text-lg">
+                         <Users2 className="w-5 h-5 mr-2" />
+                         Học sinh
+                       </NotebookButton>
+                     </Link>
+                   )}
+                </div>
+              </NotebookCard>
+            ))
+          )}
         </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Hiển thị {startIndex + 1} -{" "}
-              {Math.min(endIndex, filteredAndSortedClasses.length)} của{" "}
-              {filteredAndSortedClasses.length} lớp học
+          <div className="flex items-center justify-center gap-4 py-8">
+            <NotebookButton
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-4 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-gray-400"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </NotebookButton>
+            
+            <div className="text-xl font-black text-gray-800 bg-white border-2 border-black px-6 py-2 rounded-md shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+              {currentPage} / {totalPages}
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-                (page) => (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`px-3 py-2 rounded-lg ${
-                      page === currentPage
-                        ? "bg-blue-500 text-white"
-                        : "border border-gray-300 hover:bg-gray-50"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ),
-              )}
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            
+            <NotebookButton
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+               className="px-4 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-gray-400"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </NotebookButton>
           </div>
         )}
-
-        {/* Quick Stats */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg p-6 shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Tổng số lớp học</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {allClasses.length}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <GraduationCap className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg p-6 shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Lớp chủ nhiệm</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {teacherData.homeroom_classes.length}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <Users className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg p-6 shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Lớp bộ môn</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {teacherData.subject_classes.length}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { X, Save, Trash2 } from "lucide-react";
 import { NodeData, createNode, updateNode, deleteNode, NodeManagementResult } from "@/lib/nodeManagement";
 import { Subject } from "@/types/teacher";
 import { Node } from "@/lib/gradeSkillTreeService";
+import { NotebookButton } from "@/components/ui/notebook-card";
 
 interface NodeEditorFormProps {
   selectedNode: Node | null;
@@ -136,54 +137,55 @@ const NodeEditorForm: React.FC<NodeEditorFormProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-      <div className="bg-gray-900 border border-white/20 rounded-xl p-6 w-full max-w-md">
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-[#fffdf8] border-4 border-black rounded-xl shadow-[8px_8px_0_0_rgba(0,0,0,1)] overflow-hidden relative">
+        <div className="bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem] p-6 border-b-2 border-dashed border-gray-300 flex items-start justify-between">
           <div>
-            <h3 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-purple-300">
-              {selectedNode ? "CHỈNH SỬA BÀI HỌC" : "TẠO BÀI HỌC MỚI"}
+            <h3 className="text-4xl font-black text-gray-900 font-handwritten tracking-tight shadow-sm">
+              {selectedNode ? "Chỉnh Sửa Bài Học" : "Tạo Bài Học Mới"}
             </h3>
-            <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">
-              Cấu hình thông tin bài học
+            <p className="text-sm text-gray-600 mt-1 font-bold">
+              Cấu hình thông tin chi tiết
             </p>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
+            type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white hover:bg-white/10 rounded-full"
+            className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black rounded-sm shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all text-black shrink-0"
           >
             <X className="w-5 h-5" />
-          </Button>
+          </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="space-y-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[60vh] overflow-y-auto custom-scrollbar relative">
           <div>
-            <Label htmlFor="title">Tên bài học/chủ đề *</Label>
+            <Label htmlFor="title" className="text-gray-800 font-bold text-sm uppercase mb-1 block">Tên bài học/chủ đề *</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => handleChange("title", e.target.value)}
+              className="w-full bg-white border-2 border-black rounded-md px-3 py-2 text-gray-900 font-bold focus:outline-none focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
               required
             />
           </div>
           <div>
-            <Label htmlFor="description">Mô tả</Label>
+            <Label htmlFor="description" className="text-gray-800 font-bold text-sm uppercase mb-1 block">Mô tả</Label>
             <Textarea
               id="description"
               value={formData.description || ""}
               onChange={(e) => handleChange("description", e.target.value)}
+              className="w-full bg-white border-2 border-black rounded-md px-3 py-2 text-gray-900 font-bold focus:outline-none focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] resize-none"
               rows={3}
             />
           </div>
           
           <div>
-            <Label htmlFor="node_type" className="text-indigo-300 font-bold text-xs uppercase mb-2 block">Loại bài học</Label>
+            <Label htmlFor="node_type" className="text-gray-800 font-bold text-sm uppercase mb-1 block">Loại bài học</Label>
             <select
               id="node_type"
               value={formData.node_type}
               onChange={(e) => handleChange("node_type", e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-white border-2 border-black rounded-md px-3 py-2 text-gray-900 font-bold focus:outline-none focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
             >
               <option value="grade">Khối</option>
               <option value="subject">Môn học</option>
@@ -195,12 +197,12 @@ const NodeEditorForm: React.FC<NodeEditorFormProps> = ({
           </div>
           
           <div>
-            <Label htmlFor="subject_id" className="text-indigo-300 font-bold text-xs uppercase mb-2 block">Thuộc môn học</Label>
+            <Label htmlFor="subject_id" className="text-gray-800 font-bold text-sm uppercase mb-1 block">Thuộc môn học</Label>
             <select
               id="subject_id"
               value={formData.subject_id || ""}
               onChange={(e) => handleChange("subject_id", e.target.value ? parseInt(e.target.value) : undefined)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-white border-2 border-black rounded-md px-3 py-2 text-gray-900 font-bold focus:outline-none focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
             >
               <option value="">Chọn môn học</option>
               {subjects.map((subject) => (
@@ -212,12 +214,12 @@ const NodeEditorForm: React.FC<NodeEditorFormProps> = ({
           </div>
           
           <div>
-            <Label htmlFor="parent_node_id" className="text-indigo-300 font-bold text-xs uppercase mb-2 block">Bài học đứng trước (Node cha)</Label>
+            <Label htmlFor="parent_node_id" className="text-gray-800 font-bold text-sm uppercase mb-1 block">Bài học đứng trước (Node cha)</Label>
             <select
               id="parent_node_id"
               value={formData.parent_node_id || ""}
               onChange={(e) => handleChange("parent_node_id", e.target.value ? parseInt(e.target.value) : null)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-white border-2 border-black rounded-md px-3 py-2 text-gray-900 font-bold focus:outline-none focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
             >
               <option value="">Không có bài học đứng trước</option>
               {allNodes.filter(n => n.id !== selectedNode?.id).map((node) => (
@@ -226,41 +228,41 @@ const NodeEditorForm: React.FC<NodeEditorFormProps> = ({
                 </option>
               ))}
             </select>
-            <p className="text-[10px] text-slate-500 mt-1 italic italic">Giúp tạo liên kết mũi tên trên bản đồ.</p>
+            <p className="text-[11px] text-blue-600 font-bold mt-1 italic">Giúp tạo liên kết mũi tên trên bản đồ.</p>
           </div>
           
           <div>
-            <Label htmlFor="required_xp">XP yêu cầu</Label>
+            <Label htmlFor="required_xp" className="text-gray-800 font-bold text-sm uppercase mb-1 block">XP yêu cầu</Label>
             <Input
               id="required_xp"
               type="number"
               value={formData.xp}
               onChange={(e) => handleChange("xp", parseInt(e.target.value))}
+              className="w-full bg-white border-2 border-black rounded-md px-3 py-2 text-gray-900 font-bold focus:outline-none focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
               min="0"
             />
           </div>
           
-          <div className="flex gap-4 pt-4 sticky bottom-0 bg-gray-900 border-t border-white/5 mt-auto">
-            <Button
+          <div className="flex gap-4 pt-4 border-t-2 border-dashed border-gray-300 mt-6">
+            <NotebookButton
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold"
+              className="flex-1 bg-blue-100 text-blue-900 border-blue-900"
             >
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="w-5 h-5 mr-2" />
               {isSubmitting ? "Đang lưu..." : selectedNode ? "Lưu thay đổi" : "Tạo bài học"}
-            </Button>
+            </NotebookButton>
             
             {selectedNode && (
-              <Button
+              <NotebookButton
                 type="button"
                 onClick={handleDelete}
                 disabled={isDeleting}
-                variant="danger"
-                className="bg-red-500/20 hover:bg-red-500 border border-red-500/50 text-red-400 hover:text-white transition-all"
+                className="bg-red-100 border-red-900 text-red-900"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Trash2 className="w-5 h-5 mr-2" />
                 {isDeleting ? "Đang xóa..." : "Xóa"}
-              </Button>
+              </NotebookButton>
             )}
           </div>
         </form>
