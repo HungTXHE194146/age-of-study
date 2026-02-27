@@ -1,6 +1,7 @@
 import { fetchSubjectSkillTree } from '@/lib/skillTreeService';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import SkillNode from './SkillNode';
+import { Virtuoso } from 'react-virtuoso';
 
 interface SkillTreeProps {
   subjectId: number;
@@ -18,6 +19,17 @@ interface Node {
   position_y?: number;
   order_index: number;
   children?: Node[];
+}
+
+function flattenTree(nodes: Node[], level = 0): { node: Node; level: number }[] {
+  let result: { node: Node; level: number }[] = [];
+  for (const node of nodes) {
+    result.push({ node, level });
+    if (node.children && node.children.length > 0) {
+      result = result.concat(flattenTree(node.children, level + 1));
+    }
+  }
+  return result;
 }
 
 export default function SkillTree({ subjectId }: SkillTreeProps) {
@@ -71,15 +83,24 @@ export default function SkillTree({ subjectId }: SkillTreeProps) {
     );
   }
 
+  const flatData = useMemo(() => flattenTree(nodes), [nodes]);
+
   return (
-    <div className="space-y-2">
-      {nodes.map((node) => (
-        <SkillNode
-          key={node.id}
-          node={node}
-          level={0}
-        />
-      ))}
+    <div className="h-[600px] w-full border rounded-xl bg-white/50 p-4">
+      <Virtuoso
+        style={{ height: '100%', width: '100%' }}
+        data={flatData}
+        itemContent={(_, item) => (
+          <div className="py-1">
+            <SkillNode
+              key={item.node.id}
+              node={item.node}
+              level={item.level}
+              disableRecursion={true}
+            />
+          </div>
+        )}
+      />
     </div>
   );
 }

@@ -53,7 +53,7 @@ export async function fetchGradeSkillTree(gradeCode: string): Promise<{
     if (!subjects || subjects.length === 0) {
       return {
         gradeNode: {
-          id: 0,
+          id: -999999,
           title: `Khối ${gradeCode}`,
           description: `Các môn học thuộc khối ${gradeCode}`,
           parent_node_id: null,
@@ -86,7 +86,7 @@ export async function fetchGradeSkillTree(gradeCode: string): Promise<{
     const subjectNodes: Node[] = [];
     subjects.forEach((subject: Subject) => {
       const subjectNode: Node = {
-        id: subject.id,
+        id: -subject.id, // Negative to prevent colliding with nodes table IDs
         title: subject.name,
         description: subject.description || '',
         parent_node_id: null,
@@ -106,7 +106,7 @@ export async function fetchGradeSkillTree(gradeCode: string): Promise<{
 
     // Tạo node gốc cho khối học
     const gradeNode: Node = {
-      id: 0,
+      id: -999999,
       title: `Khối ${gradeCode}`,
       description: `Các môn học thuộc khối ${gradeCode}`,
       parent_node_id: null,
@@ -125,6 +125,51 @@ export async function fetchGradeSkillTree(gradeCode: string): Promise<{
     };
   } catch (error) {
     console.error('Error in fetchGradeSkillTree:', error);
+    throw error;
+  }
+}
+
+/**
+ * Server-side function: Lấy toàn bộ cây kỹ năng của một môn học
+ * @param subjectId ID của môn học
+ */
+export async function fetchSubjectSkillTree(subjectId: number): Promise<{
+  subject: Subject | null;
+  nodes: Node[];
+}> {
+  try {
+    const supabase = getSupabaseBrowserClient();
+
+    // Lấy thông tin môn học
+    const { data: subject, error: subjectError } = await supabase
+      .from('subjects')
+      .select('*')
+      .eq('id', subjectId)
+      .single();
+
+    if (subjectError) {
+      console.error('Error fetching subject:', subjectError);
+      return { subject: null, nodes: [] };
+    }
+
+    // Lấy danh sách tất cả các nodes thuộc môn học đó
+    const { data: nodes, error: nodesError } = await supabase
+      .from('nodes')
+      .select('*')
+      .eq('subject_id', subjectId)
+      .order('order_index', { ascending: true });
+
+    if (nodesError) {
+      console.error('Error fetching nodes:', nodesError);
+      throw new Error(`Failed to fetch nodes: ${nodesError.message}`);
+    }
+
+    return {
+      subject,
+      nodes: nodes || []
+    };
+  } catch (error) {
+    console.error('Error in fetchSubjectSkillTree:', error);
     throw error;
   }
 }

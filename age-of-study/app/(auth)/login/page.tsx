@@ -7,15 +7,20 @@ import Image from "next/image";
 import { useAuthStore } from "@/store/useAuthStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { QrCode } from "lucide-react";
+import { QRScanner } from "@/components/qr-scanner";
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, isLoading, error, clearError, user } = useAuthStore();
 
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPasswordToast, setShowForgotPasswordToast] = useState(false);
+  const [isScanningQR, setIsScanningQR] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -53,6 +58,22 @@ export default function LoginPage() {
       () => setShowForgotPasswordToast(false),
       4000,
     );
+  };
+
+  const handleQRScanSuccess = async (decodedText: string) => {
+    try {
+      setScanError(null);
+      const parsed = JSON.parse(decodedText);
+      if (parsed.action === 'qr_login_v1' && parsed.username && parsed.password) {
+        setIsScanningQR(false);
+        await login(parsed.username, parsed.password);
+      } else {
+         setScanError("Mã QR không hợp lệ hoặc đã cũ. Hãy xin thầy cô thẻ mới nhé!");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setScanError("Đây không phải là thẻ lớp học do Giáo viên cung cấp.");
+    }
   };
 
   return (
@@ -145,6 +166,34 @@ export default function LoginPage() {
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
+          {scanError && (
+             <div className="bg-orange-50 border border-orange-200 text-orange-700 px-4 py-3 text-center rounded-xl mb-4 text-sm font-medium">
+               {scanError}
+             </div>
+          )}
+
+          {/* Nút Quét QR to rõ */}
+          <button
+             type="button"
+             onClick={() => setIsScanningQR(true)}
+             className="w-full bg-blue-100 hover:bg-blue-200 border-2 border-blue-500 text-blue-700 font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 shadow-sm text-lg"
+          >
+             <QrCode className="w-6 h-6" />
+             Quét thẻ thẻ QR
+          </button>
+          
+          {/* Divider */}
+          <div className="relative pt-2 pb-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-gray-500 font-medium">
+                Hoặc nhập tay nếu quên thẻ
+              </span>
+            </div>
+          </div>
+
           {/* Username Input */}
           <div>
             <label
@@ -314,9 +363,17 @@ export default function LoginPage() {
       </motion.div>
 
       {/* Footer */}
-      <div className="text-center text-xs text-gray-600 mt-6">
+      <div className="text-center text-xs text-gray-600 mt-6 pb-6">
         © {new Date().getFullYear()} Age Of Study. Cùng bé khôn lớn mỗi ngày.
       </div>
+      
+      {/* Scanner Modal overlay */}
+      {isScanningQR && (
+        <QRScanner 
+          onScanSuccess={handleQRScanSuccess} 
+          onClose={() => setIsScanningQR(false)} 
+        />
+      )}
     </div>
   );
 }

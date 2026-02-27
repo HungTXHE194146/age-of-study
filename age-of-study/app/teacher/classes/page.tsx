@@ -522,18 +522,6 @@ export default function TeacherClassesPage() {
                                 Quản lý học sinh
                               </Button>
                             </Link>
-                            <Link
-                              href={`/teacher/classes/${classData.id}/manage`}
-                            >
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex items-center gap-1"
-                              >
-                                <UserPlus className="w-4 h-4" />
-                                Quản lý lớp
-                              </Button>
-                            </Link>
                           </>
                         )}
                       </td>

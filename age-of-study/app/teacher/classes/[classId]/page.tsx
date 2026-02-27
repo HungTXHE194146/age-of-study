@@ -308,16 +308,28 @@ export default function ClassDetailPage() {
               Hành động quản lý
             </h2>
             <div className="flex flex-wrap gap-3">
-              <Link href={`/teacher/classes/${classId}/students`}>
-                <Button className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
-                  <Users2 className="w-4 h-4" />
-                  Quản lý học sinh
+              <Link href={`/teacher/classes/${classId}/attendance`}>
+                <Button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                  <Calendar className="w-4 h-4" />
+                  Điểm danh
                 </Button>
               </Link>
-              <Link href={`/teacher/classes/${classId}/manage`}>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <UserPlus className="w-4 h-4" />
-                  Quản lý lớp
+              <Link href={`/teacher/classes/${classId}/qr-codes`}>
+                <Button className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold">
+                  <Users className="w-4 h-4" />
+                  Quản lý QR
+                </Button>
+              </Link>
+              <Link href={`/teacher/classes/${classId}/reports`}>
+                <Button className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold">
+                  <Eye className="w-4 h-4" />
+                  Báo cáo
+                </Button>
+              </Link>
+              <Link href={`/teacher/classes/${classId}/students`}>
+                <Button className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold">
+                  <Users2 className="w-4 h-4" />
+                  DS Học sinh
                 </Button>
               </Link>
               <Link href={`/teacher/tests/create?classId=${classId}`}>

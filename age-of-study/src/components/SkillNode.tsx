@@ -1,3 +1,5 @@
+import React from 'react';
+
 // Định nghĩa interface Node để match với database schema
 interface Node {
   id: number;
@@ -15,9 +17,10 @@ interface Node {
 interface SkillNodeProps {
   node: Node;
   level: number;
+  disableRecursion?: boolean;
 }
 
-export default function SkillNode({ node, level }: SkillNodeProps) {
+export function SkillNode({ node, level, disableRecursion = false }: SkillNodeProps) {
   // Xác định màu sắc, biểu tượng và kiểu dáng dựa trên node_type
   const getTypeStyle = (nodeType: string) => {
     switch (nodeType.toLowerCase()) {
@@ -209,7 +212,7 @@ export default function SkillNode({ node, level }: SkillNodeProps) {
       </div>
 
       {/* Render các node con nếu có */}
-      {node.children && node.children.length > 0 && (
+      {!disableRecursion && node.children && node.children.length > 0 && (
         <div className="relative">
           {/* Đường nối từ node cha đến node con */}
           <div 
@@ -223,7 +226,7 @@ export default function SkillNode({ node, level }: SkillNodeProps) {
           
           <div className="ml-6 space-y-2">
             {node.children.map((childNode) => (
-              <SkillNode
+              <MemoizedSkillNode
                 key={childNode.id}
                 node={childNode}
                 level={level + 1}
@@ -235,3 +238,6 @@ export default function SkillNode({ node, level }: SkillNodeProps) {
     </div>
   );
 }
+
+const MemoizedSkillNode = React.memo(SkillNode);
+export default MemoizedSkillNode;

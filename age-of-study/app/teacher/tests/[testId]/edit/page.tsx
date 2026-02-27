@@ -11,10 +11,11 @@ import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { RouteProtectedWrapper } from "@/lib/routeMiddleware";
 import { TestWithQuestions } from "@/types/test";
-import { Question, QuestionDifficulty } from "@/types/teacher";
+import { Question, QuestionDifficulty, QuestionOption } from "@/types/teacher";
 import { subjectService } from "@/lib/subjectService";
 import { Subject } from "@/types/teacher";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { AIQuestionService } from "@/lib/aiQuestionService";
 import {
   Save,
   Plus,
@@ -394,7 +395,7 @@ export default function TeacherTestEditPage() {
           console.error("Error upserting questions:", questionsError);
           throw questionsError;
         }
-        
+
         insertedQuestions = data || [];
       } catch (error) {
         console.error("Error saving questions:", error);
@@ -1016,7 +1017,8 @@ export default function TeacherTestEditPage() {
                                     },
                                   ]
                                 : [],
-                          difficulty: manualDifficulty.toLowerCase() as QuestionDifficulty,
+                          difficulty:
+                            manualDifficulty.toLowerCase() as QuestionDifficulty,
                           explanation: manualExplanation || undefined,
                         };
 
@@ -1046,51 +1048,79 @@ export default function TeacherTestEditPage() {
               {activeTab === "ai" && (
                 <div>
                   <QuizGeneratorForm
-                    onGenerate={(data) => {
-                      // Mock AI question generation with explanations
-                      const mockQuestions = Array.from(
-                        { length: data.questionCount },
-                        (_, i) => ({
-                          id: generateUUID(),
-                          createdAt: Date.now(),
-                          number: questions.length + i + 1,
-                          type: "MULTIPLE_CHOICE" as const,
-                          questionText: `Câu hỏi AI ${i + 1}: ${data.topic}`,
-                          options: [
-                            {
-                              id: "1",
-                              label: "A",
-                              text: "Đáp án A",
-                              isCorrect: true,
-                            },
-                            {
-                              id: "2",
-                              label: "B",
-                              text: "Đáp án B",
-                              isCorrect: false,
-                            },
-                            {
-                              id: "3",
-                              label: "C",
-                              text: "Đáp án C",
-                              isCorrect: false,
-                            },
-                            {
-                              id: "4",
-                              label: "D",
-                              text: "Đáp án D",
-                              isCorrect: false,
-                            },
-                          ],
-                          difficulty:
-                            (data.difficulty === "Mixed"
-                              ? "Medium"
-                              : data.difficulty.toLowerCase()) as QuestionDifficulty,
-                          explanation: `Giải thích cho câu hỏi AI ${i + 1}: Đây là câu hỏi được tạo bởi AI dựa trên chủ đề "${data.topic}". Câu trả lời đúng là A.`,
-                          topic: data.topic || "AI Generated",
-                        }),
-                      );
-                      mockQuestions.forEach((q) => handleAddQuestion(q));
+                    onGenerate={async (data) => {
+                      try {
+                        const aiQuestionService = new AIQuestionService();
+                        const result =
+                          await aiQuestionService.generateQuestions({
+                            textPrompt: data.topic || "",
+                            questionCount: data.questionCount,
+                            difficulty: data.difficulty,
+                            subject: data.subject || "",
+                            file: data.file || null,
+                          });
+
+                        if (result.questions && result.questions.length > 0) {
+                          // Transform AI-generated questions to match the expected format
+                          const transformedQuestions = result.questions.map(
+                            (
+                              q: {
+                                type: string;
+                                questionText: string;
+                                options: {
+                                  label: string;
+                                  text: string;
+                                  isCorrect: boolean;
+                                  id?: string;
+                                }[];
+                                difficulty: string;
+                                explanation?: string;
+                              },
+                              index: number,
+                            ) => ({
+                              id: generateUUID(),
+                              createdAt: Date.now(),
+                              number: questions.length + index + 1,
+                              type: q.type as
+                                | "MULTIPLE_CHOICE"
+                                | "TRUE_FALSE"
+                                | "ESSAY",
+                              questionText: q.questionText,
+                              options: (q.options || []).map((opt, idx) => ({
+                                id: opt.id || idx.toString(),
+                                label: opt.label,
+                                text: opt.text,
+                                isCorrect: opt.isCorrect,
+                              })),
+                              difficulty: q.difficulty as QuestionDifficulty,
+                              topic: data.topic || "AI Generated",
+                              explanation: q.explanation || "",
+                            }),
+                          );
+
+                          transformedQuestions.forEach((q) =>
+                            handleAddQuestion(q),
+                          );
+
+                          if (result.totalGenerated < result.requested) {
+                            alert(
+                              `AI đã tạo được ${result.totalGenerated} câu hỏi (yêu cầu ${result.requested}). Vui lòng kiểm tra chất lượng câu hỏi.`,
+                            );
+                          }
+                        } else {
+                          alert(
+                            "AI không thể tạo câu hỏi từ tài liệu này. Vui lòng thử với tài liệu khác hoặc nội dung rõ ràng hơn.",
+                          );
+                        }
+                      } catch (error) {
+                        console.error(
+                          "Error generating questions with AI:",
+                          error,
+                        );
+                        alert(
+                          "Có lỗi xảy ra khi tạo câu hỏi bằng AI. Vui lòng thử lại sau.",
+                        );
+                      }
                     }}
                   />
                 </div>
