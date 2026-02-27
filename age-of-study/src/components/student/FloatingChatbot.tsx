@@ -39,10 +39,17 @@ interface Position {
 
 const BUTTON_SIZE = 80;
 
-const clampToViewport = (pos: Position): Position => ({
-  x: Math.max(0, Math.min(pos.x, window.innerWidth - BUTTON_SIZE)),
-  y: Math.max(0, Math.min(pos.y, window.innerHeight - BUTTON_SIZE)),
-});
+const clampToViewport = (pos: Position): Position => {
+  // Add 90px bottom padding to avoid overlapping with mobile bottom nav
+  const bottomNavOffset = 90;
+  return {
+    x: Math.max(0, Math.min(pos.x, window.innerWidth - BUTTON_SIZE)),
+    y: Math.max(
+      0,
+      Math.min(pos.y, window.innerHeight - BUTTON_SIZE - bottomNavOffset),
+    ),
+  };
+};
 
 export default function FloatingChatbot({
   subjectId,
@@ -125,9 +132,9 @@ export default function FloatingChatbot({
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
 
-      // Constrain to viewport
+      // Constrain to viewport, reserving space for bottom nav
       const maxX = window.innerWidth - 80;
-      const maxY = window.innerHeight - 80;
+      const maxY = window.innerHeight - 80 - 90;
 
       const constrainedPos = {
         x: Math.max(0, Math.min(newX, maxX)),
@@ -330,12 +337,12 @@ export default function FloatingChatbot({
       {/* Chat Window */}
       {isOpen && (
         <div
-          className="fixed bottom-4 right-4 z-50 flex flex-col bg-white rounded-2xl shadow-2xl 
+          className="fixed bottom-24 right-4 md:bottom-4 px-2 sm:px-0 z-50 flex flex-col bg-white rounded-2xl shadow-2xl 
                    border-2 border-yellow-200 overflow-hidden transition-all duration-300"
           style={{
             width: isMinimized ? "320px" : "400px",
             height: isMinimized ? "60px" : "600px",
-            maxHeight: "80vh",
+            maxHeight: "75vh",
             maxWidth: "95vw",
           }}
         >
