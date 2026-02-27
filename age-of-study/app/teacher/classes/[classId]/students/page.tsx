@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { AddStudentModal, AddStudentFromExcelModal } from "@/components/student-management-modals";
+
 
 interface StudentData {
   student_id: string;
@@ -33,6 +35,20 @@ interface StudentData {
     username: string | null;
     total_xp: number;
     grade: number | null;
+    latest_activity?: {
+      id: string;
+      activity_type: string;
+      description: string;
+      created_at: string;
+    } | null;
+    latest_progress?: {
+      node_id: string;
+      status: string;
+      score: string;
+      last_accessed_at: string;
+      completed_at: string;
+      nodes: { title: string };
+    } | null;
   };
 }
 
@@ -74,30 +90,32 @@ export default function ClassStudentsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    async function fetchData() {
-      if (!classId || !user?.id) return;
+  // Modal states
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
 
-      try {
-        setLoading(true);
+  const fetchClassData = async () => {
+    if (!classId || !user?.id) return;
 
-        // Fetch class detail
-        const classResult = await getClassDetail(Number(classId));
-        if (classResult.error) {
-          setError(classResult.error);
-          return;
-        }
-
-        setClassData(classResult.data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Lỗi tải dữ liệu");
-      } finally {
-        setLoading(false);
+    try {
+      setLoading(true);
+      const classResult = await getClassDetail(Number(classId));
+      if (classResult.error) {
+        setError(classResult.error);
+        return;
       }
+      setClassData(classResult.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Lỗi tải dữ liệu");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    fetchData();
+  useEffect(() => {
+    fetchClassData();
   }, [classId, user?.id]);
+
 
   if (loading) {
     return (
@@ -419,13 +437,13 @@ export default function ClassStudentsPage() {
                     Học sinh
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Username
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Khối
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    XP
+                    Hoạt động
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tiến độ
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Ngày tham gia
@@ -476,9 +494,6 @@ export default function ClassStudentsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {student.profile.username}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <Badge
                           variant="outline"
                           className="bg-blue-50 text-blue-700 border-blue-200"
@@ -486,13 +501,42 @@ export default function ClassStudentsPage() {
                           Khối {student.profile.grade}
                         </Badge>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="flex items-center gap-1">
-                          <GraduationCap className="w-4 h-4 text-gray-400" />
-                          {student.profile.total_xp} XP
-                        </div>
+                      <td className="px-6 py-4 text-sm text-gray-900 border-x">
+                        {student.profile.latest_activity ? (
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-gray-800 line-clamp-2">
+                              {student.profile.latest_activity.description}
+                            </span>
+                            <span className="text-xs text-gray-400 mt-1">
+                              {new Date(student.profile.latest_activity.created_at).toLocaleDateString("vi-VN")}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 italic">Chưa có</span>
+                        )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {student.profile.latest_progress ? (
+                          <div className="flex flex-col">
+                            <span className="font-bold line-clamp-1">
+                              {student.profile.latest_progress.nodes?.title || "Bài học"}
+                            </span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant={student.profile.latest_progress.status === 'completed' ? 'default' : 'secondary'} className="text-xs py-0 h-5">
+                                {student.profile.latest_progress.status === 'completed' ? 'Hoàn thành' : 'Đang học'}
+                              </Badge>
+                              {student.profile.latest_progress.score && (
+                                <span className="text-xs font-mono font-bold text-gray-600 border border-gray-200 px-1.5 rounded bg-gray-50">
+                                  {student.profile.latest_progress.score}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                           <span className="text-gray-400 italic">Chưa có</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-l">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-4 h-4 text-gray-400" />
                           {new Date(student.joined_at).toLocaleDateString(
@@ -502,7 +546,7 @@ export default function ClassStudentsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
                         <Link
-                          href={`/student/tests?studentId=${student.student_id}`}
+                          href={`/teacher/classes/${classId}/students/${student.student_id}`}
                         >
                           <Button
                             variant="outline"
@@ -582,18 +626,37 @@ export default function ClassStudentsPage() {
               <p className="text-gray-600">Quản lý học sinh trong lớp học</p>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" className="flex items-center gap-2">
+              <Button onClick={() => setIsAddModalOpen(true)} variant="outline" className="flex items-center gap-2">
                 <UserPlus className="w-4 h-4" />
-                Thêm học sinh
+                Thêm thủ công
               </Button>
-              <Button variant="outline" className="flex items-center gap-2">
-                <UserMinus className="w-4 h-4" />
-                Xóa học sinh
+              <Button onClick={() => setIsExcelModalOpen(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                <Users className="w-4 h-4" />
+                Nhập từ Excel
               </Button>
             </div>
           </div>
         </div>
       </div>
+
+      <AddStudentModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        classId={Number(classId)}
+        onSuccess={() => {
+          fetchClassData();
+          setCurrentPage(1);
+        }}
+      />
+      <AddStudentFromExcelModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+        classId={Number(classId)}
+        onSuccess={() => {
+          fetchClassData();
+          setCurrentPage(1);
+        }}
+      />
     </div>
   );
 }
