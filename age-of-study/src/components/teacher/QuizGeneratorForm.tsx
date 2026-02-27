@@ -104,42 +104,47 @@ export function QuizGeneratorForm({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+    <div className="bg-[#fffdf8] rounded-xl border-2 border-black p-6 shadow-[4px_4px_0_0_rgba(0,0,0,1)] relative mt-4">
+      {/* Decorative inner pins */}
+      <div className="absolute top-3 left-3 w-3 h-3 rounded-full bg-blue-200 border-2 border-black shadow-[1px_1px_0_0_rgba(0,0,0,1)]"></div>
+      <div className="absolute top-3 right-3 w-3 h-3 rounded-full bg-blue-200 border-2 border-black shadow-[1px_1px_0_0_rgba(0,0,0,1)]"></div>
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-          Generate Content
+      <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-dashed border-gray-300 ml-4 mr-4 mt-2">
+        <h2 className="text-3xl font-black text-gray-900 font-handwritten tracking-tight">
+          Tạo Câu Hỏi bằng AI
         </h2>
-        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-          <CloudUpload className="w-4 h-4" />
-          <span>AI-Powered</span>
+        <div className="flex items-center gap-2 font-bold text-blue-700 bg-blue-100 px-3 py-1 rounded-full border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+          <CloudUpload className="w-5 h-5" />
+          <span className="text-sm">Trí tuệ nhân tạo</span>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6 px-4">
         {/* File Upload Area */}
         <div>
           <div
-            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+            className={`border-4 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer relative overflow-hidden ${
               isDragging
-                ? "border-blue-400 bg-blue-50 dark:bg-blue-900/20"
+                ? "border-blue-400 bg-blue-50"
                 : fileError
-                  ? "border-red-400 bg-red-50 dark:bg-red-900/20"
-                  : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+                  ? "border-red-400 bg-red-50 relative"
+                  : "border-gray-400 bg-white hover:bg-gray-50 hover:border-blue-400"
             }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+             onDragOver={handleDragOver}
+             onDragLeave={handleDragLeave}
+             onDrop={handleDrop}
+             onClick={() => document.getElementById('file-upload')?.click()}
           >
             {formData.file ? (
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-3">
-                <FileText className="w-8 h-8 text-blue-500" />
+                <FileText className="w-10 h-10 text-blue-600" />
                 <div className="text-left">
-                  <p className="font-medium text-gray-900 dark:text-white">
+                  <p className="font-bold text-gray-900 text-lg">
                     {formData.file.name}
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="font-bold text-gray-500">
                     {(formData.file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
@@ -147,23 +152,23 @@ export function QuizGeneratorForm({
               <button
                 type="button"
                 onClick={handleFileRemove}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                className="p-2 border-2 border-black rounded-lg bg-red-100 hover:bg-red-200 text-red-900 shadow-[2px_2px_0_0_rgba(0,0,0,1)] transition-transform hover:-translate-y-0.5"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
           ) : (
-            <div className="space-y-2">
-              <CloudUpload className="w-12 h-12 mx-auto text-gray-400" />
+            <div className="space-y-3 pointer-events-none">
+              <CloudUpload className="w-14 h-14 mx-auto text-blue-500" />
               <div>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  Click to upload or drag and drop
+                <p className="font-bold text-gray-900 text-lg">
+                  Click hoặc kéo thả tài liệu vào đây
                 </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  PDF, DOCX up to 10MB
+                <p className="font-bold text-gray-500">
+                  PDF, DOCX (Tối đa 10MB)
                 </p>
               </div>
-              <Input
+              <input
                 type="file"
                 accept=".pdf,.doc,.docx"
                 onChange={(e) => {
@@ -173,61 +178,55 @@ export function QuizGeneratorForm({
                 className="hidden"
                 id="file-upload"
               />
-              <label
-                htmlFor="file-upload"
-                className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"
-              >
-                Choose File
-              </label>
             </div>
           )}
           </div>
           {fileError && (
-            <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-              <span className="text-lg">⚠️</span>
-              {fileError}
-            </p>
+             <div className="mt-3 bg-red-100 border-2 border-black text-red-800 font-bold px-4 py-2 rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex items-center gap-2 w-max">
+               <AlertCircle className="w-5 h-5 flex-shrink-0" />
+               {fileError}
+             </div>
           )}
         </div>
 
         {/* Divider */}
-        <div className="flex items-center justify-center">
-          <div className="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
-          <span className="px-4 text-sm text-gray-500 dark:text-gray-400">
-            OR USE PROMPT
+        <div className="flex items-center justify-center my-8">
+          <div className="flex-1 border-t-2 border-dashed border-gray-400"></div>
+          <span className="px-4 font-black font-handwritten text-gray-500 text-2xl tracking-tight">
+            HOẶC DÙNG GỢI Ý
           </span>
-          <div className="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
+          <div className="flex-1 border-t-2 border-dashed border-gray-400"></div>
         </div>
 
         {/* Topic/Instructions */}
         <div className="space-y-2">
-          <Label
+          <label
             htmlFor="topic"
-            className="text-sm font-medium text-gray-700 dark:text-gray-300"
+            className="block text-xl font-black text-gray-800 font-handwritten tracking-tight"
           >
-            Topic/Instructions
-          </Label>
-          <Textarea
+            Chủ đề & Yêu cầu cụ thể
+          </label>
+          <textarea
             id="topic"
-            placeholder="Enter specific topics, key concepts, or instructions for the AI to generate questions..."
+            placeholder="Ví dụ: Tạo 10 câu hỏi trắc nghiệm tiếng Anh lớp 6 về Unit 1..."
             value={formData.topic}
             onChange={(e) =>
               setFormData((prev) => ({ ...prev, topic: e.target.value }))
             }
-            className="min-h-[120px] resize-none"
-            required
+            className="w-full min-h-[140px] p-4 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem] leading-8 border-2 border-black rounded-lg resize-y focus:outline-none focus:ring-4 focus:ring-blue-100 transition-shadow font-medium text-gray-900"
+            required={!formData.file}
           />
         </div>
 
         {/* Controls */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
           <div className="space-y-2">
-            <Label
+            <label
               htmlFor="subject"
-              className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="block text-xl font-black text-gray-800 font-handwritten tracking-tight"
             >
-              Subject
-            </Label>
+              Môn học
+            </label>
             <select
               id="subject"
               value={formData.subject || ""}
@@ -237,11 +236,11 @@ export function QuizGeneratorForm({
                   subject: e.target.value,
                 }))
               }
-              className="flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-blue-100 appearance-none shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
             >
-              <option value="">Select a subject...</option>
+              <option value="">Chọn môn học...</option>
               {isLoadingSubjects ? (
-                <option disabled>Loading subjects...</option>
+                <option disabled>Đang tải môn học...</option>
               ) : (
                 subjects.map((subject) => (
                   <option key={subject.id} value={subject.id}>
@@ -253,12 +252,12 @@ export function QuizGeneratorForm({
           </div>
 
           <div className="space-y-2">
-            <Label
+            <label
               htmlFor="difficulty"
-              className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="block text-xl font-black text-gray-800 font-handwritten tracking-tight"
             >
-              Difficulty
-            </Label>
+              Độ khó
+            </label>
             <select
               id="difficulty"
               value={formData.difficulty}
@@ -268,7 +267,7 @@ export function QuizGeneratorForm({
                   difficulty: e.target.value as DifficultyLevel,
                 }))
               }
-              className="flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+               className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-blue-100 appearance-none shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
             >
               {difficultyOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -279,12 +278,12 @@ export function QuizGeneratorForm({
           </div>
 
           <div className="space-y-2">
-            <Label
+            <label
               htmlFor="questionCount"
-              className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="block text-xl font-black text-gray-800 font-handwritten tracking-tight"
             >
-              Question Count
-            </Label>
+              Số lượng câu hỏi
+            </label>
             <select
               id="questionCount"
               value={formData.questionCount.toString()}
@@ -294,7 +293,7 @@ export function QuizGeneratorForm({
                   questionCount: parseInt(e.target.value),
                 }))
               }
-              className="flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+               className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-blue-100 appearance-none shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
             >
               {questionCountOptions.map((option) => (
                 <option key={option.value} value={option.value.toString()}>
@@ -306,17 +305,18 @@ export function QuizGeneratorForm({
         </div>
 
         {/* Action Button */}
-        <div className="pt-4">
-          <Button
+        <div className="pt-8">
+          <button
             type="submit"
             disabled={isLoading || (!formData.topic.trim() && !formData.file)}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 bg-[#ffde59] hover:bg-[#efce49] border-2 border-black text-black font-black py-4 px-6 rounded-lg text-lg transition-transform hover:-translate-y-1 shadow-[4px_4px_0_0_rgba(0,0,0,1)] uppercase disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
           >
-            <span className="flex items-center gap-2">
-              <span>✨</span>
-              {isLoading ? "Generating..." : "Generate Questions with AI"}
-            </span>
-          </Button>
+            {isLoading ? (
+               <><Loader2 className="w-6 h-6 animate-spin" /> Đang tạo câu hỏi bằng AI...</>
+            ) : (
+               <><span>✨</span> Bắt đầu Nhờ AI Tạo Câu Hỏi</>
+            )}
+          </button>
         </div>
       </form>
     </div>

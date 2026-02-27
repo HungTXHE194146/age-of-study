@@ -13,7 +13,6 @@ import {
   Calendar,
   Eye,
   UserPlus,
-  Users2,
   ArrowLeft,
   Edit3,
   Plus,
@@ -21,54 +20,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import type { Subject } from "@/types/teacher";
 import Loading from "@/components/ui/loading";
-
-interface StudentCardProps {
-  student: {
-    student_id: string;
-    joined_at: string;
-    profile: {
-      full_name: string | null;
-      username: string | null;
-      total_xp: number;
-      grade: number | null;
-    };
-  };
-}
-
-function StudentCard({ student }: StudentCardProps) {
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow">
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-teal-400 rounded-full flex items-center justify-center text-white font-bold text-lg">
-          {student.profile.full_name?.charAt(0) ||
-            student.profile.username?.charAt(0) ||
-            "?"}
-        </div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 dark:text-white">
-            {student.profile.full_name ||
-              student.profile.username ||
-              "Học sinh"}
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            {student.profile.username} • {student.profile.total_xp} XP
-          </p>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge variant="outline" className="text-xs">
-              Khối {student.profile.grade}
-            </Badge>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              Tham gia:{" "}
-              {new Date(student.joined_at).toLocaleDateString("vi-VN")}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { AddStudentModal, AddStudentFromExcelModal, EditStudentModal } from "@/components/student-management-modals";
+import { NotebookCard, NotebookCardHeader, NotebookCardTitle, NotebookCardContent, NotebookButton, NotebookBadge } from "@/components/ui/notebook-card";
+import { Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 
 export default function ClassDetailPage() {
   const { classId } = useParams();
@@ -110,6 +65,22 @@ export default function ClassDetailPage() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterGrade, setFilterGrade] = useState<number>(0);
+  const [sortBy, setSortBy] = useState<"name" | "xp" | "grade" | "joined">("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Modal states
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -207,238 +178,459 @@ export default function ClassDetailPage() {
     (c) => c.id === Number(classId),
   );
 
+  // Sorting and filtering logic for students
+  const filteredAndSortedStudents = classData.students
+    .filter((student) => {
+      const matchesSearch =
+        student.profile.full_name
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        student.profile.username
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase());
+      const matchesGrade =
+        filterGrade === 0 || student.profile.grade === filterGrade;
+      return matchesSearch && matchesGrade;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case "name":
+          comparison = (
+            a.profile.full_name ||
+            a.profile.username ||
+            ""
+          ).localeCompare(b.profile.full_name || b.profile.username || "");
+          break;
+        case "xp":
+          comparison = a.profile.total_xp - b.profile.total_xp;
+          break;
+        case "grade":
+          comparison = (a.profile.grade || 0) - (b.profile.grade || 0);
+          break;
+        case "joined":
+          comparison =
+            new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime();
+          break;
+        default:
+          return 0;
+      }
+
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredAndSortedStudents.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentStudents = filteredAndSortedStudents.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const reloadData = async () => {
+    try {
+      const classResult = await getClassDetail(Number(classId));
+      if (!classResult.error) {
+        setClassData(classResult.data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-8 p-6 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem] border-b-2 border-dashed border-gray-300">
           <div className="flex items-center gap-4 mb-4">
             <Link href="/teacher/classes">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Quay lại
-              </Button>
+              <NotebookButton className="bg-gray-100 text-gray-800 border-gray-800 text-base py-1 px-4">
+                <ArrowLeft className="w-5 h-5 mr-1" />
+                Về lớp
+              </NotebookButton>
             </Link>
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <div className="flex-1 ml-4">
+              <h1 className="text-4xl font-black text-gray-900 tracking-tight font-handwritten">
                 {classData.name}
               </h1>
-              <p className="text-gray-600 dark:text-gray-300">
-                Khối {classData.grade} • {classData.school_year}
+              <p className="text-xl font-bold text-gray-600 font-handwritten mt-1">
+                Khối {classData.grade} • Năm {classData.school_year}
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Mã lớp
-                  </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
-                    {classData.class_code}
-                  </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 mt-6">
+            <NotebookCard className="bg-blue-50">
+              <NotebookCardContent className="pt-6">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold text-gray-600 uppercase text-sm">Mã lớp</span>
+                  <GraduationCap className="w-6 h-6 text-blue-900" />
                 </div>
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                  <GraduationCap className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <div className="text-2xl font-black text-blue-900 mt-2">
+                  {classData.class_code}
                 </div>
-              </div>
-            </div>
+              </NotebookCardContent>
+            </NotebookCard>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Học sinh
-                  </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
-                    {classData.students.length}
-                  </p>
+            <NotebookCard className="bg-green-50">
+              <NotebookCardContent className="pt-6">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold text-gray-600 uppercase text-sm">Học sinh</span>
+                  <Users className="w-6 h-6 text-green-900" />
                 </div>
-                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                  <Users className="w-6 h-6 text-green-600 dark:text-green-400" />
+                <div className="text-4xl font-black text-green-900">
+                  {classData.students.length}
                 </div>
-              </div>
-            </div>
+              </NotebookCardContent>
+            </NotebookCard>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Môn học
-                  </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
-                    {classData.homeroom_teacher?.subjects?.[0]?.name ||
-                      "Chưa xác định"}
-                  </p>
+            <NotebookCard className="bg-purple-50">
+              <NotebookCardContent className="pt-6">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold text-gray-600 uppercase text-sm">Môn học</span>
+                  <BookOpen className="w-6 h-6 text-purple-900" />
                 </div>
-                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                <div className="text-2xl font-black text-purple-900 mt-2 truncate max-w-[150px]" title={classData.homeroom_teacher?.subjects?.[0]?.name || "Chưa xác định"}>
+                  {classData.homeroom_teacher?.subjects?.[0]?.name || "Chưa xác định"}
                 </div>
-              </div>
-            </div>
+              </NotebookCardContent>
+            </NotebookCard>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Tạo lúc
-                  </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
-                    {new Date(classData.created_at).toLocaleDateString("vi-VN")}
-                  </p>
+            <NotebookCard className="bg-yellow-50">
+              <NotebookCardContent className="pt-6">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold text-gray-600 uppercase text-sm">Tạo lúc</span>
+                  <Calendar className="w-6 h-6 text-yellow-900" />
                 </div>
-                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                <div className="text-2xl font-black text-yellow-900 mt-2">
+                  {new Date(classData.created_at).toLocaleDateString("vi-VN")}
                 </div>
-              </div>
-            </div>
+              </NotebookCardContent>
+            </NotebookCard>
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Actions Section Notebook Style */}
         {isHomeroomTeacher && (
-          <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Hành động quản lý
-            </h2>
-            <div className="flex flex-wrap gap-3">
-              <Link href={`/teacher/classes/${classId}/attendance`}>
-                <Button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold">
-                  <Calendar className="w-4 h-4" />
-                  Điểm danh
-                </Button>
-              </Link>
-              <Link href={`/teacher/classes/${classId}/qr-codes`}>
-                <Button className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold">
-                  <Users className="w-4 h-4" />
-                  Quản lý QR
-                </Button>
-              </Link>
-              <Link href={`/teacher/classes/${classId}/reports`}>
-                <Button className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold">
-                  <Eye className="w-4 h-4" />
-                  Báo cáo
-                </Button>
-              </Link>
-              <Link href={`/teacher/classes/${classId}/students`}>
-                <Button className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold">
-                  <Users2 className="w-4 h-4" />
-                  DS Học sinh
-                </Button>
-              </Link>
-              <Link href={`/teacher/tests/create?classId=${classId}`}>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Tạo bài kiểm tra
-                </Button>
-              </Link>
-            </div>
-          </div>
+          <NotebookCard className="mb-8 bg-blue-50/50">
+            <NotebookCardContent className="pt-6">
+              <h2 className="text-2xl font-black font-handwritten mb-4">
+                Hành động quản lý
+              </h2>
+              <div className="flex flex-wrap gap-3">
+                <Link href={`/teacher/classes/${classId}/attendance`}>
+                  <NotebookButton className="flex items-center gap-2 bg-blue-100 border-blue-800 text-blue-900 font-bold hover:bg-blue-200">
+                    <Calendar className="w-5 h-5" />
+                    Điểm danh
+                  </NotebookButton>
+                </Link>
+                <Link href={`/teacher/classes/${classId}/qr-codes`}>
+                  <NotebookButton className="flex items-center gap-2 bg-purple-100 border-purple-800 text-purple-900 font-bold hover:bg-purple-200">
+                    <Users className="w-5 h-5" />
+                    Quản lý QR
+                  </NotebookButton>
+                </Link>
+                <Link href={`/teacher/classes/${classId}/reports`}>
+                  <NotebookButton className="flex items-center gap-2 bg-yellow-100 border-yellow-800 text-yellow-900 font-bold hover:bg-yellow-200">
+                    <Eye className="w-5 h-5" />
+                    Báo cáo
+                  </NotebookButton>
+                </Link>
+                <Link href={`/teacher/tests/create?classId=${classId}`}>
+                  <NotebookButton className="flex items-center gap-2 border-gray-800 font-bold">
+                    <Plus className="w-5 h-5" />
+                    Tạo bài kiểm tra
+                  </NotebookButton>
+                </Link>
+              </div>
+            </NotebookCardContent>
+          </NotebookCard>
         )}
 
         {/* Teacher Information */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Homeroom Teacher */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              Giáo viên chủ nhiệm
-            </h2>
-            {classData.homeroom_teacher ? (
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-teal-400 rounded-full flex items-center justify-center text-white font-bold text-xl">
-                  {classData.homeroom_teacher.full_name?.charAt(0) || "?"}
+          <NotebookCard className="bg-[#fffdf8]">
+            <NotebookCardContent className="pt-6 relative">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-4 bg-yellow-200/50 -translate-y-2 border border-yellow-300"></div>
+              <h2 className="text-2xl font-black font-handwritten mb-4 flex items-center gap-2 border-b-2 border-dashed border-gray-300 pb-2">
+                <GraduationCap className="w-6 h-6 text-blue-700" />
+                Giáo viên chủ nhiệm
+              </h2>
+              {classData.homeroom_teacher ? (
+                <div className="flex items-center gap-4 mt-4">
+                  <div className="w-20 h-20 bg-blue-100 border-2 border-black rounded-lg flex items-center justify-center text-3xl font-black text-blue-900 shadow-[2px_2px_0_0_rgba(0,0,0,1)] -rotate-3">
+                    {classData.homeroom_teacher.full_name?.charAt(0) || "?"}
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900 truncate" title={classData.homeroom_teacher.full_name || ""}>
+                      {classData.homeroom_teacher.full_name}
+                    </h3>
+                    <p className="text-lg font-bold text-gray-600 mt-1">
+                      Môn:{" "}
+                      {classData.homeroom_teacher.subjects
+                        ?.map((s) => s.name)
+                        .join(", ") || "Chưa xác định"}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white">
-                    {classData.homeroom_teacher.full_name}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    Môn:{" "}
-                    {classData.homeroom_teacher.subjects
-                      ?.map((s) => s.name)
-                      .join(", ") || "Chưa xác định"}
-                  </p>
+              ) : (
+                <div className="text-center py-8 text-gray-500 font-bold border-2 border-dashed border-gray-300 rounded-lg mt-4 bg-gray-50">
+                  Chưa có giáo viên chủ nhiệm
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                Chưa có giáo viên chủ nhiệm
-              </div>
-            )}
-          </div>
+              )}
+            </NotebookCardContent>
+          </NotebookCard>
 
           {/* Subject Teachers */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              Giáo viên bộ môn
-            </h2>
-            {classData.subject_teachers.length > 0 ? (
-              <div className="space-y-4">
-                {classData.subject_teachers.map((teacher, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                  >
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold">
-                      {teacher.teacher.full_name?.charAt(0) || "?"}
+          <NotebookCard className="bg-[#fffdf8]">
+            <NotebookCardContent className="pt-6 relative">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-4 bg-yellow-200/50 -translate-y-2 border border-yellow-300"></div>
+              <h2 className="text-2xl font-black font-handwritten mb-4 flex items-center gap-2 border-b-2 border-dashed border-gray-300 pb-2">
+                <BookOpen className="w-6 h-6 text-purple-700" />
+                Giáo viên bộ môn
+              </h2>
+              {classData.subject_teachers.length > 0 ? (
+                <div className="space-y-4 mt-4 overflow-y-auto max-h-[160px] pr-2 custom-scrollbar">
+                  {classData.subject_teachers.map((teacher, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-4 p-3 bg-white border-2 border-gray-300 rounded-lg shadow-sm hover:border-purple-300 transition-colors"
+                    >
+                      <div className="w-12 h-12 bg-purple-100 border-2 border-black rounded-full flex items-center justify-center text-xl font-black text-purple-900 flex-shrink-0">
+                        {teacher.teacher.full_name?.charAt(0) || "?"}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-lg font-bold text-gray-900 truncate" title={teacher.teacher.full_name || ""}>
+                          {teacher.teacher.full_name}
+                        </h4>
+                        <p className="text-sm font-bold text-gray-600">
+                          Môn: {teacher.subject.name}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">
-                        {teacher.teacher.full_name}
-                      </h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        Môn: {teacher.subject.name}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                Chưa có giáo viên bộ môn
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500 font-bold border-2 border-dashed border-gray-300 rounded-lg mt-4 bg-gray-50">
+                  Chưa có giáo viên bộ môn
+                </div>
+              )}
+            </NotebookCardContent>
+          </NotebookCard>
         </div>
 
-        {/* Students */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-green-600 dark:text-green-400" />
+        {/* Integrated Student List */}
+        <div className="mt-12 mb-6 flex justify-between items-end border-b-2 border-dashed border-gray-400 pb-4">
+          <div>
+            <h2 className="text-3xl font-black font-handwritten text-gray-900 flex items-center gap-2">
+              <Users className="w-8 h-8 text-green-700" />
               Danh sách học sinh ({classData.students.length})
             </h2>
-            {isHomeroomTeacher && (
-              <Link href={`/teacher/classes/${classId}/students`}>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Edit3 className="w-4 h-4" />
-                  Quản lý chi tiết
-                </Button>
-              </Link>
-            )}
+            <p className="text-gray-600 font-bold mt-1">Quản lý học viên trong lớp</p>
           </div>
-
-          {classData.students.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {classData.students.map((student) => (
-                <StudentCard key={student.student_id} student={student} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-              Lớp học này hiện chưa có học sinh nào
+          {isHomeroomTeacher && (
+            <div className="hidden sm:flex gap-3">
+              <NotebookButton onClick={() => setIsAddModalOpen(true)} className="bg-emerald-100 text-emerald-900 border-emerald-900 py-2">
+                <UserPlus className="w-5 h-5 mr-2" />
+                Thêm thủ công
+              </NotebookButton>
+              <NotebookButton onClick={() => setIsExcelModalOpen(true)} className="bg-blue-100 text-blue-900 border-blue-900 py-2">
+                <Users className="w-5 h-5 mr-2" />
+                Thêm từ Excel
+              </NotebookButton>
             </div>
           )}
         </div>
+
+        {isHomeroomTeacher && (
+          <div className="flex sm:hidden gap-3 mb-6">
+            <NotebookButton onClick={() => setIsAddModalOpen(true)} className="flex-1 bg-emerald-100 text-emerald-900 border-emerald-900 py-2 text-sm">
+              <UserPlus className="w-4 h-4 mr-1" /> Thêm
+            </NotebookButton>
+            <NotebookButton onClick={() => setIsExcelModalOpen(true)} className="flex-1 bg-blue-100 text-blue-900 border-blue-900 py-2 text-sm">
+              <Users className="w-4 h-4 mr-1" /> Excel
+            </NotebookButton>
+          </div>
+        )}
+
+        {/* Search and Filter Controls */}
+        <NotebookCard className="mb-8 border-gray-400 bg-gray-50/80">
+          <NotebookCardContent className="pt-6 pb-6 bg-transparent border-b-0">
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 w-6 h-6" />
+                <input
+                  type="text"
+                  placeholder="Tìm học sinh theo tên, mã..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full pl-12 pr-4 py-3 border-2 border-black rounded-md focus:ring-0 focus:border-blue-600 text-lg font-bold bg-white"
+                />
+              </div>
+
+              <select
+                value={filterGrade}
+                onChange={(e) => {
+                  setFilterGrade(parseInt(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="px-4 py-3 border-2 border-black rounded-md focus:ring-0 focus:border-blue-600 text-lg font-bold bg-white"
+              >
+                <option value={0}>Tất cả khối</option>
+                <option value={1}>Khối 1</option>
+                <option value={2}>Khối 2</option>
+                <option value={3}>Khối 3</option>
+                <option value={4}>Khối 4</option>
+                <option value={5}>Khối 5</option>
+              </select>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row items-center justify-between mt-4 border-t-2 border-dashed border-gray-400 pt-6">
+               <div className="text-lg font-bold text-gray-700 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem]">
+                 {filteredAndSortedStudents.length} học sinh trong danh sách.
+               </div>
+               <div className="flex items-center gap-2 mt-4 sm:mt-0">
+                 <span className="font-bold">Sắp xếp:</span>
+                 <select
+                   value={sortBy}
+                   onChange={(e) => setSortBy(e.target.value as "name" | "xp" | "grade" | "joined")}
+                   className="px-3 py-1 border-2 border-black rounded-md focus:ring-0 text-base font-bold bg-white"
+                 >
+                   <option value="name">Tên</option>
+                   <option value="xp">XP</option>
+                   <option value="grade">Khối</option>
+                   <option value="joined">Ngày</option>
+                 </select>
+                 <button onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")} className="border-2 border-black bg-white p-1 rounded-md hover:bg-gray-200">
+                   {sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />}
+                 </button>
+               </div>
+            </div>
+          </NotebookCardContent>
+        </NotebookCard>
+
+        {/* Students Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {filteredAndSortedStudents.length === 0 ? (
+             <div className="col-span-full py-12 text-center text-gray-500 font-bold border-4 border-dashed border-gray-400 bg-white/50 rounded-2xl text-xl">
+                Không có học sinh nào.
+             </div>
+          ) : (
+            currentStudents.map((student) => (
+              <NotebookCard key={student.student_id} className="group hover:-translate-y-1 transition-transform bg-white">
+                <NotebookCardContent className="pt-6 relative">
+                  {/* Decorative Pin/Tape */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-4 bg-red-200/50 -translate-y-2 rotate-[-2deg] border border-red-300"></div>
+                  
+                  <div className="flex items-center gap-4 mb-4">
+                     <div className="w-16 h-16 bg-blue-100 border-2 border-black rounded-full flex items-center justify-center text-2xl font-black text-blue-900 shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex-shrink-0">
+                       {student.profile.full_name?.charAt(0) || student.profile.username?.charAt(0) || "?"}
+                     </div>
+                     <div className="min-w-0">
+                       <h3 className="text-xl font-bold text-gray-900 truncate" title={student.profile.full_name || student.profile.username || "Học sinh"}>
+                         {student.profile.full_name || student.profile.username || "Học sinh"}
+                       </h3>
+                       <p className="text-sm font-bold text-gray-500 uppercase">
+                         {student.profile.full_name ? student.profile.username : "N/A"}
+                       </p>
+                     </div>
+                  </div>
+                  
+                  <div className="space-y-3 pt-4 border-t-2 border-dashed border-gray-200">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="font-bold text-gray-600">Khối</span>
+                      <NotebookBadge className="py-0 px-2 text-sm">{student.profile.grade || "N/A"}</NotebookBadge>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="font-bold text-gray-600">XP</span>
+                      <span className="font-black text-amber-600">{student.profile.total_xp}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mt-6">
+                    <Link
+                       href={`/teacher/classes/${classId}/students/${student.student_id}`}
+                       className="flex-1"
+                    >
+                      <NotebookButton className="w-full text-base py-1 bg-gray-100 border-gray-800 hover:bg-gray-200">
+                        <Eye className="w-4 h-4 mr-1" /> Xem
+                      </NotebookButton>
+                    </Link>
+                    {isHomeroomTeacher && (
+                      <NotebookButton 
+                        onClick={() => { setSelectedStudent(student); setIsEditModalOpen(true); }}
+                        className="aspect-square p-2 bg-yellow-100 border-yellow-800 text-yellow-900 hover:bg-yellow-200"
+                      >
+                         <Edit3 className="w-4 h-4" />
+                      </NotebookButton>
+                    )}
+                  </div>
+                </NotebookCardContent>
+              </NotebookCard>
+            ))
+          )}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-4 py-8">
+            <NotebookButton
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-4 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-gray-400"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </NotebookButton>
+            
+            <div className="text-xl font-black text-gray-800 bg-white border-2 border-black px-6 py-2 rounded-md shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+              {currentPage} / {totalPages}
+            </div>
+            
+            <NotebookButton
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+               className="px-4 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-gray-400"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </NotebookButton>
+          </div>
+        )}
       </div>
+
+      <AddStudentModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        classId={Number(classId)}
+        onSuccess={() => {
+          reloadData();
+          setCurrentPage(1);
+        }}
+      />
+      <AddStudentFromExcelModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+        classId={Number(classId)}
+        onSuccess={() => {
+          reloadData();
+          setCurrentPage(1);
+        }}
+      />
+      <EditStudentModal
+        isOpen={isEditModalOpen}
+        onClose={() => { setIsEditModalOpen(false); setSelectedStudent(null); }}
+        student={selectedStudent}
+        onSuccess={() => {
+          reloadData();
+        }}
+      />
     </div>
   );
 }
