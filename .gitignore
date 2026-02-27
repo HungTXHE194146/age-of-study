@@ -42,3 +42,5 @@ age-of-study/package.json
 age-of-study/package-lock.json
 age-of-study/CRAWLER-GUIDE.md
 /age-of-study/data
+age-of-study/dev.bat
+age-of-study/DEV-SETUP.md
