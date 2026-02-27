@@ -59,13 +59,13 @@ export default function ReportsPage() {
 
   const handleExportImage = async () => {
     if (!reportRef.current) return;
-    
+
     try {
       const canvas = await html2canvas(reportRef.current, {
         scale: 2, // Tăng chất lượng ảnh
         backgroundColor: "#ffffff",
       } as any);
-      
+
       const image = canvas.toDataURL("image/png");
       const link = document.createElement("a");
       link.href = image;
@@ -101,10 +101,10 @@ export default function ReportsPage() {
 
   // Calculate some simple stats
   const totalStudents = classData?.students.length || 0;
-  const avgXp = totalStudents > 0 
+  const avgXp = totalStudents > 0
     ? Math.round(classData!.students.reduce((acc, s) => acc + s.profile.total_xp, 0) / totalStudents)
     : 0;
-    
+
   // Sort students by XP for "Top" list
   const topStudents = [...(classData?.students || [])]
     .sort((a, b) => b.profile.total_xp - a.profile.total_xp)
@@ -113,18 +113,16 @@ export default function ReportsPage() {
   return (
     <div className="min-h-screen bg-[#f4f4f9] py-8 print:bg-white print:py-0">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 print:px-0">
-        
+
         {/* Controls */}
         <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4 print:hidden">
           <Link href={`/teacher/classes/${classId}`}>
-            <Button
-              variant="outline"
-              size="lg"
-              className="flex items-center gap-2 border-2 border-black font-bold text-lg hover:bg-gray-200 w-full sm:w-auto"
+            <NotebookButton
+              className="flex items-center gap-2 bg-white text-black hover:bg-gray-100 w-full sm:w-auto h-12"
             >
               <ArrowLeft className="w-5 h-5" />
               Quay lại
-            </Button>
+            </NotebookButton>
           </Link>
           <div className="flex gap-4 w-full sm:w-auto">
             <NotebookButton onClick={handleExportImage} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-green-300">
@@ -139,8 +137,8 @@ export default function ReportsPage() {
         </div>
 
         {/* Report Content - This part gets exported */}
-        <div 
-          ref={reportRef} 
+        <div
+          ref={reportRef}
           className="bg-white p-8 border-4 border-black shadow-[8px_8px_0_0_rgba(0,0,0,1)] print:shadow-none print:border-none"
         >
           {/* Report Header */}
@@ -192,7 +190,7 @@ export default function ReportsPage() {
                         {student.profile.full_name || student.profile.username}
                       </td>
                       <td className="p-4 text-green-700">
-                         {student.profile.total_xp} XP
+                        {student.profile.total_xp} XP
                       </td>
                     </tr>
                   ))}
