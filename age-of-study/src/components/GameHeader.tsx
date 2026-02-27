@@ -18,10 +18,10 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { icon: "🏠", label: "Trang chủ", href: "/student" },
+  { icon: "🏠", label: "Tổng quan", href: "/student" },
   { icon: "⚔️", label: "Học tập", href: "/student/skill-tree" },
-  { icon: "🏆", label: "Xếp hạng", href: "/leaderboard" },
-  { icon: "🎒", label: "Balo", href: "/backpack" },
+  { icon: "🏆", label: "Xếp hạng", href: "/student/leaderboard" },
+  { icon: "🎒", label: "Balo", href: "/student/backpack" },
 ];
 
 /* ─────────────────────────────────────
@@ -140,7 +140,7 @@ export default function GameHeader() {
           >
             {/* Logo */}
             <Image
-              src="/logo.svg"
+              src="/school-logo.png"
               alt="Age of Study Logo"
               width={48}
               height={48}

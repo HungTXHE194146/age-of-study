@@ -86,7 +86,7 @@ export default function LoginPage() {
           <div className="relative">
             <div className="w-32 h-32 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
               <Image
-                src="/logo.svg"
+                src="/school-logo.svg"
                 alt="Age of Study Logo"
                 width={105}
                 height={105}

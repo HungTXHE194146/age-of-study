@@ -25,10 +25,10 @@ import {
    ═══════════════════════════════════════ */
 const floatVariants = {
   initial: { y: 0 },
-  animate: {
+  animate: (custom: number = 0) => ({
     y: [-8, 8, -8],
-    transition: { duration: 4, repeat: Infinity },
-  },
+    transition: { duration: 4, repeat: Infinity, delay: custom },
+  }),
 };
 
 const fadeInUp = {
@@ -358,8 +358,7 @@ export default function HomePage() {
         <div className="absolute top-0 inset-x-0 h-24 md:h-40 bg-gradient-to-b from-slate-50 to-transparent z-0 pointer-events-none"></div>
 
         <div className="absolute inset-0 opacity-[0.03] outline-none z-0">
-          <svg width="100%" height="100%" xmlns="http://www.w300.org/2000/svg">
-            <defs>
+          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">            <defs>
               <pattern
                 id="smallGrid"
                 width="40"
@@ -398,6 +397,7 @@ export default function HomePage() {
                   variants={floatVariants}
                   initial="initial"
                   animate="animate"
+                  custom={0}
                   className="text-7xl group-hover:scale-110 transition-transform"
                 >
                   🔢
@@ -421,8 +421,8 @@ export default function HomePage() {
                   variants={floatVariants}
                   initial="initial"
                   animate="animate"
+                  custom={1}
                   className="text-7xl group-hover:scale-110 transition-transform"
-                  style={{ animationDelay: "1s" }}
                 >
                   🇬🇧
                 </motion.div>
@@ -444,8 +444,8 @@ export default function HomePage() {
                   variants={floatVariants}
                   initial="initial"
                   animate="animate"
+                  custom={2}
                   className="text-7xl group-hover:scale-110 transition-transform"
-                  style={{ animationDelay: "2s" }}
                 >
                   🇻🇳
                 </motion.div>
