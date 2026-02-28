@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuthStore } from "@/store/useAuthStore";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { QrCode } from "lucide-react";
 import { QRScanner } from "@/components/qr-scanner";
@@ -18,18 +18,8 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showForgotPasswordToast, setShowForgotPasswordToast] = useState(false);
   const [isScanningQR, setIsScanningQR] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
-  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -48,17 +38,6 @@ export default function LoginPage() {
       }
     }
   }, [user, router]);
-
-  const handleForgotPassword = () => {
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-    setShowForgotPasswordToast(true);
-    toastTimeoutRef.current = setTimeout(
-      () => setShowForgotPasswordToast(false),
-      4000,
-    );
-  };
 
   const handleQRScanSuccess = async (decodedText: string) => {
     try {
@@ -107,7 +86,7 @@ export default function LoginPage() {
           <div className="relative">
             <div className="w-32 h-32 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
               <Image
-                src="/logo.svg"
+                src="/school-logo.svg"
                 alt="Age of Study Logo"
                 width={105}
                 height={105}
@@ -148,21 +127,6 @@ export default function LoginPage() {
             {error}
           </motion.div>
         )}
-
-        {/* Forgot Password Toast */}
-        <AnimatePresence>
-          {showForgotPasswordToast && (
-            <motion.div
-              key="forgot-password-toast"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-xl text-center mb-4 text-sm"
-            >
-              Vui lòng liên hệ thầy/cô giáo để cấp lại mật khẩu nhé! 😊
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -328,13 +292,12 @@ export default function LoginPage() {
 
           {/* Forgot Password Link */}
           <div className="text-center">
-            <button
-              type="button"
-              onClick={handleForgotPassword}
-              className="text-sm text-gray-600 hover:text-gray-800 hover:underline"
+            <Link
+              href="/magic-login"
+              className="text-sm text-gray-600 hover:text-orange-500 hover:underline transition-colors"
             >
               Quên mật khẩu bí mật rồi? 🤔
-            </button>
+            </Link>
           </div>
 
           {/* Divider */}

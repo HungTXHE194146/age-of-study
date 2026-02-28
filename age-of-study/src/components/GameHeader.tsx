@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Settings, LogOut } from "lucide-react";
+import { User, LogOut } from "lucide-react";
 import Image from "next/image";
 import "./GameHeader.css";
 
@@ -18,10 +18,10 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { icon: "🏠", label: "Trang chủ", href: "/student" },
+  { icon: "🏠", label: "Tổng quan", href: "/student" },
   { icon: "⚔️", label: "Học tập", href: "/student/skill-tree" },
-  { icon: "🏆", label: "Xếp hạng", href: "/leaderboard" },
-  { icon: "🎒", label: "Balo", href: "/backpack" },
+  { icon: "🏆", label: "Xếp hạng", href: "/student/leaderboard" },
+  { icon: "🎒", label: "Balo", href: "/student/backpack" },
 ];
 
 /* ─────────────────────────────────────
@@ -140,7 +140,7 @@ export default function GameHeader() {
           >
             {/* Logo */}
             <Image
-              src="/logo.svg"
+              src="/school-logo.png"
               alt="Age of Study Logo"
               width={48}
               height={48}
@@ -282,17 +282,17 @@ export default function GameHeader() {
                       tabIndex={0}
                       onClick={() => {
                         setDropdownOpen(false);
-                        router.push("/settings");
+                        router.push("/student/settings");
                       }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           setDropdownOpen(false);
-                          router.push("/settings");
+                          router.push("/student/settings");
                         }
                       }}
                     >
-                      <Settings size={16} />
-                      <span>Cài đặt</span>
+                      <User size={16} />
+                      <span>Hồ sơ của tôi</span>
                     </div>
 
                     <div className="hud-dropdown-divider" />

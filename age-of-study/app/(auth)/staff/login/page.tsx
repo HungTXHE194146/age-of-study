@@ -55,9 +55,9 @@ export default function StaffLoginPage() {
             <div className="mb-8">
               <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl mb-6 border border-white/20">
                 <img
-                  src="/logo.svg"
+                  src="/school-logo.svg"
                   alt="Age of Study Logo"
-                  className="w-14 h-14"
+                  className="w-14 h-14 bg-white rounded-lg p-1"
                 />
               </div>
               <h1 className="text-4xl font-bold mb-3">
@@ -180,7 +180,7 @@ export default function StaffLoginPage() {
           <div className="lg:hidden mb-8 text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-2xl mb-4">
               <img
-                src="/logo.svg"
+                src="/school-logo.svg"
                 alt="Age of Study Logo"
                 className="w-10 h-10"
               />

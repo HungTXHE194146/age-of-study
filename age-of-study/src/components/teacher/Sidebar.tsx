@@ -105,11 +105,11 @@ export function Sidebar({ className, isOpen = true, onClose }: SidebarProps) {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0">
                 <Image
-                  src="/logo.svg"
+                  src="/school-logo.svg"
                   alt="Age of Study Logo"
                   width={48}
                   height={48}
-                  className="w-full h-full"
+                  className="w-full h-full bg-gray-100 rounded-lg "
                   priority
                 />
               </div>
@@ -183,23 +183,35 @@ export function Sidebar({ className, isOpen = true, onClose }: SidebarProps) {
           </div>
 
           <div className="flex items-center justify-between px-2 mb-4">
-            <span className="text-sm font-bold text-indigo-200">Tiết kiệm mạng</span>
+            <span className="text-sm font-bold text-indigo-200">
+              Tiết kiệm mạng
+            </span>
             <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-              <input 
-                type="checkbox" 
-                name="toggle" 
-                id="toggle" 
+              <input
+                type="checkbox"
+                name="toggle"
+                id="toggle"
                 className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"
-                defaultChecked={typeof window !== "undefined" ? localStorage.getItem("low_data_mode_enabled") === "true" : false}
+                defaultChecked={
+                  typeof window !== "undefined"
+                    ? localStorage.getItem("low_data_mode_enabled") === "true"
+                    : false
+                }
                 onChange={(e) => {
                   if (typeof window !== "undefined") {
-                    localStorage.setItem("low_data_mode_enabled", e.target.checked ? "true" : "false");
+                    localStorage.setItem(
+                      "low_data_mode_enabled",
+                      e.target.checked ? "true" : "false",
+                    );
                     // Optionally dispatch event to tell other components
                     window.dispatchEvent(new Event("lowDataModeChanged"));
                   }
                 }}
               />
-              <label htmlFor="toggle" className="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
+              <label
+                htmlFor="toggle"
+                className="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"
+              ></label>
             </div>
           </div>
 

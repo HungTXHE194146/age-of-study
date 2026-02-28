@@ -131,7 +131,7 @@ export default function RegisterPage() {
           <div className="relative">
             <div className="w-28 h-28 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
               <Image
-                src="/logo.svg"
+                src="/school-logo.svg"
                 alt="Age of Study Logo"
                 width={95}
                 height={95}
