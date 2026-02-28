@@ -1,7 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Upload, FileDown, CheckCircle, AlertCircle, Users, UserPlus } from "lucide-react";
+import { Upload, FileDown, CheckCircle, AlertCircle, Users, UserPlus, Edit3 } from "lucide-react";
 import * as xlsx from "xlsx";
 import Loading, { LoadingSpinner } from "@/components/ui/loading";
 import { motion, AnimatePresence } from "framer-motion";
@@ -423,12 +423,19 @@ export function AddStudentModal({
 }: AddStudentModalProps) {
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
+  const [dob, setDob] = useState("");
+  const [gender, setGender] = useState("");
+  const [phone, setPhone] = useState("");
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const resetForm = () => {
     setFullName("");
     setUsername("");
+    setDob("");
+    setGender("");
+    setPhone("");
     setError(null);
   };
 
@@ -451,6 +458,9 @@ export function AddStudentModal({
         body: JSON.stringify({
           full_name: fullName.trim(),
           username: username.trim().toLowerCase(),
+          dob: dob.trim(),
+          gender: gender.trim(),
+          phone_number: phone.trim(),
           class_id: classId,
         }),
       });
@@ -472,87 +482,339 @@ export function AddStudentModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[425px] rounded-2xl border-0 overflow-hidden p-0 shadow-2xl">
-        <div className="bg-gradient-to-r from-teal-500 to-emerald-500 p-6 flex flex-col items-center justify-center text-white relative">
-          <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-3">
-            <UserPlus className="w-8 h-8 text-white" />
-          </div>
-          <DialogTitle className="text-2xl font-bold mb-1">Thêm Học Sinh Mới</DialogTitle>
-          <DialogDescription className="text-teal-50 text-center text-sm px-4">
-            Tạo tài khoản và Tự động ghép vào lớp. Mật khẩu mặc định là <strong className="font-mono bg-white/20 px-1 rounded">12345678</strong>.
-          </DialogDescription>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 bg-white">
-          <div className="space-y-5">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium flex gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                {error}
+      <DialogContent className="sm:max-w-[500px] bg-transparent border-0 shadow-none p-0">
+        <div className="bg-[#fffdf8] border-2 border-black rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] overflow-hidden relative">
+          {/* Notebook Header */}
+          <div className="bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem] p-6 border-b-2 border-dashed border-gray-400">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 border-2 border-black rounded-full flex items-center justify-center -rotate-6 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                <UserPlus className="w-5 h-5 text-blue-800" />
               </div>
-            )}
-
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
-                Họ và Tên
-              </label>
-              <input
-                id="fullName"
-                type="text"
-                placeholder="Ví dụ: Nguyễn Văn A"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                disabled={isSubmitting}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-              />
+              <DialogTitle className="text-3xl font-black font-handwritten text-gray-900 drop-shadow-sm">
+                Thêm Học Sinh Mới
+              </DialogTitle>
             </div>
-
-            <div>
-              <label htmlFor="username" className="block text-sm font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
-                Tên đăng nhập (Username)
-              </label>
-              <input
-                id="username"
-                type="text"
-                placeholder="Ví dụ: nguyenvana1A, SV_081"
-                value={username}
-                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
-                required
-                disabled={isSubmitting}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-mono focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-blue-700 font-medium"
-              />
-              <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                <CheckCircle className="w-3 h-3"/> Viết liền không dấu, không khoảng trắng.
-              </p>
-            </div>
+            <DialogDescription className="text-gray-700 font-bold mt-2 font-handwritten text-lg ml-14">
+              Mật khẩu mặc định: <span className="bg-yellow-200 px-2 border border-black rounded-md">12345678</span>
+            </DialogDescription>
           </div>
 
-          <div className="mt-8 flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="font-semibold text-gray-600 hover:bg-gray-50 border-gray-200"
-            >
-              Hủy
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-teal-600 hover:bg-teal-700 text-white font-bold px-6 shadow-md"
-            >
-              {isSubmitting ? (
-                <span className="flex items-center gap-2">
-                  <LoadingSpinner size="sm" /> Đang tạo...
-                </span>
-              ) : (
-                "Tạo Tài Khoản"
-              )}
-            </Button>
+          <form onSubmit={handleSubmit} className="p-6 relative">
+             {/* Margin line */}
+             <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-red-300"></div>
+             
+             <div className="space-y-4 pl-6">
+                {error && (
+                  <div className="bg-red-50 border-2 border-dashed border-red-400 text-red-700 px-4 py-3 rounded-lg text-sm font-bold flex gap-2">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    {error}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-bold text-gray-700 mb-1 uppercase tracking-wider font-handwritten text-lg">
+                      Họ và Tên *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ví dụ: Nguyễn Văn A"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required
+                      disabled={isSubmitting}
+                      className="w-full px-4 py-2 bg-transparent border-b-2 border-dashed border-gray-400 focus:border-blue-500 focus:outline-none transition-colors font-medium text-gray-900"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-bold text-gray-700 mb-1 uppercase tracking-wider font-handwritten text-lg">
+                      Tên đăng nhập *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ví dụ: nguyenvana1A"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                      required
+                      disabled={isSubmitting}
+                      className="w-full px-4 py-2 bg-transparent border-b-2 border-dashed border-gray-400 focus:border-blue-500 focus:outline-none transition-colors font-mono font-bold text-blue-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1 uppercase tracking-wider font-handwritten text-lg">
+                      Ngày sinh
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="DD/MM/YYYY"
+                      value={dob}
+                      onChange={(e) => setDob(e.target.value)}
+                      disabled={isSubmitting}
+                      className="w-full px-4 py-2 bg-transparent border-b-2 border-dashed border-gray-400 focus:border-blue-500 focus:outline-none transition-colors font-medium text-gray-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1 uppercase tracking-wider font-handwritten text-lg">
+                      Giới tính
+                    </label>
+                    <select
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                      disabled={isSubmitting}
+                      className="w-full px-4 py-2 bg-transparent border-b-2 border-dashed border-gray-400 focus:border-blue-500 focus:outline-none transition-colors font-medium text-gray-900"
+                    >
+                      <option value="">Chọn giới tính</option>
+                      <option value="Nam">Nam</option>
+                      <option value="Nữ">Nữ</option>
+                      <option value="Khác">Khác</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-bold text-gray-700 mb-1 uppercase tracking-wider font-handwritten text-lg">
+                      Số điện thoại
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="SDT Phụ huynh / Học sinh"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      disabled={isSubmitting}
+                      className="w-full px-4 py-2 bg-transparent border-b-2 border-dashed border-gray-400 focus:border-blue-500 focus:outline-none transition-colors font-medium text-gray-900"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-8 flex justify-end gap-3 pt-4 border-t-2 border-dashed border-gray-300">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    disabled={isSubmitting}
+                    className="px-4 py-2 bg-white border-2 border-black text-gray-800 font-bold rounded hover:bg-gray-100 transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,1)] disabled:opacity-50"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-6 py-2 bg-[#ffde59] border-2 border-black text-black font-black rounded hover:bg-[#efce49] transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,1)] disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isSubmitting ? <><LoadingSpinner size="sm" /> Đang lưu...</> : "Tạo mới"}
+                  </button>
+                </div>
+             </div>
+          </form>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ----------------------------------------------------
+
+interface EditStudentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  student: any | null; // Student data
+  onSuccess: () => void;
+}
+
+export function EditStudentModal({
+  isOpen,
+  onClose,
+  student,
+  onSuccess,
+}: EditStudentModalProps) {
+  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
+  const [dob, setDob] = useState("");
+  const [gender, setGender] = useState("");
+  const [phone, setPhone] = useState("");
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (student && isOpen) {
+      setFullName(student.profile?.full_name || "");
+      setUsername(student.profile?.username || "");
+      setDob(student.profile?.dob || "");
+      setGender(student.profile?.gender || "");
+      setPhone(student.profile?.phone_number || "");
+      setError(null);
+    }
+  }, [student, isOpen]);
+
+  const handleClose = () => {
+    onClose();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fullName.trim() || !username.trim() || !student) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/teacher/students/${student.student_id}/update`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: fullName.trim(),
+          username: username.trim().toLowerCase(),
+          dob: dob.trim(),
+          gender: gender.trim(),
+          phone_number: phone.trim(),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Có lỗi xảy ra khi cập nhật học sinh");
+      }
+
+      onSuccess();
+      handleClose();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[500px] bg-transparent border-0 shadow-none p-0">
+        <div className="bg-[#fffdf8] border-2 border-black rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] overflow-hidden relative">
+          {/* Notebook Header */}
+          <div className="bg-[linear-gradient(transparent_95%,#e0f2fe_95%)] bg-[length:100%_2rem] p-6 border-b-2 border-dashed border-gray-400">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 border-2 border-black rounded-full flex items-center justify-center -rotate-6 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                <Edit3 className="w-5 h-5 text-blue-800" />
+              </div>
+              <DialogTitle className="text-3xl font-black font-handwritten text-gray-900 drop-shadow-sm">
+                Sửa Thông Tin Học Sinh
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-gray-700 font-bold mt-2 font-handwritten text-lg ml-14">
+              Cập nhật hồ sơ cho <span className="text-blue-700">{student?.profile?.username}</span>
+            </DialogDescription>
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="p-6 relative">
+             {/* Margin line */}
+             <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-red-300"></div>
+             
+             <div className="space-y-4 pl-6">
+                {error && (
+                  <div className="bg-red-50 border-2 border-dashed border-red-400 text-red-700 px-4 py-3 rounded-lg text-sm font-bold flex gap-2">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    {error}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-bold text-gray-700 mb-1 uppercase tracking-wider font-handwritten text-lg">
+                      Họ và Tên *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ví dụ: Nguyễn Văn A"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required
+                      disabled={isSubmitting}
+                      className="w-full px-4 py-2 bg-transparent border-b-2 border-dashed border-gray-400 focus:border-blue-500 focus:outline-none transition-colors font-medium text-gray-900"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-bold text-gray-700 mb-1 uppercase tracking-wider font-handwritten text-lg">
+                      Tên đăng nhập *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ví dụ: nguyenvana1A"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                      required
+                      disabled={isSubmitting}
+                      className="w-full px-4 py-2 bg-transparent border-b-2 border-dashed border-gray-400 focus:border-blue-500 focus:outline-none transition-colors font-mono font-bold text-blue-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1 uppercase tracking-wider font-handwritten text-lg">
+                      Ngày sinh
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="DD/MM/YYYY"
+                      value={dob}
+                      onChange={(e) => setDob(e.target.value)}
+                      disabled={isSubmitting}
+                      className="w-full px-4 py-2 bg-transparent border-b-2 border-dashed border-gray-400 focus:border-blue-500 focus:outline-none transition-colors font-medium text-gray-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1 uppercase tracking-wider font-handwritten text-lg">
+                      Giới tính
+                    </label>
+                    <select
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                      disabled={isSubmitting}
+                      className="w-full px-4 py-2 bg-transparent border-b-2 border-dashed border-gray-400 focus:border-blue-500 focus:outline-none transition-colors font-medium text-gray-900"
+                    >
+                      <option value="">Chọn</option>
+                      <option value="Nam">Nam</option>
+                      <option value="Nữ">Nữ</option>
+                      <option value="Khác">Khác</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-bold text-gray-700 mb-1 uppercase tracking-wider font-handwritten text-lg">
+                      Số điện thoại
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="SDT Phụ huynh / Học sinh"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      disabled={isSubmitting}
+                      className="w-full px-4 py-2 bg-transparent border-b-2 border-dashed border-gray-400 focus:border-blue-500 focus:outline-none transition-colors font-medium text-gray-900"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-8 flex justify-end gap-3 pt-4 border-t-2 border-dashed border-gray-300">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    disabled={isSubmitting}
+                    className="px-4 py-2 bg-white border-2 border-black text-gray-800 font-bold rounded hover:bg-gray-100 transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,1)] disabled:opacity-50"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-6 py-2 bg-[#ffde59] border-2 border-black text-black font-black rounded hover:bg-[#efce49] transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,1)] disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isSubmitting ? <><LoadingSpinner size="sm" /> Đang lưu...</> : "Cập nhật"}
+                  </button>
+                </div>
+             </div>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

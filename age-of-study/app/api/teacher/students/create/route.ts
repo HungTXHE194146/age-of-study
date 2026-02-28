@@ -16,7 +16,7 @@ const supabaseAdmin = createClient(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { full_name, username, class_id } = body;
+    const { full_name, username, class_id, dob, gender, ethnicity, phone_number, enroll_status, sessions_per_week } = body;
 
     if (!full_name || !username || !class_id) {
       return NextResponse.json(
@@ -61,6 +61,12 @@ export async function POST(request: NextRequest) {
         username: username.toLowerCase().trim(),
         full_name,
         role: "student",
+        dob: dob || null,
+        gender: gender || null,
+        ethnicity: ethnicity || null,
+        phone_number: phone_number || null,
+        enroll_status: enroll_status || null,
+        sessions_per_week: sessions_per_week || null
       }, { onConflict: 'id' });
 
     if (profileError) {

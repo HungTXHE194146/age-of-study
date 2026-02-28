@@ -312,17 +312,19 @@ export function QuestionBankTab({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 mt-4">
       {/* Filter Section */}
-      <div className="bg-white rounded-2xl p-6 shadow-md">
-        <div className="flex items-center gap-3 mb-4">
-          <Filter className="w-5 h-5 text-gray-600" />
-          <h2 className="text-lg font-semibold text-gray-900">
+      <div className="bg-[#fffdf8] border-2 border-black rounded-xl p-6 shadow-[4px_4px_0_0_rgba(0,0,0,1)] relative">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-red-200/50 -translate-y-3 rotate-[-1deg] border border-red-300"></div>
+
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-dashed border-gray-300">
+          <Filter className="w-6 h-6 text-black" />
+          <h2 className="text-3xl font-black text-gray-900 font-handwritten tracking-tight">
             Bộ lọc câu hỏi
           </h2>
         </div>
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {/* Subject Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -425,58 +427,60 @@ export function QuestionBankTab({
       </div>
 
       {/* Results Section */}
-      <div className="flex justify-between items-center">
-        <div className="text-sm text-gray-600">
-          Đã tìm thấy {totalQuestions} câu hỏi
+      <div className="flex justify-between items-center bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem] pb-2">
+        <div className="text-xl font-bold font-handwritten text-gray-800">
+          Đã tìm thấy <span className="text-blue-700">{totalQuestions}</span> câu hỏi
         </div>
         <div className="flex gap-2">
-          <Button
+          <button
             onClick={handleAddSelectedQuestions}
             disabled={selectedQuestionIds.size === 0}
-            className="bg-green-500 hover:bg-green-600"
+            className="flex items-center gap-2 bg-[#ffde59] hover:bg-[#efce49] border-2 border-black text-black font-black py-2 px-4 rounded-lg transition-transform hover:-translate-y-1 shadow-[4px_4px_0_0_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-5 h-5" />
             Thêm{" "}
             {selectedQuestionIds.size > 0 &&
               `(${selectedQuestionIds.size})`}{" "}
             câu hỏi đã chọn
-          </Button>
+          </button>
         </div>
       </div>
 
       {/* Questions List */}
-      <div className="bg-white rounded-2xl p-6 shadow-md">
-        <div className="space-y-4">
+      <div className="bg-[#fffdf8] border-2 border-black rounded-xl p-6 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+        <div className="space-y-6">
           {isLoading ? (
             <div className="flex justify-center p-8">
               <Loading />
             </div>
           ) : questions.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-12 text-gray-500 font-bold border-4 border-dashed border-gray-300 rounded-xl bg-gray-50">
               Không tìm thấy câu hỏi nào phù hợp với bộ lọc hiện tại
             </div>
           ) : (
             <>
-              <div className="h-[500px] overflow-y-auto">
-                <div className="divide-y divide-gray-200">
+              <div className="h-[600px] overflow-y-auto custom-scrollbar pr-4">
+                <div className="space-y-6">
                   {filteredQuestions.map((question) => (
-                    <div key={question.id} className="p-4 hover:bg-gray-50">
-                      <div className="flex items-start justify-between">
+                    <div key={question.id} className="p-6 bg-white border-2 border-dashed border-gray-400 rounded-xl hover:border-black hover:bg-yellow-50/50 transition-colors shadow-[4px_4px_0_0_rgba(0,0,0,1)] relative group">
+                      <div className="flex flex-col md:flex-row items-start justify-between gap-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <input
-                              type="checkbox"
-                              checked={selectedQuestionIds.has(question.id)}
-                              onChange={() =>
-                                handleQuestionSelection(question.id)
-                              }
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                            />
+                          <div className="flex flex-wrap items-center gap-3 mb-4">
+                            <label className="flex items-center gap-2 cursor-pointer bg-white border-2 border-black rounded px-2 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-transform">
+                              <input
+                                type="checkbox"
+                                checked={selectedQuestionIds.has(question.id)}
+                                onChange={() =>
+                                  handleQuestionSelection(question.id)
+                                }
+                                className="w-5 h-5 text-blue-600 bg-white border-2 border-black rounded focus:ring-0 cursor-pointer"
+                              />
+                            </label>
                             <Badge
                               variant="secondary"
-                              className={getDifficultyColor(
+                              className={`${getDifficultyColor(
                                 question.difficulty,
-                              )}
+                              )} border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold px-3 py-1`}
                             >
                               {question.difficulty}
                             </Badge>
@@ -502,32 +506,30 @@ export function QuestionBankTab({
                             {question.node_title && (
                               <Badge
                                 variant="outline"
-                                className="text-green-600"
+                                className="bg-green-50 text-green-800 border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold px-3 py-1"
                               >
                                 {question.node_title}
                               </Badge>
                             )}
                           </div>
 
-                          <h3 className="font-medium text-gray-900 mb-2">
+                          <h3 className="font-medium text-xl text-gray-900 mb-4 font-handwritten tracking-wide leading-relaxed">
                             {question.questionText}
                           </h3>
 
                           {question.options && question.options.length > 0 && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                               {question.options
                                 .slice(0, 4)
                                 .map((option, index) => (
                                   <div
                                     key={`${question.id}-${option.id}-${index}`}
-                                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 shadow-sm"
+                                    className="flex items-start gap-3 p-3 bg-white border-2 border-black rounded-lg hover:bg-blue-50 transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
                                   >
-                                    <div className="flex-shrink-0 w-8 h-8 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center">
-                                      <span className="text-sm font-semibold text-gray-700">
-                                        {option.label}
-                                      </span>
+                                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 border-2 border-black rounded-full flex items-center justify-center font-black">
+                                      {option.label}
                                     </div>
-                                    <span className="text-sm text-gray-700 leading-relaxed">
+                                    <span className="text-sm font-bold text-gray-800 leading-relaxed pt-1">
                                       {typeof option.text === "string"
                                         ? option.text
                                         : (option.text as { text?: string })
@@ -536,38 +538,36 @@ export function QuestionBankTab({
                                   </div>
                                 ))}
                               {question.options.length > 4 && (
-                                <div className="col-span-full text-sm text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                <div className="col-span-full text-sm font-bold text-gray-600 bg-gray-100 p-3 rounded-lg border-2 border-dashed border-gray-400 text-center">
                                   +{question.options.length - 4} lựa chọn khác
                                 </div>
                               )}
                             </div>
                           )}
 
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <div className="flex items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-widest mt-4">
                             <span>
                               Ngày tạo: {question.created_at_formatted}
                             </span>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
+                        <div className="flex flex-row md:flex-col gap-3">
+                          <button
                             onClick={() => handleEditQuestion(question)}
-                            className="flex items-center gap-2 text-blue-600 border-blue-300 hover:bg-blue-50 hover:border-blue-400"
+                            className="flex items-center justify-center gap-2 p-3 bg-blue-100 border-2 border-black text-blue-900 font-bold rounded-lg hover:bg-blue-200 transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+                            title="Sửa"
                           >
-                            <Edit3 className="w-4 h-4" />
-                            Sửa
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
+                            <Edit3 className="w-5 h-5" />
+                            <span className="md:hidden">Sửa</span>
+                          </button>
+                          <button
                             onClick={() => handleDeleteQuestion(question.id)}
-                            className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+                            className="flex items-center justify-center gap-2 p-3 bg-red-100 border-2 border-black text-red-900 font-bold rounded-lg hover:bg-red-200 transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+                            title="Xóa"
                           >
-                            <Trash2 className="w-4 h-4" />
-                            Xóa
-                          </Button>
+                            <Trash2 className="w-5 h-5" />
+                            <span className="md:hidden">Xóa</span>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -577,30 +577,30 @@ export function QuestionBankTab({
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 p-4 border-t">
-                  <Button
-                    variant="outline"
+                <div className="flex justify-center items-center gap-4 p-6 border-t-2 border-dashed border-gray-300 mt-6">
+                  <button
                     onClick={() =>
                       setCurrentPage((prev) => Math.max(1, prev - 1))
                     }
                     disabled={currentPage === 1}
+                    className="px-4 py-2 bg-white border-2 border-black text-black font-bold rounded-lg hover:bg-gray-100 transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,1)] disabled:opacity-50"
                   >
                     Trước
-                  </Button>
+                  </button>
 
-                  <div className="text-sm text-gray-600">
-                    Trang {currentPage} / {totalPages}
+                  <div className="text-xl font-black text-gray-800 bg-white border-2 border-black px-6 py-2 rounded-md shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+                    {currentPage} / {totalPages}
                   </div>
 
-                  <Button
-                    variant="outline"
+                  <button
                     onClick={() =>
                       setCurrentPage((prev) => Math.min(totalPages, prev + 1))
                     }
                     disabled={currentPage === totalPages}
+                    className="px-4 py-2 bg-white border-2 border-black text-black font-bold rounded-lg hover:bg-gray-100 transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,1)] disabled:opacity-50"
                   >
                     Sau
-                  </Button>
+                  </button>
                 </div>
               )}
             </>

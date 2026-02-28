@@ -25,6 +25,7 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AddStudentModal, AddStudentFromExcelModal } from "@/components/student-management-modals";
+import { NotebookCard, NotebookCardHeader, NotebookCardTitle, NotebookCardContent, NotebookButton, NotebookBadge } from "@/components/ui/notebook-card";
 
 
 interface StudentData {
@@ -234,409 +235,252 @@ export default function ClassStudentsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-8 p-6 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem] border-b-2 border-dashed border-gray-300">
           <div className="flex items-center gap-4 mb-4">
             <Link href={`/teacher/classes`}>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
+              <NotebookButton
+                className="bg-gray-100 text-gray-800 border-gray-800 text-base py-1 px-4"
               >
-                <GraduationCap className="w-4 h-4" />
-                Quay lại lớp
-              </Button>
+                <ChevronLeft className="w-5 h-5 mr-1" />
+                Về lớp
+              </NotebookButton>
             </Link>
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900">
-                Quản lý học sinh - {classData.name}
+            <div className="flex-1 ml-4">
+              <h1 className="text-4xl font-black text-gray-900 tracking-tight font-handwritten">
+                Học sinh lớp {classData.name}
               </h1>
-              <p className="text-gray-600">
-                Khối {classData.grade} • {classData.school_year} •{" "}
-                {classData.students.length} học sinh
+              <p className="text-xl font-bold text-gray-600 font-handwritten mt-1">
+                Khối {classData.grade} • Năm {classData.school_year}
               </p>
             </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Tổng số học sinh
-                  </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
-                    {classData.students.length}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                  <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Trung bình XP
-                  </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
-                    {Math.round(
-                      classData.students.reduce(
-                        (acc, s) => acc + s.profile.total_xp,
-                        0,
-                      ) / classData.students.length,
-                    ) || 0}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                  <GraduationCap className="w-6 h-6 text-green-600 dark:text-green-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Khối cao nhất
-                  </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
-                    {Math.max(
-                      ...classData.students.map((s) => s.profile.grade || 0),
-                    )}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-                  <Users className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Mới nhất
-                  </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
-                    {classData.students.length > 0
-                      ? new Date(
-                          Math.max(
-                            ...classData.students.map((s) =>
-                              new Date(s.joined_at).getTime(),
-                            ),
-                          ),
-                        ).toLocaleDateString("vi-VN")
-                      : "N/A"}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                  <Plus className="w-6 h-6 text-gray-600 dark:text-gray-300" />
-                </div>
-              </div>
+            {/* Quick Actions at the top */}
+            <div className="hidden sm:flex gap-3">
+              <NotebookButton onClick={() => setIsAddModalOpen(true)} className="bg-emerald-100 text-emerald-900 border-emerald-900 py-2">
+                <UserPlus className="w-5 h-5 mr-2" />
+                Thủ công
+              </NotebookButton>
+              <NotebookButton onClick={() => setIsExcelModalOpen(true)} className="bg-blue-100 text-blue-900 border-blue-900 py-2">
+                <Users className="w-5 h-5 mr-2" />
+                Từ Excel
+              </NotebookButton>
             </div>
           </div>
+        </div>
+
+        {/* Mobile Quick Actions */}
+        <div className="flex sm:hidden gap-3 mb-6">
+          <NotebookButton onClick={() => setIsAddModalOpen(true)} className="flex-1 bg-emerald-100 text-emerald-900 border-emerald-900 py-2 text-sm">
+            <UserPlus className="w-4 h-4 mr-1" /> Thêm
+          </NotebookButton>
+          <NotebookButton onClick={() => setIsExcelModalOpen(true)} className="flex-1 bg-blue-100 text-blue-900 border-blue-900 py-2 text-sm">
+            <Users className="w-4 h-4 mr-1" /> Excel
+          </NotebookButton>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+           <NotebookCard className="bg-blue-50">
+             <NotebookCardContent className="pt-6">
+               <div className="flex justify-between items-center mb-2">
+                 <span className="font-bold text-gray-600 uppercase text-sm">Sĩ số</span>
+                 <Users className="w-6 h-6 text-blue-900" />
+               </div>
+               <div className="text-4xl font-black text-blue-900">{classData.students.length}</div>
+             </NotebookCardContent>
+           </NotebookCard>
+           
+           <NotebookCard className="bg-green-50">
+             <NotebookCardContent className="pt-6">
+               <div className="flex justify-between items-center mb-2">
+                 <span className="font-bold text-gray-600 uppercase text-sm">XP TB</span>
+                 <GraduationCap className="w-6 h-6 text-green-900" />
+               </div>
+               <div className="text-4xl font-black text-green-900">
+                  {Math.round(
+                    classData.students.reduce((acc, s) => acc + s.profile.total_xp, 0) / (classData.students.length || 1)
+                  )}
+               </div>
+             </NotebookCardContent>
+           </NotebookCard>
+           
+           <NotebookCard className="bg-purple-50">
+             <NotebookCardContent className="pt-6">
+               <div className="flex justify-between items-center mb-2">
+                 <span className="font-bold text-gray-600 uppercase text-sm">Khối</span>
+                 <Users className="w-6 h-6 text-purple-900" />
+               </div>
+               <div className="text-4xl font-black text-purple-900">
+                 {Math.max(0, ...classData.students.map((s) => s.profile.grade || 0))}
+               </div>
+             </NotebookCardContent>
+           </NotebookCard>
+           
+           <NotebookCard className="bg-yellow-50">
+             <NotebookCardContent className="pt-6">
+               <div className="flex justify-between items-center mb-2">
+                 <span className="font-bold text-gray-600 uppercase text-sm">Mới nhất</span>
+                 <Plus className="w-6 h-6 text-yellow-900" />
+               </div>
+               <div className="text-2xl font-black text-yellow-900 mt-2">
+                 {classData.students.length > 0
+                   ? new Date(
+                       Math.max(...classData.students.map((s) => new Date(s.joined_at).getTime()))
+                     ).toLocaleDateString("vi-VN")
+                   : "N/A"}
+               </div>
+             </NotebookCardContent>
+           </NotebookCard>
         </div>
 
         {/* Search and Filter Controls */}
-        <div className="mb-6 bg-white rounded-2xl shadow-md p-6 border border-gray-200">
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-            {/* Search Input */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm học sinh..."
-                value={searchTerm}
+        <NotebookCard className="mb-8 border-gray-400 bg-gray-50/80">
+          <NotebookCardContent className="pt-6 pb-6 bg-transparent border-b-0">
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 w-6 h-6" />
+                <input
+                  type="text"
+                  placeholder="Tìm học sinh theo tên, mã..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full pl-12 pr-4 py-3 border-2 border-black rounded-md focus:ring-0 focus:border-blue-600 text-lg font-bold bg-white"
+                />
+              </div>
+
+              <select
+                value={filterGrade}
                 onChange={(e) => {
-                  setSearchTerm(e.target.value);
+                  setFilterGrade(parseInt(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Filter by Grade */}
-            <select
-              value={filterGrade}
-              onChange={(e) => {
-                setFilterGrade(parseInt(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value={0}>Tất cả khối</option>
-              <option value={1}>Khối 1</option>
-              <option value={2}>Khối 2</option>
-              <option value={3}>Khối 3</option>
-              <option value={4}>Khối 4</option>
-              <option value={5}>Khối 5</option>
-            </select>
-          </div>
-
-          {/* Sort Controls */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span>Hiển thị {filteredAndSortedStudents.length} học sinh</span>
-              {searchTerm && (
-                <span className="text-blue-600 font-medium">
-                  Tìm thấy {filteredAndSortedStudents.length} kết quả cho &quot;
-                  {searchTerm}&quot;
-                </span>
-              )}
-              {filterGrade !== 0 && (
-                <span className="text-green-600 font-medium">
-                  Đã lọc theo khối {filterGrade}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Sắp xếp:</span>
-              <select
-                value={sortBy}
-                onChange={(e) =>
-                  setSortBy(
-                    e.target.value as "name" | "xp" | "grade" | "joined",
-                  )
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="px-4 py-3 border-2 border-black rounded-md focus:ring-0 focus:border-blue-600 text-lg font-bold bg-white"
               >
-                <option value="name">Tên học sinh</option>
-                <option value="xp">Điểm XP</option>
-                <option value="grade">Khối</option>
-                <option value="joined">Ngày tham gia</option>
+                <option value={0}>Tất cả khối</option>
+                <option value={1}>Khối 1</option>
+                <option value={2}>Khối 2</option>
+                <option value={3}>Khối 3</option>
+                <option value={4}>Khối 4</option>
+                <option value={5}>Khối 5</option>
               </select>
-              <button
-                onClick={() =>
-                  setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                }
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                {sortOrder === "asc" ? (
-                  <ChevronUp className="w-4 h-4" />
-                ) : (
-                  <ChevronDown className="w-4 h-4" />
-                )}
-              </button>
             </div>
-          </div>
-        </div>
+            
+            <div className="flex flex-col sm:flex-row items-center justify-between mt-4 border-t-2 border-dashed border-gray-400 pt-6">
+               <div className="text-lg font-bold text-gray-700 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem]">
+                 {filteredAndSortedStudents.length} học sinh trong danh sách.
+               </div>
+               <div className="flex items-center gap-2 mt-4 sm:mt-0">
+                 <span className="font-bold">Sắp xếp:</span>
+                 <select
+                   value={sortBy}
+                   onChange={(e) => setSortBy(e.target.value as "name" | "xp" | "grade" | "joined")}
+                   className="px-3 py-1 border-2 border-black rounded-md focus:ring-0 text-base font-bold bg-white"
+                 >
+                   <option value="name">Tên</option>
+                   <option value="xp">XP</option>
+                   <option value="grade">Khối</option>
+                   <option value="joined">Ngày</option>
+                 </select>
+                 <button onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")} className="border-2 border-black bg-white p-1 rounded-md hover:bg-gray-200">
+                   {sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />}
+                 </button>
+               </div>
+            </div>
+          </NotebookCardContent>
+        </NotebookCard>
 
-        {/* Students Table */}
-        <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Học sinh
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Khối
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Hoạt động
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tiến độ
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ngày tham gia
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Hành động
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-4">
-                      <LoadingInline message="Đang tải danh sách học sinh..." />
-                    </td>
-                  </tr>
-                ) : filteredAndSortedStudents.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-4 text-center text-gray-500"
+        {/* Students Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {filteredAndSortedStudents.length === 0 ? (
+             <div className="col-span-full py-12 text-center text-gray-500 font-bold border-4 border-dashed border-gray-400 bg-white/50 rounded-2xl text-xl">
+                Không có học sinh nào.
+             </div>
+          ) : (
+            currentStudents.map((student) => (
+              <NotebookCard key={student.student_id} className="group hover:-translate-y-1 transition-transform bg-white">
+                <NotebookCardContent className="pt-6 relative">
+                  {/* Decorative Pin/Tape */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-4 bg-red-200/50 -translate-y-2 rotate-[-2deg] border border-red-300"></div>
+                  
+                  <div className="flex items-center gap-4 mb-4">
+                     <div className="w-16 h-16 bg-blue-100 border-2 border-black rounded-full flex items-center justify-center text-2xl font-black text-blue-900 shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex-shrink-0">
+                       {student.profile.full_name?.charAt(0) || student.profile.username?.charAt(0) || "?"}
+                     </div>
+                     <div className="min-w-0">
+                       <h3 className="text-xl font-bold text-gray-900 truncate" title={student.profile.full_name || student.profile.username || "Học sinh"}>
+                         {student.profile.full_name || student.profile.username || "Học sinh"}
+                       </h3>
+                       <p className="text-sm font-bold text-gray-500 uppercase">
+                         {student.profile.full_name ? student.profile.username : "N/A"}
+                       </p>
+                     </div>
+                  </div>
+                  
+                  <div className="space-y-3 pt-4 border-t-2 border-dashed border-gray-200">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="font-bold text-gray-600">Khối</span>
+                      <NotebookBadge className="py-0 px-2 text-sm">{student.profile.grade || "N/A"}</NotebookBadge>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="font-bold text-gray-600">XP</span>
+                      <span className="font-black text-amber-600">{student.profile.total_xp}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="font-bold text-gray-600">Đang học</span>
+                      <span className="font-bold text-blue-600 truncate max-w-[120px] text-right" title={student.profile.latest_progress?.nodes?.title}>
+                        {student.profile.latest_progress?.nodes?.title || "Chưa có"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mt-6">
+                    <Link
+                       href={`/teacher/classes/${classId}/students/${student.student_id}`}
+                       className="flex-1"
                     >
-                      Không tìm thấy học sinh nào phù hợp với tiêu chí tìm kiếm.
-                    </td>
-                  </tr>
-                ) : (
-                  currentStudents.map((student) => (
-                    <tr key={student.student_id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-teal-400 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                            {student.profile.full_name?.charAt(0) ||
-                              student.profile.username?.charAt(0) ||
-                              "?"}
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {student.profile.full_name ||
-                                student.profile.username ||
-                                "Học sinh"}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {student.profile.full_name
-                                ? student.profile.username
-                                : ""}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <Badge
-                          variant="outline"
-                          className="bg-blue-50 text-blue-700 border-blue-200"
-                        >
-                          Khối {student.profile.grade}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 border-x">
-                        {student.profile.latest_activity ? (
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-gray-800 line-clamp-2">
-                              {student.profile.latest_activity.description}
-                            </span>
-                            <span className="text-xs text-gray-400 mt-1">
-                              {new Date(student.profile.latest_activity.created_at).toLocaleDateString("vi-VN")}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 italic">Chưa có</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {student.profile.latest_progress ? (
-                          <div className="flex flex-col">
-                            <span className="font-bold line-clamp-1">
-                              {student.profile.latest_progress.nodes?.title || "Bài học"}
-                            </span>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant={student.profile.latest_progress.status === 'completed' ? 'default' : 'secondary'} className="text-xs py-0 h-5">
-                                {student.profile.latest_progress.status === 'completed' ? 'Hoàn thành' : 'Đang học'}
-                              </Badge>
-                              {student.profile.latest_progress.score && (
-                                <span className="text-xs font-mono font-bold text-gray-600 border border-gray-200 px-1.5 rounded bg-gray-50">
-                                  {student.profile.latest_progress.score}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                           <span className="text-gray-400 italic">Chưa có</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-l">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          {new Date(student.joined_at).toLocaleDateString(
-                            "vi-VN",
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
-                        <Link
-                          href={`/teacher/classes/${classId}/students/${student.student_id}`}
-                        >
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-1"
-                          >
-                            <Eye className="w-4 h-4" />
-                            Xem
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-1"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                          Sửa
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                      <NotebookButton className="w-full text-base py-1 bg-gray-100 border-gray-800 hover:bg-gray-200">
+                        <Eye className="w-4 h-4 mr-1" /> Xem
+                      </NotebookButton>
+                    </Link>
+                    <NotebookButton className="aspect-square p-2 bg-yellow-100 border-yellow-800 text-yellow-900 hover:bg-yellow-200">
+                       <Edit3 className="w-4 h-4" />
+                    </NotebookButton>
+                  </div>
+                </NotebookCardContent>
+              </NotebookCard>
+            ))
+          )}
         </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Hiển thị {startIndex + 1} -{" "}
-              {Math.min(endIndex, filteredAndSortedStudents.length)} của{" "}
-              {filteredAndSortedStudents.length} học sinh
+          <div className="flex items-center justify-center gap-4 py-8">
+            <NotebookButton
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-4 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-gray-400"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </NotebookButton>
+            
+            <div className="text-xl font-black text-gray-800 bg-white border-2 border-black px-6 py-2 rounded-md shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+              {currentPage} / {totalPages}
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-                (page) => (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`px-3 py-2 rounded-lg ${
-                      page === currentPage
-                        ? "bg-blue-500 text-white"
-                        : "border border-gray-300 hover:bg-gray-50"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ),
-              )}
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            
+            <NotebookButton
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+               className="px-4 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-gray-400"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </NotebookButton>
           </div>
         )}
-
-        {/* Quick Actions */}
-        <div className="mt-8 bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Hành động nhanh
-              </h3>
-              <p className="text-gray-600">Quản lý học sinh trong lớp học</p>
-            </div>
-            <div className="flex gap-3">
-              <Button onClick={() => setIsAddModalOpen(true)} variant="outline" className="flex items-center gap-2">
-                <UserPlus className="w-4 h-4" />
-                Thêm thủ công
-              </Button>
-              <Button onClick={() => setIsExcelModalOpen(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
-                <Users className="w-4 h-4" />
-                Nhập từ Excel
-              </Button>
-            </div>
-          </div>
-        </div>
       </div>
 
       <AddStudentModal

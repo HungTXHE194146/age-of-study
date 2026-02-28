@@ -12,6 +12,7 @@ import {
   Book,
   Eye,
 } from "lucide-react";
+import { NotebookCard, NotebookCardContent, NotebookButton } from "@/components/ui/notebook-card";
 import { QuizGeneratorForm } from "@/components/teacher/QuizGeneratorForm";
 import { QuizReviewList } from "@/components/teacher/QuizReviewList";
 import { QuestionBankTab } from "@/components/teacher/QuestionBankTab";
@@ -324,18 +325,17 @@ export default function CreateTestPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <button
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
-          onClick={() => router.back()}
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Quay lại
-        </button>
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">
-          Tạo bài kiểm tra mới
+      <div className="mb-8 p-8 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2.5rem] border-b-2 border-dashed border-gray-400 relative">
+        <div className="absolute top-4 left-4 w-4 h-4 rounded-full bg-blue-200 border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]"></div>
+        <div className="absolute top-4 right-4 w-4 h-4 rounded-full bg-blue-200 border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]"></div>
+        
+        <NotebookButton onClick={() => router.back()} className="mb-6 bg-white border-2 border-black text-gray-800 hover:bg-gray-100 px-4 py-1 text-sm font-bold flex items-center gap-2">
+            Quay lại
+        </NotebookButton>
+        <h1 className="text-5xl font-black text-gray-900 mb-4 font-handwritten tracking-tight drop-shadow-sm leading-10 pl-6">
+          Tạo Bài Kiểm Tra Mới
         </h1>
-        <p className="text-lg text-gray-600">
+        <p className="text-xl text-gray-700 font-bold italic pl-6 leading-10">
           Thiết lập chi tiết bài kiểm tra và thêm câu hỏi
         </p>
       </div>
@@ -344,24 +344,26 @@ export default function CreateTestPage() {
         {/* Row 1: Test Details (Left) and Question Management (Right) */}
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Test Details Section */}
-          <div className="bg-white rounded-2xl p-8 shadow-md lg:col-span-1">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <Settings className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  Chi tiết bài kiểm tra
-                </h2>
-                <p className="text-gray-600">Cấu hình các thông số cơ bản</p>
-              </div>
-            </div>
+          <div className="lg:col-span-1">
+            <NotebookCard className="bg-yellow-50 h-full">
+              <NotebookCardContent className="pt-6">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-dashed border-gray-400">
+                  <div className="w-12 h-12 bg-yellow-200 border-2 border-black rounded-lg flex items-center justify-center -rotate-3 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                    <Settings className="w-6 h-6 text-yellow-800" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-gray-900 font-handwritten tracking-tight">
+                      Chi tiết bài kiểm tra
+                    </h2>
+                    <p className="text-gray-700 font-bold text-sm">Cấu hình các thông số cơ bản</p>
+                  </div>
+                </div>
 
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tiêu đề bài kiểm tra
-                </label>
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
+                      Tiêu đề bài kiểm tra <span className="text-red-500">*</span>
+                    </label>
                 <input
                   type="text"
                   value={testDetails.title}
@@ -371,13 +373,13 @@ export default function CreateTestPage() {
                       title: e.target.value,
                     }))
                   }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5"
                   placeholder="Nhập tiêu đề bài kiểm tra..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
                   Mô tả
                 </label>
                 <textarea
@@ -389,13 +391,13 @@ export default function CreateTestPage() {
                     }))
                   }
                   rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 border-dashed"
                   placeholder="Mô tả ngắn về bài kiểm tra..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
                   Môn học <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -433,7 +435,7 @@ export default function CreateTestPage() {
                       setNodes([]);
                     }
                   }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 appearance-none cursor-pointer"
                   required
                 >
                   <option value="">Chọn môn học</option>
@@ -450,7 +452,7 @@ export default function CreateTestPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
                   Chủ đề / Bài học
                 </label>
                 <select
@@ -462,7 +464,7 @@ export default function CreateTestPage() {
                     }))
                   }
                   disabled={!testDetails.subject || isLoadingNodes}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 disabled:bg-gray-100 disabled:cursor-not-allowed appearance-none cursor-pointer"
                 >
                   <option value="">Kiểm tra tổng hợp / Luyện tập chung</option>
                   {isLoadingNodes ? (
@@ -478,7 +480,7 @@ export default function CreateTestPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
                   Thời gian làm bài (phút)
                 </label>
                 <input
@@ -492,144 +494,150 @@ export default function CreateTestPage() {
                   }
                   min="5"
                   max="180"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white border-2 border-black rounded-md focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900"
                 />
               </div>
             </div>
-          </div>
+          </NotebookCardContent>
+        </NotebookCard>
+      </div>
 
-          {/* Question Management Section */}
-          <div className="bg-white rounded-2xl p-8 shadow-md lg:col-span-2">
-            <div className="flex items-center justify-between mb-6">
+      {/* Question Management Section */}
+      <div className="lg:col-span-2">
+        <NotebookCard className="bg-[#fffdf8] h-full">
+          <NotebookCardContent className="pt-6">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-dashed border-gray-300">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <Plus className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-green-100 border-2 border-black rounded-full flex items-center justify-center rotate-6 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                  <Plus className="w-6 h-6 text-green-700" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Câu hỏi</h2>
-                  <p className="text-gray-600">Thêm và quản lý câu hỏi</p>
+                  <h2 className="text-3xl font-black text-gray-900 font-handwritten tracking-tight">Câu Hỏi</h2>
+                  <p className="text-gray-700 font-bold text-sm">Thêm và quản lý câu hỏi</p>
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-2xl font-bold text-blue-600">
-                  {questions.length}
-                </span>
-                <p className="text-sm text-gray-600">câu hỏi</p>
+                  <span className="text-3xl font-black text-blue-700 font-handwritten drop-shadow-sm">
+                    {questions.length}
+                  </span>
+                  <p className="text-sm font-bold text-gray-600 uppercase">câu hỏi</p>
+                </div>
               </div>
-            </div>
 
-            {/* Tab Navigation */}
-            <div className="border-b border-gray-200 mb-6">
-              <nav className="-mb-px flex space-x-8">
-                <button
-                  onClick={() => setActiveTab("manual")}
-                  className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === "manual"
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <FileText className="w-4 h-4" />
-                  Nhập thủ công
-                </button>
-                <button
-                  onClick={() => setActiveTab("ai")}
-                  className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === "ai"
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <LinkIcon className="w-4 h-4" />
-                  AI Generator
-                </button>
-                <button
-                  onClick={() => setActiveTab("bank")}
-                  className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === "bank"
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <Book className="w-4 h-4" />
-                  Question Bank
-                </button>
-              </nav>
-            </div>
+              {/* Tab Navigation */}
+              <div className="border-b-2 border-black mb-6">
+                <nav className="-mb-[2px] flex space-x-2">
+                  <button
+                    onClick={() => setActiveTab("manual")}
+                    className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${
+                      activeTab === "manual"
+                        ? "border-black border-b-white bg-white text-gray-900 z-10"
+                        : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                    }`}
+                  >
+                    <FileText className="w-5 h-5" />
+                    Nhập thủ công
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("ai")}
+                    className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${
+                      activeTab === "ai"
+                        ? "border-black border-b-white bg-white text-gray-900 z-10"
+                        : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                    }`}
+                  >
+                    <LinkIcon className="w-5 h-5" />
+                    AI Generator
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("bank")}
+                    className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${
+                      activeTab === "bank"
+                        ? "border-black border-b-white bg-white text-gray-900 z-10"
+                        : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                    }`}
+                  >
+                    <Book className="w-5 h-5" />
+                    Ngân hàng câu hỏi
+                  </button>
+                </nav>
+              </div>
 
-            {/* Tab Content */}
-            <div className="space-y-6">
-              {activeTab === "manual" && (
-                <div className="space-y-4">
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                      Tạo câu hỏi thủ công
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Nhập thông tin câu hỏi và các lựa chọn trả lời
-                    </p>
-                  </div>
+              {/* Tab Content */}
+              <div className="space-y-6">
+                {activeTab === "manual" && (
+                  <div className="space-y-4">
+                    <div className="bg-yellow-100/50 border-2 border-dashed border-gray-300 p-4 rounded-lg">
+                      <h3 className="font-bold text-gray-900 mb-1 uppercase text-sm">
+                        Tạo câu hỏi thủ công
+                      </h3>
+                      <p className="text-sm font-bold text-gray-600">
+                        Nhập thông tin câu hỏi và các lựa chọn trả lời
+                      </p>
+                    </div>
 
-                  <div className="grid gap-4">
+                  <div className="grid gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
                         Nội dung câu hỏi
                       </label>
                       <textarea
                         rows={3}
                         value={manualQuestionText}
                         onChange={(e) => setManualQuestionText(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 border-dashed"
                         placeholder="Nhập nội dung câu hỏi..."
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Loại câu hỏi
-                      </label>
-                      <select
-                        value={manualQuestionType}
-                        onChange={(e) =>
-                          setManualQuestionType(
-                            e.target.value as
-                              | "MULTIPLE_CHOICE"
-                              | "TRUE_FALSE"
-                              | "ESSAY",
-                          )
-                        }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="MULTIPLE_CHOICE">Trắc nghiệm</option>
-                        <option value="TRUE_FALSE">Đúng/Sai</option>
-                        <option value="ESSAY">Tự luận</option>
-                      </select>
-                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
+                          Loại câu hỏi
+                        </label>
+                        <select
+                          value={manualQuestionType}
+                          onChange={(e) =>
+                            setManualQuestionType(
+                              e.target.value as
+                                | "MULTIPLE_CHOICE"
+                                | "TRUE_FALSE"
+                                | "ESSAY",
+                            )
+                          }
+                          className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 cursor-pointer"
+                        >
+                          <option value="MULTIPLE_CHOICE">Trắc nghiệm</option>
+                          <option value="TRUE_FALSE">Đúng/Sai</option>
+                          <option value="ESSAY">Tự luận</option>
+                        </select>
+                      </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Độ khó
-                      </label>
-                      <select
-                        value={manualDifficulty}
-                        onChange={(e) =>
-                          setManualDifficulty(
-                            e.target.value as "Easy" | "Medium" | "Hard",
-                          )
-                        }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="Easy">Dễ</option>
-                        <option value="Medium">Trung bình</option>
-                        <option value="Hard">Khó</option>
-                      </select>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
+                          Độ khó
+                        </label>
+                        <select
+                          value={manualDifficulty}
+                          onChange={(e) =>
+                            setManualDifficulty(
+                              e.target.value as "Easy" | "Medium" | "Hard",
+                            )
+                          }
+                          className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 cursor-pointer"
+                        >
+                          <option value="Easy">Dễ</option>
+                          <option value="Medium">Trung bình</option>
+                          <option value="Hard">Khó</option>
+                        </select>
+                      </div>
                     </div>
 
                     {/* Multiple Choice Options */}
                     {manualQuestionType === "MULTIPLE_CHOICE" && (
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <h4 className="font-medium text-gray-900">
+                      <div className="space-y-4 bg-gray-50 border-2 border-black rounded-lg p-4 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="font-black text-gray-900 uppercase">
                             Lựa chọn trả lời
                           </h4>
                           <div className="flex gap-2">
@@ -638,7 +646,6 @@ export default function CreateTestPage() {
                               onClick={() => {
                                 if (manualOptions.length > 3) {
                                   setManualOptions((prev) => prev.slice(0, -1));
-                                  // Update correct answer if it was the last option
                                   if (
                                     manualCorrectAnswer ===
                                     String.fromCharCode(
@@ -654,7 +661,7 @@ export default function CreateTestPage() {
                                 }
                               }}
                               disabled={manualOptions.length <= 3}
-                              className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="px-3 py-1 font-bold text-sm bg-red-100 border-2 border-black text-red-900 rounded-md hover:bg-red-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5"
                             >
                               - Xóa
                             </button>
@@ -677,17 +684,17 @@ export default function CreateTestPage() {
                                 }
                               }}
                               disabled={manualOptions.length >= 6}
-                              className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="px-3 py-1 font-bold text-sm bg-green-100 border-2 border-black text-green-900 rounded-md hover:bg-green-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5"
                             >
                               + Thêm
                             </button>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {manualOptions.map((option, index) => (
                             <div key={option.id} className="space-y-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-bold text-gray-800 uppercase">
                                 Lựa chọn {option.label}
                               </label>
                               <input
@@ -701,7 +708,7 @@ export default function CreateTestPage() {
                                   };
                                   setManualOptions(updatedOptions);
                                 }}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5"
                                 placeholder={`Nhập lựa chọn ${option.label}...`}
                               />
                             </div>
@@ -712,9 +719,9 @@ export default function CreateTestPage() {
 
                     {/* True/False Options */}
                     {manualQuestionType === "TRUE_FALSE" && (
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 border-2 border-black rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
                             Đáp án Đúng
                           </label>
                           <input
@@ -726,12 +733,12 @@ export default function CreateTestPage() {
                                 true: e.target.value,
                               })
                             }
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5"
                             placeholder="Nhập nội dung cho Đúng..."
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
                             Đáp án Sai
                           </label>
                           <input
@@ -743,7 +750,7 @@ export default function CreateTestPage() {
                                 false: e.target.value,
                               })
                             }
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5"
                             placeholder="Nhập nội dung cho Sai..."
                           />
                         </div>
@@ -752,173 +759,176 @@ export default function CreateTestPage() {
 
                     {/* Essay Question */}
                     {manualQuestionType === "ESSAY" && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <div className="p-4 bg-gray-50 border-2 border-black rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                        <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
                           Gợi ý trả lời
                         </label>
                         <textarea
                           rows={4}
                           value={manualEssayHint}
                           onChange={(e) => setManualEssayHint(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 border-dashed"
                           placeholder="Nhập gợi ý trả lời hoặc hướng dẫn chấm điểm..."
                         />
                       </div>
                     )}
 
-                    {/* Multiple Choice Answer */}
-                    {manualQuestionType === "MULTIPLE_CHOICE" && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Đáp án đúng
-                        </label>
-                        <select
-                          value={manualCorrectAnswer}
-                          onChange={(e) =>
-                            setManualCorrectAnswer(e.target.value)
-                          }
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          {manualOptions.map((option) => (
-                            <option key={option.id} value={option.label}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
+                    {/* Answers Setup Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Multiple Choice Answer */}
+                      {manualQuestionType === "MULTIPLE_CHOICE" && (
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
+                            Đáp án đúng
+                          </label>
+                          <select
+                            value={manualCorrectAnswer}
+                            onChange={(e) =>
+                              setManualCorrectAnswer(e.target.value)
+                            }
+                            className="w-full px-4 py-3 bg-blue-50 border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 cursor-pointer"
+                          >
+                            {manualOptions.map((option) => (
+                              <option key={option.id} value={option.label}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
 
-                    {/* True/False Answer */}
-                    {manualQuestionType === "TRUE_FALSE" && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Đáp án đúng
-                        </label>
-                        <select
-                          value={manualTrueFalseCorrectAnswer}
-                          onChange={(e) =>
-                            setManualTrueFalseCorrectAnswer(
-                              e.target.value as "TRUE" | "FALSE",
-                            )
-                          }
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="TRUE">Đúng</option>
-                          <option value="FALSE">Sai</option>
-                        </select>
-                      </div>
-                    )}
+                      {/* True/False Answer */}
+                      {manualQuestionType === "TRUE_FALSE" && (
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
+                            Đáp án đúng
+                          </label>
+                          <select
+                            value={manualTrueFalseCorrectAnswer}
+                            onChange={(e) =>
+                              setManualTrueFalseCorrectAnswer(
+                                e.target.value as "TRUE" | "FALSE",
+                              )
+                            }
+                            className="w-full px-4 py-3 bg-blue-50 border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 cursor-pointer"
+                          >
+                            <option value="TRUE">Đúng</option>
+                            <option value="FALSE">Sai</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Explanation Field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Giải thích (không bắt buộc)
+                      <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
+                        Giải thích <span className="text-gray-500 font-normal normal-case">(không bắt buộc)</span>
                       </label>
                       <textarea
                         rows={3}
                         value={manualExplanation}
                         onChange={(e) => setManualExplanation(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 border-dashed"
                         placeholder="Nhập giải thích cho câu hỏi..."
                       />
                     </div>
 
-                    <button
-                      onClick={() => {
-                        // Validate required fields
-                        if (!manualQuestionText.trim()) {
-                          alert("Vui lòng nhập nội dung câu hỏi");
-                          return;
-                        }
+                      <button
+                        onClick={() => {
+                          // Validate required fields
+                          if (!manualQuestionText.trim()) {
+                            alert("Vui lòng nhập nội dung câu hỏi");
+                            return;
+                          }
 
-                        if (manualQuestionType === "MULTIPLE_CHOICE") {
-                          const hasEmptyOptions = manualOptions.some(
-                            (option) => !option.text.trim(),
-                          );
-                          if (hasEmptyOptions) {
-                            alert(
-                              "Vui lòng nhập đầy đủ nội dung cho tất cả các lựa chọn",
+                          if (manualQuestionType === "MULTIPLE_CHOICE") {
+                            const hasEmptyOptions = manualOptions.some(
+                              (option) => !option.text.trim(),
                             );
-                            return;
+                            if (hasEmptyOptions) {
+                              alert(
+                                "Vui lòng nhập đầy đủ nội dung cho tất cả các lựa chọn",
+                              );
+                              return;
+                            }
                           }
-                        }
 
-                        if (manualQuestionType === "TRUE_FALSE") {
-                          if (
-                            !manualTrueFalseContent.true.trim() ||
-                            !manualTrueFalseContent.false.trim()
-                          ) {
-                            alert("Vui lòng nhập nội dung cho cả Đúng và Sai");
-                            return;
+                          if (manualQuestionType === "TRUE_FALSE") {
+                            if (
+                              !manualTrueFalseContent.true.trim() ||
+                              !manualTrueFalseContent.false.trim()
+                            ) {
+                              alert("Vui lòng nhập nội dung cho cả Đúng và Sai");
+                              return;
+                            }
                           }
-                        }
 
-                        if (manualQuestionType === "ESSAY") {
-                          if (!manualEssayHint.trim()) {
-                            alert(
-                              "Vui lòng nhập gợi ý trả lời cho câu hỏi tự luận",
-                            );
-                            return;
+                          if (manualQuestionType === "ESSAY") {
+                            if (!manualEssayHint.trim()) {
+                              alert(
+                                "Vui lòng nhập gợi ý trả lời cho câu hỏi tự luận",
+                              );
+                              return;
+                            }
                           }
-                        }
 
-                        // Create question object
-                        const newQuestion: Question = {
-                          id: Date.now().toString(),
-                          createdAt: Date.now(),
-                          number: questions.length + 1,
-                          type: manualQuestionType,
-                          questionText: manualQuestionText,
-                          options:
-                            manualQuestionType === "MULTIPLE_CHOICE"
-                              ? manualOptions.map((option) => ({
-                                  ...option,
-                                  isCorrect:
-                                    option.label === manualCorrectAnswer,
-                                }))
-                              : manualQuestionType === "TRUE_FALSE"
-                                ? [
-                                    {
-                                      id: "1",
-                                      label: "A",
-                                      text: manualTrueFalseContent.true,
-                                      isCorrect:
-                                        manualTrueFalseCorrectAnswer === "TRUE",
-                                    },
-                                    {
-                                      id: "2",
-                                      label: "B",
-                                      text: manualTrueFalseContent.false,
-                                      isCorrect:
-                                        manualTrueFalseCorrectAnswer ===
-                                        "FALSE",
-                                    },
-                                  ]
-                                : [],
-                          difficulty: manualDifficulty,
-                          explanation: manualExplanation || undefined,
-                        };
+                          // Create question object
+                          const newQuestion: Question = {
+                            id: Date.now().toString(),
+                            createdAt: Date.now(),
+                            number: questions.length + 1,
+                            type: manualQuestionType,
+                            questionText: manualQuestionText,
+                            options:
+                              manualQuestionType === "MULTIPLE_CHOICE"
+                                ? manualOptions.map((option) => ({
+                                    ...option,
+                                    isCorrect:
+                                      option.label === manualCorrectAnswer,
+                                  }))
+                                : manualQuestionType === "TRUE_FALSE"
+                                  ? [
+                                      {
+                                        id: "1",
+                                        label: "A",
+                                        text: manualTrueFalseContent.true,
+                                        isCorrect:
+                                          manualTrueFalseCorrectAnswer === "TRUE",
+                                      },
+                                      {
+                                        id: "2",
+                                        label: "B",
+                                        text: manualTrueFalseContent.false,
+                                        isCorrect:
+                                          manualTrueFalseCorrectAnswer ===
+                                          "FALSE",
+                                      },
+                                    ]
+                                  : [],
+                            difficulty: manualDifficulty,
+                            explanation: manualExplanation || undefined,
+                          };
 
-                        handleAddQuestion(newQuestion);
+                          handleAddQuestion(newQuestion);
 
-                        // Reset form
-                        setManualQuestionText("");
-                        setManualOptions([
-                          { id: "1", label: "A", text: "", isCorrect: false },
-                          { id: "2", label: "B", text: "", isCorrect: false },
-                          { id: "3", label: "C", text: "", isCorrect: false },
-                          { id: "4", label: "D", text: "", isCorrect: false },
-                        ]);
-                        setManualCorrectAnswer("A");
-                        setManualTrueFalseContent({ true: "", false: "" });
-                        setManualEssayHint("");
-                        setManualExplanation("");
-                      }}
-                      className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                    >
-                      Thêm câu hỏi
-                    </button>
-                  </div>
+                          // Reset form
+                          setManualQuestionText("");
+                          setManualOptions([
+                            { id: "1", label: "A", text: "", isCorrect: false },
+                            { id: "2", label: "B", text: "", isCorrect: false },
+                            { id: "3", label: "C", text: "", isCorrect: false },
+                            { id: "4", label: "D", text: "", isCorrect: false },
+                          ]);
+                          setManualCorrectAnswer("A");
+                          setManualTrueFalseContent({ true: "", false: "" });
+                          setManualEssayHint("");
+                          setManualExplanation("");
+                        }}
+                        className="w-full px-4 py-3 bg-green-400 text-green-950 font-black border-2 border-black rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:bg-green-300 transition-all uppercase tracking-wide flex justify-center mt-4"
+                      >
+                        Thêm câu hỏi
+                      </button>
+                    </div>
                 </div>
               )}
 
@@ -1048,34 +1058,38 @@ export default function CreateTestPage() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </NotebookCardContent>
+        </NotebookCard>
+      </div>
+    </div>
 
         {/* Row 2: Question Points Grid (Left) and Preview (Right) */}
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Question Points Grid */}
-          <div className="bg-white rounded-2xl p-8 shadow-md lg:col-span-1">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-purple-600" />
+          <div className="lg:col-span-1">
+            <NotebookCard className="bg-purple-50 h-full">
+              <NotebookCardContent className="pt-6">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-dashed border-gray-400">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-purple-200 border-2 border-black rounded-lg flex items-center justify-center rotate-3 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                      <FileText className="w-6 h-6 text-purple-800" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-black text-gray-900 font-handwritten tracking-tight">
+                        Điểm số câu hỏi
+                      </h2>
+                      <p className="text-gray-700 font-bold text-sm">
+                        Thiết lập điểm cho từng câu hỏi
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-3xl font-black text-blue-700 font-handwritten drop-shadow-sm">
+                      {questions.length}
+                    </span>
+                    <p className="text-sm font-bold text-gray-600 uppercase">câu hỏi</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    Điểm số câu hỏi
-                  </h2>
-                  <p className="text-gray-600">
-                    Thiết lập điểm cho từng câu hỏi
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="text-2xl font-bold text-blue-600">
-                  {questions.length}
-                </span>
-                <p className="text-sm text-gray-600">câu hỏi</p>
-              </div>
-            </div>
 
             {questions.length > 0 ? (
               <QuestionPointsGrid
@@ -1097,36 +1111,40 @@ export default function CreateTestPage() {
                 points={points}
               />
             ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-500 mb-4">Chưa có câu hỏi nào</div>
-                <p className="text-sm text-gray-400">
+              <div className="text-center py-12 bg-white border-2 border-dashed border-gray-400 rounded-lg">
+                <div className="text-gray-600 font-bold mb-2">Chưa có câu hỏi nào</div>
+                <p className="text-sm text-gray-500 font-bold">
                   Hãy thêm câu hỏi để thiết lập điểm số
                 </p>
               </div>
             )}
-          </div>
+            </NotebookCardContent>
+          </NotebookCard>
+        </div>
 
-          {/* Paginated Question Preview */}
-          <div className="bg-white rounded-2xl p-8 shadow-md lg:col-span-2">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Eye className="w-6 h-6 text-orange-600" />
+        {/* Paginated Question Preview */}
+        <div className="lg:col-span-2">
+          <NotebookCard className="bg-[#fffdf8] h-full">
+            <NotebookCardContent className="pt-6">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-dashed border-gray-300">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-orange-100 border-2 border-black rounded-full flex items-center justify-center -rotate-6 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                    <Eye className="w-6 h-6 text-orange-700" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-black text-gray-900 font-handwritten tracking-tight">
+                      Xem trước câu hỏi
+                    </h2>
+                    <p className="text-gray-700 font-bold text-sm">Xem chi tiết từng câu hỏi</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    Xem trước câu hỏi
-                  </h2>
-                  <p className="text-gray-600">Xem chi tiết từng câu hỏi</p>
+                <div className="text-right">
+                  <span className="text-3xl font-black text-blue-700 font-handwritten drop-shadow-sm">
+                    {questions.length > 0 ? currentQuestionIndex + 1 : 0}
+                  </span>
+                  <p className="text-sm font-bold text-gray-600 uppercase">câu hỏi hiện tại</p>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="text-2xl font-bold text-blue-600">
-                  {questions.length > 0 ? currentQuestionIndex + 1 : 0}
-                </span>
-                <p className="text-sm text-gray-600">câu hỏi hiện tại</p>
-              </div>
-            </div>
 
             {questions.length > 0 ? (
               <PaginatedQuestionPreview
@@ -1137,35 +1155,37 @@ export default function CreateTestPage() {
                 points={points}
               />
             ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-500 mb-4">Chưa có câu hỏi nào</div>
-                <p className="text-sm text-gray-400">
+              <div className="text-center py-12 bg-white border-2 border-dashed border-gray-400 rounded-lg">
+                <div className="text-gray-600 font-bold mb-2">Chưa có câu hỏi nào</div>
+                <p className="text-sm text-gray-500 font-bold">
                   Hãy thêm câu hỏi để xem trước
                 </p>
               </div>
             )}
-          </div>
+            </NotebookCardContent>
+          </NotebookCard>
         </div>
       </div>
+    </div>
 
-      {/* Save Button */}
-      <div className="mt-8 flex justify-end gap-4">
-        <button
+  {/* Save Button */}
+      <div className="mt-8 flex justify-end gap-4 border-t-4 border-dashed border-gray-300 pt-6">
+        <NotebookButton
           onClick={handleSaveDraft}
           disabled={isSaving}
-          className="px-8 py-4 bg-gray-500 text-white rounded-full font-semibold hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="bg-white text-gray-700 border-gray-400 py-3 px-6 text-base font-bold flex items-center justify-center gap-2"
         >
           <Save className="w-5 h-5" />
           {isSaving ? "Đang lưu..." : "Lưu nháp"}
-        </button>
-        <button
+        </NotebookButton>
+        <NotebookButton
           onClick={handleSaveTest}
           disabled={isSaving}
-          className="px-8 py-4 bg-blue-500 text-white rounded-full font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="bg-blue-100 text-blue-900 border-blue-900 py-3 px-6 text-base font-bold flex items-center justify-center gap-2"
         >
           <Save className="w-5 h-5" />
           {isSaving ? "Đang lưu..." : "Lưu bài kiểm tra"}
-        </button>
+        </NotebookButton>
       </div>
     </div>
   );
