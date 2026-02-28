@@ -54,7 +54,10 @@ interface AdminSidebarProps {
   onClose?: () => void;
 }
 
-export default function AdminSidebar({ isOpen = true, onClose }: AdminSidebarProps) {
+export default function AdminSidebar({
+  isOpen = true,
+  onClose,
+}: AdminSidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
   const router = useRouter();
@@ -75,19 +78,19 @@ export default function AdminSidebar({ isOpen = true, onClose }: AdminSidebarPro
     <>
       {/* Mobile Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar */}
-      <div 
+      <div
         className={`
           fixed lg:static inset-y-0 left-0 z-50
           w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col
           transition-transform duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
         {/* Logo & Title */}
@@ -96,13 +99,15 @@ export default function AdminSidebar({ isOpen = true, onClose }: AdminSidebarPro
             <div className="flex items-center gap-2">
               <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg flex items-center justify-center flex-shrink-0">
                 <img
-                  src="/logo.svg"
+                  src="/school-logo.svg"
                   alt="Age of Study Logo"
                   className="w-full h-full"
                 />
               </div>
               <div className="min-w-0">
-                <h1 className="font-bold text-gray-900 text-sm sm:text-base truncate">Age of Study</h1>
+                <h1 className="font-bold text-gray-900 text-sm sm:text-base truncate">
+                  Age of Study
+                </h1>
                 <p className="text-xs text-gray-500">Quản trị viên</p>
               </div>
             </div>
@@ -117,19 +122,19 @@ export default function AdminSidebar({ isOpen = true, onClose }: AdminSidebarPro
           </div>
         </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4">
-        <ul className="space-y-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
+        {/* Navigation */}
+        <nav className="flex-1 p-4">
+          <ul className="space-y-2">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
 
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  onClick={handleLinkClick}
-                  className={`
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={handleLinkClick}
+                    className={`
                     flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm
                     ${
                       isActive
@@ -137,15 +142,15 @@ export default function AdminSidebar({ isOpen = true, onClose }: AdminSidebarPro
                         : "text-gray-700 hover:bg-gray-50 border-2 border-transparent"
                     }
                   `}
-                >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
-                  <span className="truncate">{item.name}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+                  >
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    <span className="truncate">{item.name}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
 
         {/* User Info & Logout */}
         <div className="p-4 border-t border-gray-200">
