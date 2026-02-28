@@ -47,7 +47,10 @@ export interface Profile {
   
   // Profile completion tracking
   profile_completed_reward_claimed: boolean
-  
+
+  // Password management
+  must_change_password: boolean
+
   created_at: string
   updated_at: string
 }
