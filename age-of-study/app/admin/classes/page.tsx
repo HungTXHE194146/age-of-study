@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, memo } from "react";
 import { useRouter } from "next/navigation";
 import {
   BookOpen,
@@ -10,6 +10,7 @@ import {
   Eye,
   Archive,
   AlertCircle,
+  Pencil,
 } from "lucide-react";
 import {
   getAllClasses,
@@ -17,6 +18,7 @@ import {
   createClass,
   archiveClass,
   assignTeacherToClass,
+  updateClass,
 } from "@/lib/classService";
 import type {
   ClassWithCount,
@@ -28,6 +30,7 @@ import { Subject } from "@/types/teacher";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import CreateClassModal from "@/components/admin/CreateClassModal";
 import AssignTeacherModal from "@/components/admin/AssignTeacherModal";
+import EditClassModal from "@/components/admin/EditClassModal";
 
 interface Profile {
   id: string;
@@ -36,6 +39,96 @@ interface Profile {
   role: string;
 }
 
+// ============================================================================
+// Class Card Component (memoized to prevent re-render on modal open/close)
+// ============================================================================
+interface ClassCardProps {
+  cls: ClassWithCount;
+  onViewDetail: (id: number) => void;
+  onEdit: (cls: ClassWithCount) => void;
+  onArchive: (id: number, name: string) => void;
+}
+
+const ClassCard = memo(function ClassCard({
+  cls,
+  onViewDetail,
+  onEdit,
+  onArchive,
+}: ClassCardProps) {
+  return (
+    <div className="bg-white rounded-xl border-2 border-gray-100 p-4 sm:p-6 hover:border-teal-200 transition-colors">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Class Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 mb-2">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+              {cls.name}
+            </h3>
+            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
+              Khối {cls.grade}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-gray-400" />
+              <span>Mã lớp: </span>
+              <code className="px-2 py-0.5 bg-gray-100 rounded font-mono text-xs font-semibold">
+                {cls.class_code}
+              </code>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-gray-400" />
+              <span>{cls.student_count} học sinh</span>
+            </div>
+            <div className="col-span-1 sm:col-span-2 flex items-center gap-2">
+              <span className="text-gray-500">GVCN:</span>
+              <span className="font-medium text-gray-900">
+                {cls.homeroom_teacher_name || "Chưa phân công"}
+              </span>
+            </div>
+            <div className="col-span-1 sm:col-span-2 flex items-center gap-2 text-xs">
+              <span className="text-gray-500">Năm học:</span>
+              <span className="text-gray-700">{cls.school_year}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => onViewDetail(cls.id)}
+            className="flex items-center gap-2 px-3 py-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors text-sm font-medium"
+            title="Xem chi tiết"
+          >
+            <Eye className="w-4 h-4" />
+            <span className="hidden sm:inline">Chi tiết</span>
+          </button>
+          <button
+            onClick={() => onEdit(cls)}
+            className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-sm font-medium"
+            title="Chỉnh sửa lớp"
+          >
+            <Pencil className="w-4 h-4" />
+            <span className="hidden sm:inline">Sửa</span>
+          </button>
+          <button
+            onClick={() => onArchive(cls.id, cls.name)}
+            className="flex items-center gap-2 px-3 py-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors text-sm font-medium"
+            title="Lưu trữ lớp"
+          >
+            <Archive className="w-4 h-4" />
+            <span className="hidden sm:inline">Lưu trữ</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ============================================================================
+// Main Page Component
+// ============================================================================
 export default function ClassesManagementPage() {
   const router = useRouter();
   const [classes, setClasses] = useState<ClassWithCount[]>([]);
@@ -51,6 +144,10 @@ export default function ClassesManagementPage() {
   const [selectedClass, setSelectedClass] = useState<ClassDetail | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+
+  // Edit modal states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingClass, setEditingClass] = useState<ClassWithCount | null>(null);
 
   useEffect(() => {
     loadData();
@@ -137,7 +234,7 @@ export default function ClassesManagementPage() {
     return true;
   };
 
-  const handleViewDetail = async (classId: number) => {
+  const handleViewDetail = useCallback(async (classId: number) => {
     const result = await getClassDetail(classId);
     if (result.error) {
       alert(`Lỗi tải thông tin lớp: ${result.error}`);
@@ -149,9 +246,29 @@ export default function ClassesManagementPage() {
     }
     setSelectedClass(result.data);
     setShowDetailModal(true);
+  }, []);
+
+  const handleEditClass = useCallback((cls: ClassWithCount) => {
+    setEditingClass(cls);
+    setShowEditModal(true);
+  }, []);
+
+  const handleEditSubmit = async (
+    classId: number,
+    updates: { name: string; grade: number; school_year: string }
+  ) => {
+    const result = await updateClass(classId, updates);
+    if (result.error) {
+      alert(`Lỗi cập nhật lớp: ${result.error}`);
+      return false;
+    }
+    setShowEditModal(false);
+    setEditingClass(null);
+    await loadData();
+    return true;
   };
 
-  const handleArchiveClass = async (classId: number, className: string) => {
+  const handleArchiveClass = useCallback(async (classId: number, className: string) => {
     if (
       !confirm(
         `Bạn có chắc muốn lưu trữ lớp "${className}"? Lớp này sẽ không còn hiển thị trong danh sách lớp đang hoạt động.`
@@ -167,7 +284,8 @@ export default function ClassesManagementPage() {
     }
 
     await loadData();
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAssignTeacher = async (input: AssignTeacherInput) => {
     const result = await assignTeacherToClass(input);
@@ -311,70 +429,13 @@ export default function ClassesManagementPage() {
       ) : (
         <div className="grid gap-4">
           {filteredClasses.map((cls) => (
-            <div
+            <ClassCard
               key={cls.id}
-              className="bg-white rounded-xl border-2 border-gray-100 p-4 sm:p-6 hover:border-teal-200 transition-colors"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                {/* Class Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
-                      {cls.name}
-                    </h3>
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
-                      Khối {cls.grade}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-gray-400" />
-                      <span>Mã lớp: </span>
-                      <code className="px-2 py-0.5 bg-gray-100 rounded font-mono text-xs font-semibold">
-                        {cls.class_code}
-                      </code>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-gray-400" />
-                      <span>
-                        {cls.student_count} học sinh
-                      </span>
-                    </div>
-                    <div className="col-span-1 sm:col-span-2 flex items-center gap-2">
-                      <span className="text-gray-500">GVCN:</span>
-                      <span className="font-medium text-gray-900">
-                        {cls.homeroom_teacher_name || "Chưa phân công"}
-                      </span>
-                    </div>
-                    <div className="col-span-1 sm:col-span-2 flex items-center gap-2 text-xs">
-                      <span className="text-gray-500">Năm học:</span>
-                      <span className="text-gray-700">{cls.school_year}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleViewDetail(cls.id)}
-                    className="flex items-center gap-2 px-3 py-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors text-sm font-medium"
-                    title="Xem chi tiết"
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span className="hidden sm:inline">Chi tiết</span>
-                  </button>
-                  <button
-                    onClick={() => handleArchiveClass(cls.id, cls.name)}
-                    className="flex items-center gap-2 px-3 py-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors text-sm font-medium"
-                    title="Lưu trữ lớp"
-                  >
-                    <Archive className="w-4 h-4" />
-                    <span className="hidden sm:inline">Lưu trữ</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+              cls={cls}
+              onViewDetail={handleViewDetail}
+              onEdit={handleEditClass}
+              onArchive={handleArchiveClass}
+            />
           ))}
         </div>
       )}
@@ -405,7 +466,6 @@ export default function ClassesManagementPage() {
             setShowDetailModal(false);
             setSelectedClass(null);
           }}
-          onRefresh={loadData}
           onAssignTeacher={() => setShowAssignModal(true)}
         />
       )}
@@ -421,6 +481,21 @@ export default function ClassesManagementPage() {
           onSuccess={handleAssignTeacher}
         />
       )}
+
+      {/* Edit Class Modal */}
+      {showEditModal && editingClass && (
+        <EditClassModal
+          classId={editingClass.id}
+          initialName={editingClass.name}
+          initialGrade={editingClass.grade}
+          initialSchoolYear={editingClass.school_year}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingClass(null);
+          }}
+          onSuccess={handleEditSubmit}
+        />
+      )}
     </div>
   );
 }
@@ -434,16 +509,12 @@ interface ClassDetailModalProps {
   teachers: Profile[];
   subjects: Subject[];
   onClose: () => void;
-  onRefresh?: () => void;
   onAssignTeacher: () => void;
 }
 
 function ClassDetailModal({
   classDetail,
-  teachers,
-  subjects,
   onClose,
-  onRefresh,
   onAssignTeacher,
 }: ClassDetailModalProps) {
   return (
@@ -566,10 +637,7 @@ function ClassDetailModal({
             + Phân công GV
           </button>
           <button
-            onClick={() => {
-              onRefresh?.();
-              onClose();
-            }}
+            onClick={onClose}
             className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium"
           >
             Đóng
