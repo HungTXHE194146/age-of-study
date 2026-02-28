@@ -252,7 +252,7 @@ export default function TeacherClassesPage() {
               <p className="text-lg font-bold text-gray-600">Lớp học</p>
             </NotebookCardContent>
           </NotebookCard>
-          
+
           <NotebookCard className="bg-blue-50">
             <NotebookCardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
@@ -296,7 +296,7 @@ export default function TeacherClassesPage() {
                   className="w-full pl-12 pr-4 py-3 border-2 border-black rounded-md focus:ring-0 focus:border-blue-600 text-lg font-bold bg-white/80"
                 />
               </div>
-              
+
               <select
                 value={filterType}
                 onChange={(e) => {
@@ -326,27 +326,27 @@ export default function TeacherClassesPage() {
                 <option value={5}>Khối 5</option>
               </select>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 border-t-2 border-dashed border-gray-400 pt-6 bg-transparent pb-0">
-               <div className="text-lg font-bold text-gray-700 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem]">
-                 Tìm thấy {filteredAndSortedClasses.length} lớp.
-               </div>
-               <div className="flex items-center gap-2 mt-4 sm:mt-0">
-                 <span className="font-bold">Sắp xếp:</span>
-                 <select
-                   value={sortBy}
-                   onChange={(e) => setSortBy(e.target.value as "name" | "grade" | "students" | "date")}
-                   className="px-3 py-1 border-2 border-black rounded-md focus:ring-0 text-base font-bold bg-white"
-                 >
-                   <option value="name">Tên</option>
-                   <option value="grade">Khối</option>
-                   <option value="students">Sĩ số</option>
-                   <option value="date">Ngày</option>
-                 </select>
-                 <button onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")} className="border-2 border-black bg-white p-1 rounded-md hover:bg-gray-200">
-                   {sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />}
-                 </button>
-               </div>
+              <div className="text-lg font-bold text-gray-700 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem]">
+                Tìm thấy {filteredAndSortedClasses.length} lớp.
+              </div>
+              <div className="flex items-center gap-2 mt-4 sm:mt-0">
+                <span className="font-bold">Sắp xếp:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as "name" | "grade" | "students" | "date")}
+                  className="px-3 py-1 border-2 border-black rounded-md focus:ring-0 text-base font-bold bg-white"
+                >
+                  <option value="name">Tên</option>
+                  <option value="grade">Khối</option>
+                  <option value="students">Sĩ số</option>
+                  <option value="date">Ngày</option>
+                </select>
+                <button onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")} className="border-2 border-black bg-white p-1 rounded-md hover:bg-gray-200">
+                  {sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />}
+                </button>
+              </div>
             </div>
           </NotebookCardContent>
         </NotebookCard>
@@ -354,9 +354,9 @@ export default function TeacherClassesPage() {
         {/* Classes Grid instead of Table */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 mb-8">
           {filteredAndSortedClasses.length === 0 ? (
-             <div className="col-span-full py-12 text-center text-gray-500 font-bold border-4 border-dashed border-gray-400 bg-white/50 rounded-2xl text-xl">
-                Không tìm thấy lớp học nào.
-             </div>
+            <div className="col-span-full py-12 text-center text-gray-500 font-bold border-4 border-dashed border-gray-400 bg-white/50 rounded-2xl text-xl">
+              Không tìm thấy lớp học nào.
+            </div>
           ) : (
             currentClasses.map((classData) => (
               <NotebookCard key={classData.id} className="group hover:scale-[1.02] transition-transform">
@@ -374,48 +374,48 @@ export default function TeacherClassesPage() {
                   </div>
                 </NotebookCardHeader>
                 <NotebookCardContent className="py-6 space-y-4">
-                   <div className="grid grid-cols-2 gap-4">
-                     <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
-                       <span className="block text-sm text-gray-500 font-bold uppercase">Sĩ số</span>
-                       <span className="text-2xl font-black text-gray-800 flex items-center gap-2">
-                         <Users className="w-5 h-5" /> {classData.student_count}
-                       </span>
-                     </div>
-                     <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
-                       <span className="block text-sm text-gray-500 font-bold uppercase">Khối</span>
-                       <span className="text-2xl font-black text-gray-800">
-                         {classData.grade}
-                       </span>
-                     </div>
-                     <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
-                       <span className="block text-sm text-gray-500 font-bold uppercase">Mã lớp</span>
-                       <span className="text-xl font-bold text-gray-800 tracking-wider">
-                         {classData.class_code}
-                       </span>
-                     </div>
-                     <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
-                       <span className="block text-sm text-gray-500 font-bold uppercase">Môn học</span>
-                       <span className="text-xl font-bold text-gray-800 truncate block" title={classData.subject?.name}>
-                         {classData.subject?.name || "N/A"}
-                       </span>
-                     </div>
-                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
+                      <span className="block text-sm text-gray-500 font-bold uppercase">Sĩ số</span>
+                      <span className="text-2xl font-black text-gray-800 flex items-center gap-2">
+                        <Users className="w-5 h-5" /> {classData.student_count}
+                      </span>
+                    </div>
+                    <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
+                      <span className="block text-sm text-gray-500 font-bold uppercase">Khối</span>
+                      <span className="text-2xl font-black text-gray-800">
+                        {classData.grade}
+                      </span>
+                    </div>
+                    <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
+                      <span className="block text-sm text-gray-500 font-bold uppercase">Mã lớp</span>
+                      <span className="text-xl font-bold text-gray-800 tracking-wider">
+                        {classData.class_code}
+                      </span>
+                    </div>
+                    <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
+                      <span className="block text-sm text-gray-500 font-bold uppercase">Môn học</span>
+                      <span className="text-xl font-bold text-gray-800 truncate block" title={classData.subject?.name}>
+                        {classData.subject?.name || "N/A"}
+                      </span>
+                    </div>
+                  </div>
                 </NotebookCardContent>
                 <div className="p-6 pt-0 flex gap-3 flex-col sm:flex-row border-t-2 border-dashed border-gray-300 mt-4 h-auto items-end">
-                   <Link href={`/teacher/classes/${classData.id}`} className="flex-1 w-full mt-4">
-                     <NotebookButton className="w-full bg-blue-100 text-blue-900 border-blue-900 hover:bg-blue-200 text-lg">
-                       <Eye className="w-5 h-5 mr-2" />
-                       Xem lớp
-                     </NotebookButton>
-                   </Link>
-                   {classData.type === "homeroom" && (
-                     <Link href={`/teacher/classes/${classData.id}/students`} className="flex-1 w-full mt-4 sm:mt-4">
-                       <NotebookButton className="w-full bg-green-100 text-green-900 border-green-900 hover:bg-green-200 text-lg">
-                         <Users2 className="w-5 h-5 mr-2" />
-                         Học sinh
-                       </NotebookButton>
-                     </Link>
-                   )}
+                  <Link href={`/teacher/classes/${classData.id}`} className="flex-1 w-full mt-4">
+                    <NotebookButton className="w-full bg-blue-100 text-blue-900 border-blue-900 hover:bg-blue-200 text-lg">
+                      <Eye className="w-5 h-5 mr-2" />
+                      Xem lớp
+                    </NotebookButton>
+                  </Link>
+                  {classData.type === "homeroom" && (
+                    <Link href={`/teacher/classes/${classData.id}`} className="flex-1 w-full mt-4 sm:mt-4">
+                      <NotebookButton className="w-full bg-green-100 text-green-900 border-green-900 hover:bg-green-200 text-lg">
+                        <Users2 className="w-5 h-5 mr-2" />
+                        Học sinh
+                      </NotebookButton>
+                    </Link>
+                  )}
                 </div>
               </NotebookCard>
             ))
@@ -432,15 +432,15 @@ export default function TeacherClassesPage() {
             >
               <ChevronLeft className="w-6 h-6" />
             </NotebookButton>
-            
+
             <div className="text-xl font-black text-gray-800 bg-white border-2 border-black px-6 py-2 rounded-md shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               {currentPage} / {totalPages}
             </div>
-            
+
             <NotebookButton
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-               className="px-4 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-gray-400"
+              className="px-4 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-gray-400"
             >
               <ChevronRight className="w-6 h-6" />
             </NotebookButton>

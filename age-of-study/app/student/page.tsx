@@ -284,38 +284,62 @@ export default function LearnPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-12"
       >
-        <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl p-1 shadow-lg">
-          <div className="bg-white/95 backdrop-blur-xl rounded-[22px] p-6 lg:p-8">
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-              <div className="flex items-start gap-5">
-                <div className="bg-gradient-to-br from-yellow-400 to-orange-500 w-16 h-16 rounded-2xl flex items-center justify-center shadow-inner flex-shrink-0">
-                  <Target className="w-8 h-8 text-white" />
-                </div>
-                <div>
-                  <div className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full mb-2 uppercase tracking-wide">
-                    Tiêu điểm hôm nay
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Sẵn sàng học tiếp Tiếng Việt chưa?
-                  </h2>
-                  <p className="text-gray-600">
-                    Bài học hôm qua đang đợi bạn hoàn thành. Cùng chinh phục
-                    nhận thưởng nào!
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => router.push("/student/skill-tree")}
-                className="w-full lg:w-auto px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-white font-bold text-lg rounded-2xl shadow-[0_4px_14px_0_rgba(251,146,60,0.39)] transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
-              >
-                <Play className="w-5 h-5 fill-current" />
-                Học ngay
-              </button>
-            </div>
-          </div>
+        <div className="flex items-center gap-3 mb-4">
+          <Users className="w-6 h-6 text-purple-600" />
+          <h2 className="text-2xl font-bold text-gray-900">
+            Lớp Học Của Bạn 🎓
+          </h2>
         </div>
       </motion.div>
+      {currentClass?.class && (
+        // Already in a class - clickable card with beautiful design
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          onClick={() => {
+            if (currentClass?.class?.class_code) {
+              router.push(`/student/classes/${currentClass.class.class_code}`);
+            }
+          }}
+          className={`relative bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-2xl p-8 hover:shadow-2xl transition-all group overflow-hidden ${currentClass?.class?.class_code
+            ? "cursor-pointer"
+            : "cursor-not-allowed opacity-75"
+            }`}
+        >
+          {/* Background decoration */}
+          <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-16 -mb-16"></div>
+
+          {/* Content */}
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4 flex-1">
+              <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl">
+                <CheckCircle className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <div className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full mb-2 uppercase tracking-wide">
+                  Tiêu điểm hôm nay
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Sẵn sàng học tiếp Tiếng Việt chưa?
+                </h2>
+                <p className="text-gray-600">
+                  Bài học hôm qua đang đợi bạn hoàn thành. Cùng chinh phục
+                  nhận thưởng nào!
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => router.push("/student/skill-tree")}
+              className="w-full lg:w-auto px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-white font-bold text-lg rounded-2xl shadow-[0_4px_14px_0_rgba(251,146,60,0.39)] transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+            >
+              <Play className="w-5 h-5 fill-current" />
+              Học ngay
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* 3. Lớp học của bạn (Assigned by Teacher) */}
       {!currentClass?.class ? (

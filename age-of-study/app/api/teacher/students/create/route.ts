@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     // 1. Create Auth User using Admin API
     // We use a dummy email because Supabase Auth requires an email.
     // Students will login via username/password custom logic.
-    const dummyEmail = `${username.toLowerCase().trim()}@aos.local`;
+    const dummyEmail = `${username.toLowerCase().trim()}@ageofstudy.local`;
     const defaultPassword = "12345678";
 
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({

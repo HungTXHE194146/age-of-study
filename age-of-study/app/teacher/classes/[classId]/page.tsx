@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getClassDetail } from "@/lib/classService";
 import { getTeacherClasses } from "@/lib/classService";
+import { TestService } from "@/lib/testService";
+import { Test } from "@/types/test";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -54,6 +56,20 @@ export default function ClassDetailPage() {
         username: string | null;
         total_xp: number;
         grade: number | null;
+        latest_activity?: {
+          id: string;
+          activity_type: string;
+          description: string;
+          created_at: string;
+        } | null;
+        latest_progress?: {
+          node_id: string;
+          status: string;
+          score: string;
+          last_accessed_at: string;
+          completed_at: string;
+          nodes: { title: string };
+        } | null;
       };
     }>;
   } | null>(null);
@@ -63,6 +79,7 @@ export default function ClassDetailPage() {
     homeroom_classes: Array<{ id: number }>;
     subject_classes: Array<{ id: number }>;
   } | null>(null);
+  const [classTests, setClassTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,6 +119,11 @@ export default function ClassDetailPage() {
           setError(teacherResult.error);
           return;
         }
+
+        // Fetch class tests
+        const testService = new TestService();
+        const tests = await testService.getTestsByClass(Number(classId));
+        setClassTests(tests);
 
         setClassData(classResult.data);
         setTeacherData(teacherResult.data);
@@ -424,6 +446,71 @@ export default function ClassDetailPage() {
           </NotebookCard>
         </div>
 
+        {/* Integrated Class Tests List */}
+        <div className="mt-12 mb-6 flex justify-between items-end border-b-2 border-dashed border-gray-400 pb-4">
+          <div>
+            <h2 className="text-3xl font-black font-handwritten text-gray-900 flex items-center gap-2">
+              <BookOpen className="w-8 h-8 text-indigo-700" />
+              Bài kiểm tra của lớp ({classTests.length})
+            </h2>
+            <p className="text-gray-600 font-bold mt-1">Quản lý các bài kiểm tra được giao cho lớp này</p>
+          </div>
+          {isHomeroomTeacher && (
+            <div className="hidden sm:flex gap-3">
+              <Link href={`/teacher/tests/create?classId=${classId}`}>
+                <NotebookButton className="bg-indigo-100 text-indigo-900 border-indigo-900 py-2">
+                  <Plus className="w-5 h-5 mr-2" />
+                  Tạo bài mới
+                </NotebookButton>
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Tests Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          {classTests.length === 0 ? (
+            <div className="col-span-full py-12 text-center text-gray-500 font-bold border-4 border-dashed border-gray-400 bg-white/50 rounded-2xl text-xl">
+              Chưa có bài kiểm tra nào được giao cho lớp này.
+            </div>
+          ) : (
+            classTests.map((test) => (
+              <NotebookCard key={test.id} className="group hover:-translate-y-1 transition-transform bg-white">
+                <NotebookCardHeader className="bg-indigo-50 border-indigo-200">
+                  <div className="flex justify-between items-start">
+                    <NotebookCardTitle className="text-xl text-indigo-900 truncate" title={test.title}>{test.title}</NotebookCardTitle>
+                    {test.is_published ? (
+                      <NotebookBadge variant="success">Đã xuất bản</NotebookBadge>
+                    ) : (
+                      <NotebookBadge variant="warning">Bản nháp</NotebookBadge>
+                    )}
+                  </div>
+                </NotebookCardHeader>
+                <NotebookCardContent className="pt-4 py-4">
+                  <p className="text-gray-600 text-sm line-clamp-2 min-h-[40px] font-medium">{test.description || "Không có mô tả"}</p>
+                  <div className="mt-4 flex flex-col gap-2">
+                    <div className="flex justify-between items-center text-sm font-bold text-gray-600">
+                      <span>Loại:</span>
+                      <span className="uppercase text-indigo-700">{test.type === 'practice' ? 'Luyện tập' : 'Thi thật'}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm font-bold text-gray-600">
+                      <span>Thời gian:</span>
+                      <span>{test.settings?.time_limit ? `${test.settings.time_limit} phút` : "Không giới hạn"}</span>
+                    </div>
+                  </div>
+                </NotebookCardContent>
+                <div className="p-4 pt-0 flex gap-2 border-t-2 border-dashed border-gray-200 mt-2">
+                  <Link href={`/teacher/tests/${test.id}`} className="flex-1">
+                    <NotebookButton className="w-full text-sm py-2 bg-indigo-100 border-indigo-800 text-indigo-900 hover:bg-indigo-200">
+                      <Eye className="w-4 h-4 mr-1" /> Chi tiết
+                    </NotebookButton>
+                  </Link>
+                </div>
+              </NotebookCard>
+            ))
+          )}
+        </div>
+
         {/* Integrated Student List */}
         <div className="mt-12 mb-6 flex justify-between items-end border-b-2 border-dashed border-gray-400 pb-4">
           <div>
@@ -492,27 +579,27 @@ export default function ClassDetailPage() {
                 <option value={5}>Khối 5</option>
               </select>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 border-t-2 border-dashed border-gray-400 pt-6">
-               <div className="text-lg font-bold text-gray-700 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem]">
-                 {filteredAndSortedStudents.length} học sinh trong danh sách.
-               </div>
-               <div className="flex items-center gap-2 mt-4 sm:mt-0">
-                 <span className="font-bold">Sắp xếp:</span>
-                 <select
-                   value={sortBy}
-                   onChange={(e) => setSortBy(e.target.value as "name" | "xp" | "grade" | "joined")}
-                   className="px-3 py-1 border-2 border-black rounded-md focus:ring-0 text-base font-bold bg-white"
-                 >
-                   <option value="name">Tên</option>
-                   <option value="xp">XP</option>
-                   <option value="grade">Khối</option>
-                   <option value="joined">Ngày</option>
-                 </select>
-                 <button onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")} className="border-2 border-black bg-white p-1 rounded-md hover:bg-gray-200">
-                   {sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />}
-                 </button>
-               </div>
+              <div className="text-lg font-bold text-gray-700 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem]">
+                {filteredAndSortedStudents.length} học sinh trong danh sách.
+              </div>
+              <div className="flex items-center gap-2 mt-4 sm:mt-0">
+                <span className="font-bold">Sắp xếp:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as "name" | "xp" | "grade" | "joined")}
+                  className="px-3 py-1 border-2 border-black rounded-md focus:ring-0 text-base font-bold bg-white"
+                >
+                  <option value="name">Tên</option>
+                  <option value="xp">XP</option>
+                  <option value="grade">Khối</option>
+                  <option value="joined">Ngày</option>
+                </select>
+                <button onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")} className="border-2 border-black bg-white p-1 rounded-md hover:bg-gray-200">
+                  {sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />}
+                </button>
+              </div>
             </div>
           </NotebookCardContent>
         </NotebookCard>
@@ -520,30 +607,30 @@ export default function ClassDetailPage() {
         {/* Students Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {filteredAndSortedStudents.length === 0 ? (
-             <div className="col-span-full py-12 text-center text-gray-500 font-bold border-4 border-dashed border-gray-400 bg-white/50 rounded-2xl text-xl">
-                Không có học sinh nào.
-             </div>
+            <div className="col-span-full py-12 text-center text-gray-500 font-bold border-4 border-dashed border-gray-400 bg-white/50 rounded-2xl text-xl">
+              Không có học sinh nào.
+            </div>
           ) : (
             currentStudents.map((student) => (
               <NotebookCard key={student.student_id} className="group hover:-translate-y-1 transition-transform bg-white">
                 <NotebookCardContent className="pt-6 relative">
                   {/* Decorative Pin/Tape */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-4 bg-red-200/50 -translate-y-2 rotate-[-2deg] border border-red-300"></div>
-                  
+
                   <div className="flex items-center gap-4 mb-4">
-                     <div className="w-16 h-16 bg-blue-100 border-2 border-black rounded-full flex items-center justify-center text-2xl font-black text-blue-900 shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex-shrink-0">
-                       {student.profile.full_name?.charAt(0) || student.profile.username?.charAt(0) || "?"}
-                     </div>
-                     <div className="min-w-0">
-                       <h3 className="text-xl font-bold text-gray-900 truncate" title={student.profile.full_name || student.profile.username || "Học sinh"}>
-                         {student.profile.full_name || student.profile.username || "Học sinh"}
-                       </h3>
-                       <p className="text-sm font-bold text-gray-500 uppercase">
-                         {student.profile.full_name ? student.profile.username : "N/A"}
-                       </p>
-                     </div>
+                    <div className="w-16 h-16 bg-blue-100 border-2 border-black rounded-full flex items-center justify-center text-2xl font-black text-blue-900 shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex-shrink-0">
+                      {student.profile.full_name?.charAt(0) || student.profile.username?.charAt(0) || "?"}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-xl font-bold text-gray-900 truncate" title={student.profile.full_name || student.profile.username || "Học sinh"}>
+                        {student.profile.full_name || student.profile.username || "Học sinh"}
+                      </h3>
+                      <p className="text-sm font-bold text-gray-500 uppercase">
+                        {student.profile.full_name ? student.profile.username : "N/A"}
+                      </p>
+                    </div>
                   </div>
-                  
+
                   <div className="space-y-3 pt-4 border-t-2 border-dashed border-gray-200">
                     <div className="flex justify-between items-center text-sm">
                       <span className="font-bold text-gray-600">Khối</span>
@@ -553,23 +640,35 @@ export default function ClassDetailPage() {
                       <span className="font-bold text-gray-600">XP</span>
                       <span className="font-black text-amber-600">{student.profile.total_xp}</span>
                     </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="font-bold text-gray-600">Bài mới nhất</span>
+                      <span className="font-bold text-blue-600 truncate max-w-[120px] text-right" title={student.profile.latest_progress?.nodes?.title}>
+                        {student.profile.latest_progress?.nodes?.title || "Chưa có"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="font-bold text-gray-600">Hoạt động</span>
+                      <span className="text-xs font-bold text-gray-500 truncate max-w-[120px] text-right" title={student.profile.latest_activity?.description}>
+                        {student.profile.latest_activity?.description || "Chưa có"}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex gap-2 mt-6">
                     <Link
-                       href={`/teacher/classes/${classId}/students/${student.student_id}`}
-                       className="flex-1"
+                      href={`/teacher/classes/${classId}/students/${student.student_id}`}
+                      className="flex-1"
                     >
                       <NotebookButton className="w-full text-base py-1 bg-gray-100 border-gray-800 hover:bg-gray-200">
                         <Eye className="w-4 h-4 mr-1" /> Xem
                       </NotebookButton>
                     </Link>
                     {isHomeroomTeacher && (
-                      <NotebookButton 
+                      <NotebookButton
                         onClick={() => { setSelectedStudent(student); setIsEditModalOpen(true); }}
                         className="aspect-square p-2 bg-yellow-100 border-yellow-800 text-yellow-900 hover:bg-yellow-200"
                       >
-                         <Edit3 className="w-4 h-4" />
+                        <Edit3 className="w-4 h-4" />
                       </NotebookButton>
                     )}
                   </div>
@@ -589,15 +688,15 @@ export default function ClassDetailPage() {
             >
               <ChevronLeft className="w-6 h-6" />
             </NotebookButton>
-            
+
             <div className="text-xl font-black text-gray-800 bg-white border-2 border-black px-6 py-2 rounded-md shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               {currentPage} / {totalPages}
             </div>
-            
+
             <NotebookButton
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-               className="px-4 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-gray-400"
+              className="px-4 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-gray-400"
             >
               <ChevronRight className="w-6 h-6" />
             </NotebookButton>

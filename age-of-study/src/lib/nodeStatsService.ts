@@ -20,8 +20,10 @@ export interface StudentNodeStats {
   stats: {
     completed: number;
     needsReview: number;
+    bestScore: number; // Mới
   };
 }
+
 
 /**
  * Lấy danh sách bài kiểm tra và thống kê cho Giáo viên tại 1 node
@@ -84,8 +86,9 @@ export async function getStudentNodeStats(nodeId: number, studentId: string): Pr
     .eq('is_published', true);
 
   if (testsError || !tests || tests.length === 0) {
-    return { tests: [], stats: { completed: 0, needsReview: 0 } };
+    return { tests: [], stats: { completed: 0, needsReview: 0, bestScore: 0 } };
   }
+
 
   const testIds = tests.map((t: any) => t.id);
 
@@ -134,11 +137,16 @@ export async function getStudentNodeStats(nodeId: number, studentId: string): Pr
     };
   });
 
+  const bestScore = Math.max(0, ...enrichedTests.map((t: any) => t.score || 0));
+
+
   return {
     tests: enrichedTests,
     stats: {
       completed,
-      needsReview
+      needsReview,
+      bestScore
     }
   };
 }
+

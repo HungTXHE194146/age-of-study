@@ -32,7 +32,7 @@ export const useAuthStore = create<AuthState>()(
           const supabase = getSupabaseBrowserClient()
           
           // Tạo email giả từ username
-          const fakeEmail = `${username}@ageofstudy.local`
+          const fakeEmail = `${username.toLowerCase().trim()}@ageofstudy.local`
           
           // Sign in với Supabase Auth
           const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -70,7 +70,7 @@ export const useAuthStore = create<AuthState>()(
           const supabase = getSupabaseBrowserClient()
           
           // Tạo email giả từ username
-          const fakeEmail = `${username}@ageofstudy.local`
+          const fakeEmail = `${username.toLowerCase().trim()}@ageofstudy.local`
           
           // Sign up với Supabase Auth
           const { data: authData, error: authError } = await supabase.auth.signUp({
