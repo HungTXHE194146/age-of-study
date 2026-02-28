@@ -37,16 +37,17 @@ interface Position {
   y: number;
 }
 
-const BUTTON_SIZE = 80;
-
 const clampToViewport = (pos: Position): Position => {
+  if (typeof window === "undefined") return pos;
   // Add 90px bottom padding to avoid overlapping with mobile bottom nav
   const bottomNavOffset = 90;
+  const btnSize = window.innerWidth < 768 ? 60 : 80;
+  const marginX = window.innerWidth < 768 ? 16 : 60;
   return {
-    x: Math.max(0, Math.min(pos.x, window.innerWidth - BUTTON_SIZE)),
+    x: Math.max(0, Math.min(pos.x, window.innerWidth - btnSize - marginX)),
     y: Math.max(
       0,
-      Math.min(pos.y, window.innerHeight - BUTTON_SIZE - bottomNavOffset),
+      Math.min(pos.y, window.innerHeight - btnSize - bottomNavOffset),
     ),
   };
 };
@@ -84,19 +85,16 @@ export default function FloatingChatbot({
     }
   }, [messages, isOpen, isMinimized]);
 
-  // Load saved position from localStorage and clamp to current viewport
+  // Set initial position to bottom right corner and clamp to current viewport
   useEffect(() => {
-    const savedPosition = localStorage.getItem("chatbot-position");
-    if (savedPosition) {
-      setPosition(clampToViewport(JSON.parse(savedPosition)));
-    } else {
-      setPosition(
-        clampToViewport({
-          x: window.innerWidth - 100,
-          y: window.innerHeight - 100,
-        }),
-      );
-    }
+    const btnSize = window.innerWidth < 768 ? 60 : 80;
+    const marginX = window.innerWidth < 768 ? 16 : 32;
+    setPosition(
+      clampToViewport({
+        x: window.innerWidth - btnSize - marginX,
+        y: window.innerHeight - btnSize - 100,
+      }),
+    );
   }, []);
 
   // Re-clamp on resize (prevents button from going off-screen on mobile/responsive)
@@ -105,11 +103,6 @@ export default function FloatingChatbot({
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-
-  // Save position to localStorage
-  const savePosition = (pos: Position) => {
-    localStorage.setItem("chatbot-position", JSON.stringify(pos));
-  };
 
   // Handle dragging
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -132,9 +125,13 @@ export default function FloatingChatbot({
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
 
+      const btnSize = window.innerWidth < 768 ? 60 : 80;
+      const marginX = window.innerWidth < 768 ? 16 : 32;
+      const bottomNavOffset = 90;
+
       // Constrain to viewport, reserving space for bottom nav
-      const maxX = window.innerWidth - 80;
-      const maxY = window.innerHeight - 80 - 90;
+      const maxX = window.innerWidth - btnSize - marginX;
+      const maxY = window.innerHeight - btnSize - bottomNavOffset;
 
       const constrainedPos = {
         x: Math.max(0, Math.min(newX, maxX)),
@@ -147,7 +144,6 @@ export default function FloatingChatbot({
     const handleMouseUp = (e: MouseEvent) => {
       if (isDragging) {
         setIsDragging(false);
-        savePosition(position);
 
         // Calculate distance moved
         const dist = Math.sqrt(
@@ -306,7 +302,7 @@ export default function FloatingChatbot({
                      border-4 border-yellow-200"
             aria-label="Mở chat với Cú Mèo"
           >
-            <div className="relative w-16 h-16 overflow-hidden rounded-full">
+            <div className="relative w-12 h-12 md:w-16 md:h-16 overflow-hidden rounded-full">
               <Image
                 src="/logo.svg"
                 alt="Cú Mèo"
