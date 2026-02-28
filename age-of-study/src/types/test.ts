@@ -20,6 +20,7 @@ export interface Test {
   created_at: string;
   subject_name?: string;
   max_xp?: number;
+  class_id?: number | null;
 }
 
 export interface QuestionOption {
@@ -104,6 +105,7 @@ export interface CreateTestRequest {
   };
   is_published: boolean;
   created_by: string;
+  class_id?: number | null;
 }
 
 export interface AddQuestionsRequest {
@@ -129,4 +131,5 @@ export interface TestResult {
   percentage: number;
   totalQuestions: number;
   correctAnswers: number;
+  xp_earned?: number;
 }

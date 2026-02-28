@@ -34,10 +34,10 @@ export default function StudentLogPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // UI States
   const [showEncourage, setShowEncourage] = useState(false);
-  
+
   // Pagination States
   const [visibleActivitiesCount, setVisibleActivitiesCount] = useState(5);
   const [visibleProgressCount, setVisibleProgressCount] = useState(6);
@@ -81,7 +81,7 @@ export default function StudentLogPage() {
           </NotebookCardHeader>
           <NotebookCardContent>
             <p className="mt-4 font-bold text-xl">{error}</p>
-            <Link href={`/teacher/classes/${classId}/students`} className="mt-4 inline-block">
+            <Link href={`/teacher/classes/${classId}`} className="mt-4 inline-block">
               <Button>Quay Lại</Button>
             </Link>
           </NotebookCardContent>
@@ -93,21 +93,19 @@ export default function StudentLogPage() {
   return (
     <div className="min-h-screen bg-[#f4f4f9] py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Header Navigation */}
         <div className="flex items-center justify-between mb-6">
-          <Link href={`/teacher/classes/${classId}/students`}>
-            <Button
-              variant="outline"
-              size="lg"
+          <Link href={`/teacher/classes/${classId}`}>
+            <NotebookButton
               className="flex items-center gap-2 border-2 border-black font-bold text-lg hover:bg-gray-200"
             >
               <ArrowLeft className="w-5 h-5" />
               Quay lại DS Lớp
-            </Button>
+            </NotebookButton>
           </Link>
-          
-          <NotebookButton 
+
+          <NotebookButton
             onClick={() => setShowEncourage(true)}
             className="bg-yellow-100 text-yellow-900 border-yellow-900 hover:bg-yellow-200 flex items-center gap-2"
           >
@@ -134,7 +132,7 @@ export default function StudentLogPage() {
                 )}
               </div>
             </div>
-            
+
             <div className="flex gap-4">
               <div className="text-center font-bold">
                 <div className="text-gray-500 text-sm">Tổng Điểm</div>
@@ -154,7 +152,7 @@ export default function StudentLogPage() {
         {showEncourage && (
           <NotebookCard className="mb-6 bg-yellow-50 border-yellow-600 shadow-[4px_4px_0_0_#ca8a04]">
             <NotebookCardContent className="pt-6 relative">
-              <button 
+              <button
                 onClick={() => setShowEncourage(false)}
                 className="absolute top-4 right-4 text-gray-400 hover:text-black font-bold text-xl"
               >
@@ -184,7 +182,7 @@ export default function StudentLogPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
+
           {/* Timeline View */}
           <div className="lg:col-span-2">
             <NotebookCard className="h-full">
@@ -202,14 +200,14 @@ export default function StudentLogPage() {
                       {idx !== Math.min(data.activities.length, visibleActivitiesCount) - 1 && (
                         <div className="absolute left-6 top-10 bottom-[-24px] w-1 bg-black border-l-2 border-dashed border-gray-400"></div>
                       )}
-                      
+
                       {/* Icon */}
                       <div className="w-12 h-12 rounded-full border-4 border-black flex items-center justify-center shrink-0 z-10 bg-white">
                         {act.type === 'login' && <ArrowLeft className="w-5 h-5 text-blue-500 rotate-180" />}
                         {act.type === 'study' && <BookOpen className="w-5 h-5 text-purple-500" />}
                         {act.type === 'complete' && <CheckCircle2 className="w-6 h-6 text-green-600" />}
                       </div>
-                      
+
                       {/* Content */}
                       <div className="pt-1 pb-4">
                         <div className="font-bold text-gray-500 text-sm uppercase tracking-wider mb-1">
@@ -221,11 +219,11 @@ export default function StudentLogPage() {
                       </div>
                     </div>
                   ))}
-                  
+
                   {data.activities.length > visibleActivitiesCount && (
                     <div className="pt-4 pb-2 text-center border-t-2 border-dashed border-gray-300">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         onClick={() => setVisibleActivitiesCount(prev => prev + 5)}
                         className="bg-white hover:bg-gray-50 text-gray-700 font-bold border-2 border-black rounded-full px-6"
                       >
@@ -240,7 +238,7 @@ export default function StudentLogPage() {
 
           {/* Compact Skill Tree View */}
           <div className="lg:col-span-1">
-             <NotebookCard className="h-full">
+            <NotebookCard className="h-full">
               <NotebookCardHeader className="bg-purple-100">
                 <NotebookCardTitle className="flex items-center gap-2">
                   <CalendarDays className="w-6 h-6" />
@@ -250,12 +248,11 @@ export default function StudentLogPage() {
               <NotebookCardContent className="pt-6">
                 <div className="space-y-3">
                   {data.progress.slice(0, visibleProgressCount).map((p: { id: string, title: string, status: string, score: string }) => (
-                    <div 
-                      key={p.id} 
-                      className={`p-3 border-2 border-black rounded-lg flex items-center justify-between ${
-                        p.status === 'completed' ? 'bg-green-50/50' :
+                    <div
+                      key={p.id}
+                      className={`p-3 border-2 border-black rounded-lg flex items-center justify-between ${p.status === 'completed' ? 'bg-green-50/50' :
                         p.status === 'in_progress' ? 'bg-yellow-50' : 'bg-gray-100 opacity-70'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         {p.status === 'completed' ? (
@@ -277,8 +274,8 @@ export default function StudentLogPage() {
 
                   {data.progress.length > visibleProgressCount && (
                     <div className="pt-3 text-center">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         onClick={() => setVisibleProgressCount(prev => prev + 6)}
                         className="w-full bg-purple-50 hover:bg-purple-100 text-purple-900 border-2 border-dashed border-purple-300 font-bold"
                       >

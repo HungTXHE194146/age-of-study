@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const dummyEmail = `${cleanUsername}@aos.local`;
+      const dummyEmail = `${cleanUsername}@ageofstudy.local`;
 
       try {
         // 1. Create Auth User

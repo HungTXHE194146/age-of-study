@@ -58,6 +58,18 @@ export class TestService {
     return data || [];
   }
 
+  async getTestsByClass(classId: number): Promise<Test[]> {
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from("tests")
+      .select("*")
+      .eq("class_id", classId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
   async getTestById(testId: string): Promise<Test | null> {
     const supabase = getSupabaseBrowserClient();
     const { data, error } = await supabase
@@ -274,6 +286,7 @@ export class TestService {
   async submitTest(
     request: SubmitTestRequest,
     studentId: string,
+    loadedQuestions?: (Question & { points: number; display_order: number })[]
   ): Promise<TestResult> {
     // Start transaction
     const supabase = getSupabaseBrowserClient();
@@ -291,7 +304,8 @@ export class TestService {
     if (submissionError) throw submissionError;
 
     // Get test questions to validate answers
-    const testQuestions = await this.getTestQuestions(request.test_id);
+    // If loadedQuestions is passed from the server action, use it to bypass RLS.
+    const testQuestions = loadedQuestions || await this.getTestQuestions(request.test_id);
     const questionMap = new Map(testQuestions.map((q) => [q.id, q]));
 
     // Prepare answers
@@ -304,12 +318,8 @@ export class TestService {
         answer.selected_option_index,
     })) as QuizAnswer[];
 
-    // Insert answers
-    const { error: answersError } = await supabase
-      .from("quiz_answers")
-      .insert(answers);
-
-    if (answersError) throw answersError;
+    // Removed quiz_answers insert since it doesn't exist in the current schema
+    // We just calculate the score below based on the mapping.
 
     // Calculate results
     const correctAnswers = answers.filter((a) => a.is_correct).length;
@@ -328,6 +338,23 @@ export class TestService {
 
     if (updateError) throw updateError;
 
+    // --- SYNC PROGRESS & XP ---
+    let xpEarned = 0;
+    try {
+      // Calculate XP: 10 XP for starting, 10 XP per correct answer
+      xpEarned = 10 + (correctAnswers * 10);
+      
+      await supabase.rpc("handle_test_completion_progress", {
+        p_student_id: studentId,
+        p_test_id: request.test_id,
+        p_score: score,
+        p_xp_earned: xpEarned
+      });
+    } catch (error) {
+      console.error("Failed to sync progress/XP:", error);
+      // Don't throw here to avoid failing the whole submission UI
+    }
+
     return {
       submission,
       answers,
@@ -336,8 +363,29 @@ export class TestService {
       percentage: score,
       totalQuestions,
       correctAnswers,
+      xp_earned: xpEarned,
     };
   }
+
+  /**
+   * Lấy danh sách ID các node mà học sinh đã hoàn thành
+   */
+  async getCompletedNodeIds(studentId: string): Promise<number[]> {
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from("student_node_progress")
+      .select("node_id")
+      .eq("student_id", studentId)
+      .eq("is_completed", true);
+
+    if (error) {
+      console.error("Error fetching completed nodes:", error);
+      return [];
+    }
+
+    return data.map((d: any) => Number(d.node_id));
+  }
+
 
   async getStudentSubmissions(
     studentId: string,

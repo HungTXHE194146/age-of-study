@@ -188,14 +188,13 @@ export default function LearnPage() {
             animate={{ opacity: 1, scale: 1 }}
             onClick={() => {
               if (currentClass?.class?.class_code) {
-                router.push(`/learn/class/${currentClass.class.class_code}`);
+                router.push(`/student/classes/${currentClass.class.class_code}`);
               }
             }}
-            className={`relative bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-2xl p-8 hover:shadow-2xl transition-all group overflow-hidden ${
-              currentClass?.class?.class_code
+            className={`relative bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-2xl p-8 hover:shadow-2xl transition-all group overflow-hidden ${currentClass?.class?.class_code
                 ? "cursor-pointer"
                 : "cursor-not-allowed opacity-75"
-            }`}
+              }`}
           >
             {/* Background decoration */}
             <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20"></div>

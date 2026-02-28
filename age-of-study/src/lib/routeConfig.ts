@@ -27,19 +27,19 @@ export const routeConfig: RouteConfig[] = [
   },
   {
     path: "/student",
-    allowedRoles: ["student", "teacher"],
+    allowedRoles: ["student"],
   },
   {
     path: "/student/tests",
-    allowedRoles: ["student", "teacher"],
+    allowedRoles: ["student"],
   },
   {
     path: "/student/tests/[testId]",
-    allowedRoles: ["student", "teacher"],
+    allowedRoles: ["student"],
   },
   {
     path: "/leaderboard",
-    allowedRoles: ["student", "teacher"],
+    allowedRoles: ["student"],
   },
   {
     path: "/settings",
@@ -128,6 +128,13 @@ export function getRedirectPath(
 
   if (route.allowedRoles.includes(userRole)) {
     return null;
+  }
+
+  // Smart redirect based on role to prevent redirect loops
+  if (userRole === "teacher") {
+    return "/teacher/dashboard";
+  } else if (userRole === "system_admin") {
+    return "/admin/dashboard";
   }
 
   return route.redirectTo || "/student";

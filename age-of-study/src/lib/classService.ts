@@ -276,7 +276,7 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
             id, username, full_name, avatar_url, grade, total_xp, last_study_date,
             dob, gender, ethnicity, phone_number, enroll_status, sessions_per_week,
             activity_logs (
-              id, activity_type, description, created_at
+              id, activity_type, description, xp_earned, created_at
             ),
             student_node_progress (
               node_id, status, score, last_accessed_at, completed_at,

@@ -3,7 +3,21 @@ import { Edge } from "@xyflow/react";
 
 const BRANCH_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4"];
 
-export const transformDBNodesToFlow = (dbNodes: { id: number; title: string; node_type: string; parent_node_id?: number | null; position_x?: number; position_y?: number; order_index: number; source_position?: 'top' | 'bottom' | 'left' | 'right' | null; target_position?: 'top' | 'bottom' | 'left' | 'right' | null }[], isTeacherMode: boolean) => {
+export const transformDBNodesToFlow = (
+  dbNodes: { 
+    id: number; 
+    title: string; 
+    node_type: string; 
+    parent_node_id?: number | null; 
+    position_x?: number; 
+    position_y?: number; 
+    order_index: number; 
+    source_position?: 'top' | 'bottom' | 'left' | 'right' | null; 
+    target_position?: 'top' | 'bottom' | 'left' | 'right' | null 
+  }[], 
+  isTeacherMode: boolean,
+  completedNodeIds: number[] = []
+) => {
   const rfNodes: CustomNodeType[] = [];
   const rfEdges: Edge[] = [];
 
@@ -36,8 +50,13 @@ export const transformDBNodesToFlow = (dbNodes: { id: number; title: string; nod
   // 4. Khởi tạo Nodes và Edges
   dbNodes.forEach(node => {
     const branchColor = getBranchColor(node.id);
-    // (Sau này tích hợp logic check DB xem user đã học chưa. Giờ tạm hardcode khóa node Content nếu là Học sinh)
-    const isNodeLocked = isTeacherMode ? false : (node.node_type === 'content');
+    
+    // Logic Khóa Node:
+    // - Luôn mở khóa nếu là giáo viên
+    // - Luôn mở khóa nếu là node gốc (parent_node_id null)
+    // - Mở khóa nếu node cha nằm trong danh sách completedNodeIds
+    const isParentCompleted = !node.parent_node_id || completedNodeIds.includes(Number(node.parent_node_id));
+    const isNodeLocked = isTeacherMode ? false : !isParentCompleted;
 
     // Ensure unique ID by using the database node ID
     const nodeId = node.id.toString();
@@ -52,7 +71,8 @@ export const transformDBNodesToFlow = (dbNodes: { id: number; title: string; nod
         nodeType: node.node_type,
         color: branchColor,
         isLocked: isNodeLocked,
-        isTeacherMode: isTeacherMode
+        isTeacherMode: isTeacherMode,
+        isCompleted: completedNodeIds.includes(Number(node.id))
       }
     });
 
