@@ -21,6 +21,10 @@ import {
   ChevronRight,
   ChevronUp,
   ChevronDown,
+  KeyRound,
+  Copy,
+  Check,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -95,6 +99,14 @@ export default function ClassStudentsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
 
+  // Magic code states
+  const [generatingCodeFor, setGeneratingCodeFor] = useState<string | null>(null);
+  const [magicCodeResult, setMagicCodeResult] = useState<{
+    code: string;
+    studentName: string;
+  } | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
+
   const fetchClassData = async () => {
     if (!classId || !user?.id) return;
 
@@ -116,6 +128,36 @@ export default function ClassStudentsPage() {
   useEffect(() => {
     fetchClassData();
   }, [classId, user?.id]);
+
+  const handleGenerateCode = async (studentId: string, studentName: string) => {
+    if (!user?.id) return;
+    setGeneratingCodeFor(studentId);
+    setMagicCodeResult(null);
+    try {
+      const res = await fetch("/api/auth/magic-login/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ student_id: studentId, teacher_id: user.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Không thể tạo mã. Vui lòng thử lại.");
+        return;
+      }
+      setMagicCodeResult({ code: data.code, studentName });
+    } catch {
+      alert("Lỗi kết nối. Vui lòng thử lại.");
+    } finally {
+      setGeneratingCodeFor(null);
+    }
+  };
+
+  const handleCopyCode = async () => {
+    if (!magicCodeResult) return;
+    await navigator.clipboard.writeText(magicCodeResult.code);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
 
 
   if (loading) {
@@ -450,6 +492,23 @@ export default function ClassStudentsPage() {
                     <NotebookButton className="aspect-square p-2 bg-yellow-100 border-yellow-800 text-yellow-900 hover:bg-yellow-200">
                        <Edit3 className="w-4 h-4" />
                     </NotebookButton>
+                    <NotebookButton
+                      onClick={() =>
+                        handleGenerateCode(
+                          student.student_id,
+                          student.profile.full_name || student.profile.username || "Học sinh"
+                        )
+                      }
+                      disabled={generatingCodeFor === student.student_id}
+                      className="aspect-square p-2 bg-orange-100 border-orange-800 text-orange-900 hover:bg-orange-200 disabled:opacity-50"
+                      title="Tạo mã đăng nhập nhanh"
+                    >
+                      {generatingCodeFor === student.student_id ? (
+                        <div className="w-4 h-4 border-2 border-orange-600 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <KeyRound className="w-4 h-4" />
+                      )}
+                    </NotebookButton>
                   </div>
                 </NotebookCardContent>
               </NotebookCard>
@@ -501,6 +560,62 @@ export default function ClassStudentsPage() {
           setCurrentPage(1);
         }}
       />
+
+      {/* Magic Code Result Modal */}
+      {magicCodeResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl border-2 border-black p-8 max-w-sm w-full relative">
+            <button
+              onClick={() => { setMagicCodeResult(null); setCodeCopied(false); }}
+              className="absolute top-4 right-4 p-1 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+
+            <div className="text-center">
+              <div className="text-4xl mb-3">🔑</div>
+              <h2 className="text-xl font-black text-gray-900 mb-1">
+                Mã đăng nhập nhanh
+              </h2>
+              <p className="text-sm text-gray-500 mb-6">
+                Cho <span className="font-bold text-gray-800">{magicCodeResult.studentName}</span> nhập mã này
+              </p>
+
+              {/* Code display */}
+              <div className="bg-orange-50 border-2 border-dashed border-orange-400 rounded-xl p-5 mb-4">
+                <div className="font-mono text-5xl font-black tracking-[0.35em] text-orange-600 select-all">
+                  {magicCodeResult.code}
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-400 mb-5">
+                Mã có hiệu lực trong <span className="font-bold text-orange-500">5 phút</span> và chỉ dùng được 1 lần
+              </p>
+
+              <button
+                onClick={handleCopyCode}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-orange-100 hover:bg-orange-200 border-2 border-orange-800 text-orange-900 font-bold rounded-xl transition-all"
+              >
+                {codeCopied ? (
+                  <>
+                    <Check className="w-4 h-4 text-green-600" />
+                    <span className="text-green-700">Đã sao chép!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Sao chép mã
+                  </>
+                )}
+              </button>
+
+              <p className="text-xs text-gray-400 mt-4 leading-relaxed">
+                Học sinh vào trang <strong>Đăng nhập</strong> → <strong>Quên mật khẩu?</strong> → nhập tên đăng nhập và mã này
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

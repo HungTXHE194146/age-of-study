@@ -24,6 +24,12 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
+      // Force password change if flagged (e.g. after teacher magic login)
+      if (user.must_change_password && pathname !== "/student/change-password") {
+        router.push("/student/change-password");
+        return;
+      }
+
       // Check route permissions using centralized middleware
       const currentPath = pathname || "/";
       const redirectPath = checkRoutePermission({

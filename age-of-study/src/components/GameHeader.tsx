@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Settings, LogOut } from "lucide-react";
+import { User, LogOut } from "lucide-react";
 import Image from "next/image";
 import "./GameHeader.css";
 
@@ -282,17 +282,17 @@ export default function GameHeader() {
                       tabIndex={0}
                       onClick={() => {
                         setDropdownOpen(false);
-                        router.push("/settings");
+                        router.push("/student/settings");
                       }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           setDropdownOpen(false);
-                          router.push("/settings");
+                          router.push("/student/settings");
                         }
                       }}
                     >
-                      <Settings size={16} />
-                      <span>Cài đặt</span>
+                      <User size={16} />
+                      <span>Hồ sơ của tôi</span>
                     </div>
 
                     <div className="hud-dropdown-divider" />
