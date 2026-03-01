@@ -33,11 +33,38 @@ QUY TẮC BẮT BUỘC:
 6. Khuyến khích học sinh khi họ cố gắng, dùng lời khen tích cực.`
 
 // --- Constants ---
-const RATE_LIMIT_PER_MINUTE = 10
+const DEFAULT_RATE_LIMIT_PER_MINUTE = 10
+const DEFAULT_AI_CHAT_TEMPERATURE = 0.7
+const DEFAULT_AI_CHAT_MAX_TOKENS = 1500
 const MAX_CONTEXT_QUESTIONS = 15
 const MAX_CONTEXT_DOCUMENTS = 5
 const MAX_CONVERSATION_HISTORY = 10
 const CACHE_TTL_HOURS = 24
+
+// --- Fetch system settings from DB (with fallback defaults) ---
+async function getAIChatSettings(supabase: SupabaseClient) {
+  try {
+    const { data } = await supabase
+      .from('system_settings')
+      .select('ai_chat_temperature, ai_chat_max_tokens, ai_chat_rate_limit_per_minute')
+      .eq('id', 1)
+      .single()
+
+    if (data) {
+      return {
+        temperature: parseFloat(data.ai_chat_temperature) || DEFAULT_AI_CHAT_TEMPERATURE,
+        maxTokens: parseInt(data.ai_chat_max_tokens, 10) || DEFAULT_AI_CHAT_MAX_TOKENS,
+        rateLimit: parseInt(data.ai_chat_rate_limit_per_minute, 10) || DEFAULT_RATE_LIMIT_PER_MINUTE,
+      }    }
+  } catch {
+    // Fall through to defaults
+  }
+  return {
+    temperature: DEFAULT_AI_CHAT_TEMPERATURE,
+    maxTokens: DEFAULT_AI_CHAT_MAX_TOKENS,
+    rateLimit: DEFAULT_RATE_LIMIT_PER_MINUTE,
+  }
+}
 
 // ============================================================================
 // REQUEST HANDLER
@@ -82,7 +109,10 @@ export async function POST(request: NextRequest) {
 
     const userId = authUser.id
 
-    // 3. Rate limit check - count recent messages in chat_logs
+    // 3. Load AI chat settings from DB
+    const aiSettings = await getAIChatSettings(supabase)
+
+    // 4. Rate limit check - count recent messages in chat_logs
     const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
     const { count: recentCount } = await supabase
       .from('chat_logs')
@@ -91,14 +121,14 @@ export async function POST(request: NextRequest) {
       .eq('sender', 'user')
       .gte('created_at', oneMinuteAgo)
 
-    if ((recentCount || 0) >= RATE_LIMIT_PER_MINUTE) {
+    if ((recentCount || 0) >= aiSettings.rateLimit) {
       return NextResponse.json(
         { error: 'Cú Mèo đang trả lời bạn khác, chờ chút nha~ 🦉', retryAfter: 10 },
         { status: 429 }
       )
     }
 
-    // 4. Cache check - hash the message + subject for lookup
+    // 5. Cache check - hash the message + subject for lookup
     const normalizedMessage = message.trim().toLowerCase().replace(/\s+/g, ' ')
     const cacheKey = await hashMessage(normalizedMessage + (subjectId || ''))
 
@@ -119,10 +149,10 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // 5. RETRIEVAL - Find relevant content from DB
+    // 6. RETRIEVAL - Find relevant content from DB
     const context = await retrieveContext(supabase, normalizedMessage, subjectId)
 
-    // 6. BUILD PROMPT & CALL GEMINI with streaming
+    // 7. BUILD PROMPT & CALL GEMINI with streaming
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
       safetySettings: [
@@ -132,8 +162,8 @@ export async function POST(request: NextRequest) {
         { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE },
       ],
       generationConfig: {
-        maxOutputTokens: 1500,  // Increased: thinking model needs more budget
-        temperature: 0.7,
+        maxOutputTokens: aiSettings.maxTokens,
+        temperature: aiSettings.temperature,
         // @ts-expect-error thinkingConfig not yet in type definitions but supported by API
         thinkingConfig: { thinkingBudget: 256 },  // Cap thinking tokens, save budget for response
       },
