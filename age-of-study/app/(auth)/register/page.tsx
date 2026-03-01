@@ -23,6 +23,11 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false);
   const registrationRedirectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Clear error on mount to prevent errors from persisting across pages
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
+
   useEffect(() => {
     return () => {
       if (registrationRedirectTimerRef.current) {
@@ -37,6 +42,26 @@ export default function RegisterPage() {
     setValidationError("");
 
     // Client-side validation
+    if (!fullName.trim()) {
+      setValidationError("Vui lòng nhập họ và tên");
+      return;
+    }
+
+    if (!username.trim()) {
+      setValidationError("Vui lòng nhập tên đăng nhập");
+      return;
+    }
+
+    if (username.trim().length < 3) {
+      setValidationError("Tên đăng nhập phải có ít nhất 3 ký tự");
+      return;
+    }
+
+    if (!password.trim()) {
+      setValidationError("Vui lòng nhập mật khẩu");
+      return;
+    }
+
     if (password.length < 6) {
       setValidationError("Mật khẩu phải có ít nhất 6 ký tự");
       return;
@@ -46,8 +71,6 @@ export default function RegisterPage() {
       setValidationError("Mật khẩu xác nhận không khớp");
       return;
     }
-
-    // Email validation removed - auto-generated from username
 
     try {
       await signUp(username, password, fullName);
@@ -105,7 +128,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="w-full relative">
+    <div className="w-full relative" role="main">
       {/* Nút về trang chủ */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
@@ -122,7 +145,7 @@ export default function RegisterPage() {
       </motion.div>
 
       {/* Owl Avatar */}
-      <Link href="/">
+      <Link href="/" tabIndex={-1}>
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}

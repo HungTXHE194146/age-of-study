@@ -9,6 +9,7 @@ import {
   getClassSubjects,
 } from "@/lib/classService";
 import type { StudentWithClass } from "@/types/class";
+import { TestService } from "@/lib/testService";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
@@ -44,6 +45,7 @@ export default function LearnPage() {
   );
   const [classSubjects, setClassSubjects] = useState<ClassSubject[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [pendingTestsCount, setPendingTestsCount] = useState(0);
   const [classCode, setClassCode] = useState("");
   const [joiningClass, setJoiningClass] = useState(false);
   const [classError, setClassError] = useState<string | null>(null);
@@ -84,13 +86,32 @@ export default function LearnPage() {
         console.error("Error loading class:", result.error);
       } else {
         setCurrentClass(result.data);
-        // Load subjects if student has a class
+        // Load subjects and tests if student has a class
         if (result.data?.class?.id) {
           loadClassSubjects(result.data.class.id);
+          loadPendingTests(result.data.class.id);
         }
       }
     } catch (error) {
       console.error("Failed to load class:", error);
+    }
+  };
+
+  const loadPendingTests = async (classId: number) => {
+    if (!user) return;
+    try {
+      const testService = new TestService();
+      const tests = await testService.getTestsByClass(classId);
+      const submissions = await testService.getStudentSubmissions(user.id);
+      
+      // Count tests that have no submission
+      const pending = tests.filter(test => 
+        !submissions.some(sub => sub.test_id === test.id)
+      ).length;
+      
+      setPendingTestsCount(pending);
+    } catch (error) {
+      console.error("Failed to load pending tests:", error);
     }
   };
 
@@ -280,66 +301,43 @@ export default function LearnPage() {
 
       {/* 2. Tiêu điểm hôm nay (Primary Action Hub - Self Study) */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-12"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="mb-12 relative bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-2xl p-8 hover:shadow-2xl transition-all group overflow-hidden cursor-pointer"
+        onClick={() => router.push("/student/learn")}
       >
-        <div className="flex items-center gap-3 mb-4">
-          <Users className="w-6 h-6 text-purple-600" />
-          <h2 className="text-2xl font-bold text-gray-900">
-            Lớp Học Của Bạn 🎓
-          </h2>
+        {/* Background decoration */}
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20"></div>
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-16 -mb-16"></div>
+
+        {/* Content */}
+        <div className="relative flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4 flex-1">
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl">
+              <Target className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <div className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full mb-2 uppercase tracking-wide">
+                Luyện tập mỗi ngày
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Muốn giỏi hơn? Hãy luyện tập thêm! 💪
+              </h2>
+              <p className="text-emerald-100">
+                Mỗi ngày luyện tập một chút, kiến thức sẽ vững vàng hơn. Vào phần Học tập để chinh phục thêm nhiều bài học mới nhé!
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={(e) => { e.stopPropagation(); router.push("/student/skill-tree"); }}
+            className="w-full lg:w-auto px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-white font-bold text-lg rounded-2xl shadow-[0_4px_14px_0_rgba(251,146,60,0.39)] transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+          >
+            <Play className="w-5 h-5 fill-current" />
+            Học ngay
+          </button>
         </div>
       </motion.div>
-      {currentClass?.class && (
-        // Already in a class - clickable card with beautiful design
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          onClick={() => {
-            if (currentClass?.class?.class_code) {
-              router.push(`/student/classes/${currentClass.class.class_code}`);
-            }
-          }}
-          className={`relative bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-2xl p-8 hover:shadow-2xl transition-all group overflow-hidden ${currentClass?.class?.class_code
-            ? "cursor-pointer"
-            : "cursor-not-allowed opacity-75"
-            }`}
-        >
-          {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20"></div>
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-16 -mb-16"></div>
-
-          {/* Content */}
-          <div className="relative flex items-start justify-between gap-4">
-            <div className="flex items-start gap-4 flex-1">
-              <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl">
-                <CheckCircle className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <div className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full mb-2 uppercase tracking-wide">
-                  Tiêu điểm hôm nay
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Sẵn sàng học tiếp Tiếng Việt chưa?
-                </h2>
-                <p className="text-gray-600">
-                  Bài học hôm qua đang đợi bạn hoàn thành. Cùng chinh phục
-                  nhận thưởng nào!
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => router.push("/student/skill-tree")}
-              className="w-full lg:w-auto px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-white font-bold text-lg rounded-2xl shadow-[0_4px_14px_0_rgba(251,146,60,0.39)] transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
-            >
-              <Play className="w-5 h-5 fill-current" />
-              Học ngay
-            </button>
-          </div>
-        </motion.div>
-      )}
 
       {/* 3. Lớp học của bạn (Assigned by Teacher) */}
       {!currentClass?.class ? (
@@ -413,122 +411,87 @@ export default function LearnPage() {
         </motion.div>
       ) : (
         <div className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <BookOpen className="text-purple-600" />
+          <div className="flex items-center gap-3 mb-6">
+            <Users className="w-6 h-6 text-purple-600" />
+            <h2 className="text-2xl font-bold text-gray-900">
               Lớp học của bạn
             </h2>
           </div>
 
-          {loadingSubjects ? (
-            <div className="text-center py-12 bg-white rounded-3xl shadow-sm border border-gray-100">
-              <LoadingSpinner size="md" />
-              <p className="text-gray-500 mt-4 font-medium">
-                Đang soạn sách vở...
-              </p>
-            </div>
-          ) : classSubjects.length === 0 ? (
-            <div className="bg-white rounded-3xl py-16 px-8 text-center shadow-sm border border-gray-100">
-              <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <BookOpen className="w-10 h-10 text-gray-300 mx-auto" />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            onClick={() => {
+              if (currentClass?.class?.class_code) {
+                router.push(`/student/classes/${currentClass.class.class_code}`);
+              }
+            }}
+            className="relative bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-2xl p-8 hover:shadow-2xl transition-all group overflow-hidden cursor-pointer"
+          >
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-16 -mb-16"></div>
+
+            {/* Content */}
+            <div className="relative">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="flex items-start gap-4 flex-1">
+                  <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl">
+                    <Users className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-1">
+                      {currentClass?.class?.name || "Lớp học của bạn"}
+                    </h3>
+                    <p className="text-blue-100 text-sm">
+                      Mã lớp: {currentClass?.class?.class_code}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-700 mb-2">
-                Chưa có môn học nào
-              </h3>
-              <p className="text-gray-500 max-w-md mx-auto">
-                Giáo viên chủ nhiệm chưa phân công môn học nào cho lớp của bạn.
-                Hãy quay lại sau nhé!
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {classSubjects.map((subject) => {
-                const isMain =
-                  subject.name.toLowerCase().includes("tiếng việt") ||
-                  subject.name.toLowerCase().includes("tieng viet") ||
-                  subject.name.toLowerCase().includes("vietnamese");
 
-                if (isMain) {
-                  return (
-                    <motion.div
-                      key={subject.id}
-                      whileHover={{ y: -5 }}
-                      onClick={() =>
-                        router.push(`/learn/subject/${subject.id}`)
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          router.push(`/learn/subject/${subject.id}`);
-                        }
-                      }}
-                      role="button"
-                      tabIndex={0}
-                      className="group cursor-pointer bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all border-2 border-purple-100 hover:border-purple-300 relative overflow-hidden"
-                    >                      {/* Active indicator */}
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50 rounded-bl-full -mr-4 -mt-4 z-0 transition-transform group-hover:scale-110"></div>
-
-                      <div className="relative z-10 flex flex-col h-full">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform group-hover:bg-purple-600 group-hover:text-white shadow-sm">
-                            <BookOpen className="w-7 h-7" />
-                          </div>
-                          <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                            Sẵn sàng
-                          </span>
-                        </div>
-
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2 group-hover:text-purple-700 transition-colors">
-                          {subject.name}
-                        </h3>
-                        <p className="text-gray-500 text-sm mb-6 flex-grow">
-                          Giáo viên:{" "}
-                          {subject.teachers
-                            .map((t) => t.full_name)
-                            .filter(Boolean)
-                            .join(", ") || "Chưa phân công"}
-                        </p>
-
-                        <div className="flex items-center text-purple-600 font-bold text-sm bg-purple-50 px-4 py-3 rounded-xl group-hover:bg-purple-100 transition-colors">
-                          Vào học ngay
-                          <ArrowRight className="w-4 h-4 ml-auto group-hover:translate-x-1 transition-transform" />
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                } else {
-                  return (
-                    <div
-                      key={subject.id}
-                      className="bg-gray-50 rounded-3xl p-6 border-2 border-gray-100 relative overflow-hidden grayscale hover:grayscale-0 transition-all duration-300 opacity-60 hover:opacity-100"
-                    >
-                      <div className="relative z-10 flex flex-col h-full">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="w-14 h-14 bg-gray-200 rounded-2xl flex items-center justify-center text-gray-500 shadow-sm">
-                            <Lock className="w-7 h-7" />
-                          </div>
-                          <span className="px-3 py-1 bg-white border border-gray-200 text-gray-500 text-xs font-bold rounded-full shadow-sm flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> Sắp ra mắt
-                          </span>
-                        </div>
-
-                        <h3 className="text-2xl font-bold text-gray-600 mb-2">
-                          {subject.name}
-                        </h3>
-                        <p className="text-gray-400 text-sm mb-6 flex-grow">
-                          Tính năng đang được phát triển
-                        </p>
-
-                        <div className="flex items-center text-gray-400 font-bold text-sm bg-gray-100 px-4 py-3 rounded-xl">
-                          Chưa mở
-                        </div>
-                      </div>
+              {/* Homework notification */}
+              {pendingTestsCount > 0 && (
+                <div className="bg-red-500/20 backdrop-blur-sm border-2 border-red-300/50 rounded-xl p-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-red-500 p-2 rounded-lg">
+                      <AlertCircle className="w-5 h-5 text-white" />
                     </div>
-                  );
-                }
-              })}
+                    <div>
+                      <p className="text-white font-bold text-lg">
+                        Có {pendingTestsCount} bài tập về nhà cần làm!
+                      </p>
+                      <p className="text-red-100 text-sm">
+                        Đừng quên hoàn thành bài tập giáo viên giao nhé
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Class info */}
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-4">
+                <p className="text-white/90 text-sm">
+                  Hãy vào lớp để xem chi tiết bài học, bài tập và thông báo từ giáo viên
+                </p>
+              </div>
+
+              {/* Enter class button */}
+              <button
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  if (currentClass?.class?.class_code) {
+                    router.push(`/student/classes/${currentClass.class.class_code}`);
+                  }
+                }}
+                className="w-full px-6 py-4 bg-white text-indigo-600 text-lg font-bold rounded-xl shadow-lg hover:bg-indigo-50 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                <BookOpen className="w-5 h-5" />
+                Vào lớp học
+                <ArrowRight className="w-5 h-5 ml-auto" />
+              </button>
             </div>
-          )}
+          </motion.div>
         </div>
       )}
 

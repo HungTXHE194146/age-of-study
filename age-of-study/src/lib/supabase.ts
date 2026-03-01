@@ -51,6 +51,9 @@ export interface Profile {
   // Password management
   must_change_password: boolean
 
+  // Activity tracking
+  last_active_at: string | null
+
   created_at: string
   updated_at: string
 }

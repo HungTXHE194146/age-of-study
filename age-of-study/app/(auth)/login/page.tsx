@@ -20,10 +20,28 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isScanningQR, setIsScanningQR] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Clear error on mount to prevent errors from persisting across pages
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     clearError();
+    setValidationError(null);
+
+    // Client-side validation
+    if (!username.trim()) {
+      setValidationError("Vui lòng nhập tên đăng nhập");
+      return;
+    }
+
+    if (!password.trim()) {
+      setValidationError("Vui lòng nhập mật khẩu");
+      return;
+    }
 
     await login(username, password);
   };
@@ -56,7 +74,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="w-full relative">
+    <div className="w-full relative" role="main">
       {/* Nút về trang chủ */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
@@ -77,7 +95,7 @@ export default function LoginPage() {
       </motion.div>
 
       {/* Owl Avatar */}
-      <Link href="/" aria-label="Về trang chủ">
+      <Link href="/" aria-label="Về trang chủ" tabIndex={-1}>
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -118,13 +136,13 @@ export default function LoginPage() {
         </div>
 
         {/* Error Alert */}
-        {error && (
+        {(error || validationError) && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm"
           >
-            {error}
+            {validationError || error}
           </motion.div>
         )}
 
@@ -143,7 +161,7 @@ export default function LoginPage() {
              className="w-full bg-blue-100 hover:bg-blue-200 border-2 border-blue-500 text-blue-700 font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 shadow-sm text-lg"
           >
              <QrCode className="w-6 h-6" />
-             Quét thẻ thẻ QR
+             Quét thẻ QR
           </button>
           
           {/* Divider */}
