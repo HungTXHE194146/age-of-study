@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import {
   Search,
@@ -10,6 +10,8 @@ import {
   Edit,
   Ban,
   CheckCircle,
+  ArrowUpDown,
+  X,
 } from "lucide-react";
 import UserAvatar from "@/components/admin/UserAvatar";
 import UserDetailModal from "@/components/admin/UserDetailModal";
@@ -23,14 +25,29 @@ interface User {
   full_name: string | null;
   avatar_url: string | null;
   role: string;
+  grade: number | null;
   created_at: string;
   total_xp: number;
   current_streak: number;
   weekly_xp: number;
   daily_limit_minutes: number;
   freeze_count: number;
-  is_blocked?: boolean;
+  is_blocked: boolean;
 }
+
+interface ClassInfo {
+  id: number;
+  name: string;
+  grade: number;
+}
+
+type SortOption =
+  | "newest"
+  | "oldest"
+  | "xp_high"
+  | "xp_low"
+  | "name_asc"
+  | "streak_high";
 
 export default function UsersManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -38,6 +55,12 @@ export default function UsersManagementPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "blocked">("all");
+  const [gradeFilter, setGradeFilter] = useState<number | "all">("all");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [availableClasses, setAvailableClasses] = useState<ClassInfo[]>([]);
+  const [classStudentMap, setClassStudentMap] = useState<Record<string, number>>({});
+  const [classFilter, setClassFilter] = useState<number | "all">("all");
 
   // Modal states
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -51,7 +74,7 @@ export default function UsersManagementPage() {
 
   useEffect(() => {
     filterUsers();
-  }, [searchTerm, roleFilter, users]);
+  }, [searchTerm, roleFilter, statusFilter, gradeFilter, classFilter, sortBy, users, classStudentMap, availableClasses]);
 
   const loadUsers = async () => {
     try {
@@ -64,6 +87,25 @@ export default function UsersManagementPage() {
       if (error) throw error;
       setUsers(data || []);
       setFilteredUsers(data || []);
+
+      // Load classes
+      const { data: classesData } = await supabase
+        .from("classes")
+        .select("id, name, grade")
+        .neq("status", "archived")
+        .order("name", { ascending: true });
+      setAvailableClasses(classesData || []);
+
+      // Build student → class map (active memberships only)
+      const { data: csData } = await supabase
+        .from("class_students")
+        .select("student_id, class_id")
+        .eq("status", "active");
+      const map: Record<string, number> = {};
+      (csData || []).forEach((row: { student_id: string; class_id: number }) => {
+        map[row.student_id] = row.class_id;
+      });
+      setClassStudentMap(map);
     } catch (error) {
       console.error("Error loading users:", error);
     } finally {
@@ -79,6 +121,30 @@ export default function UsersManagementPage() {
       filtered = filtered.filter((u) => u.role === roleFilter);
     }
 
+    // Status filter
+    if (statusFilter === "active") {
+      filtered = filtered.filter((u) => !u.is_blocked);
+    } else if (statusFilter === "blocked") {
+      filtered = filtered.filter((u) => u.is_blocked);
+    }
+
+    // Grade filter — dùng grade của lớp thực tế (class_students → classes),
+    // fallback về profiles.grade nếu học sinh chưa vào lớp nào
+    if (gradeFilter !== "all") {
+      filtered = filtered.filter((u) => {
+        const enrolledClass = availableClasses.find(
+          (c) => c.id === classStudentMap[u.id]
+        );
+        const effectiveGrade = enrolledClass?.grade ?? u.grade;
+        return effectiveGrade === gradeFilter;
+      });
+    }
+
+    // Class filter (only meaningful when a grade is also selected)
+    if (classFilter !== "all") {
+      filtered = filtered.filter((u) => classStudentMap[u.id] === classFilter);
+    }
+
     // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -88,6 +154,28 @@ export default function UsersManagementPage() {
           u.full_name?.toLowerCase().includes(term),
       );
     }
+
+    // Sort
+    filtered = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case "oldest":
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case "xp_high":
+          return b.total_xp - a.total_xp;
+        case "xp_low":
+          return a.total_xp - b.total_xp;
+        case "name_asc":
+          return (a.full_name || a.username || "").localeCompare(
+            b.full_name || b.username || "",
+            "vi"
+          );
+        case "streak_high":
+          return b.current_streak - a.current_streak;
+        case "newest":
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
 
     setFilteredUsers(filtered);
   };
@@ -114,6 +202,37 @@ export default function UsersManagementPage() {
       alert("Có lỗi xảy ra khi thực hiện thao tác");
     }
   };
+
+  const isFiltered =
+    roleFilter !== "all" ||
+    statusFilter !== "all" ||
+    gradeFilter !== "all" ||
+    classFilter !== "all" ||
+    sortBy !== "newest" ||
+    searchTerm !== "";
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setRoleFilter("all");
+    setStatusFilter("all");
+    setGradeFilter("all");
+    setClassFilter("all");
+    setSortBy("newest");
+  };
+
+  // Stats derived from the full user list (not filtered)
+  const stats = useMemo(() => ({
+    total: users.length,
+    students: users.filter((u) => u.role === "student").length,
+    teachers: users.filter((u) => u.role === "teacher").length,
+    blocked: users.filter((u) => u.is_blocked).length,
+  }), [users]);
+
+  // Classes filtered to the currently selected grade (for cascading dropdown)
+  const classesForGrade = useMemo(() => {
+    if (gradeFilter === "all") return [];
+    return availableClasses.filter((c) => c.grade === gradeFilter);
+  }, [availableClasses, gradeFilter]);
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -155,56 +274,163 @@ export default function UsersManagementPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
           Quản lý người dùng
         </h1>
-        <p className="text-gray-600">
-          Quản lý tất cả người dùng trong hệ thống ({filteredUsers.length} người
-          dùng)
+        <p className="text-gray-500 text-sm">
+          Hiển thị {filteredUsers.length}/{stats.total} người dùng
+          {isFiltered && " (đang lọc)"}
         </p>
       </div>
 
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="bg-white rounded-xl border-2 border-gray-100 p-4">
+          <p className="text-xs text-gray-500 font-medium">Tổng cộng</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+        </div>
+        <div className="bg-white rounded-xl border-2 border-green-100 p-4">
+          <p className="text-xs text-green-600 font-medium">Học sinh</p>
+          <p className="text-2xl font-bold text-green-700 mt-1">{stats.students}</p>
+        </div>
+        <div className="bg-white rounded-xl border-2 border-blue-100 p-4">
+          <p className="text-xs text-blue-600 font-medium">Giáo viên</p>
+          <p className="text-2xl font-bold text-blue-700 mt-1">{stats.teachers}</p>
+        </div>
+        <div className="bg-white rounded-xl border-2 border-red-100 p-4">
+          <p className="text-xs text-red-600 font-medium">Bị chặn</p>
+          <p className="text-2xl font-bold text-red-700 mt-1">{stats.blocked}</p>
+        </div>
+      </div>
+
       {/* Filters and Search */}
-      <div className="bg-white rounded-xl border-2 border-gray-100 p-6 mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* Search */}
+      <div className="bg-white rounded-xl border-2 border-gray-100 p-4 mb-6 space-y-3">
+        {/* Row 1: Search + Add */}
+        <div className="flex gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="Tìm kiếm theo tên hoặc username..."
+              placeholder="Tìm theo tên hoặc username..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors"
+              className="w-full pl-9 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors text-sm"
             />
           </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold flex items-center gap-2 whitespace-nowrap text-sm"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span className="hidden sm:inline">Thêm người dùng</span>
+            <span className="sm:hidden">Thêm</span>
+          </button>
+        </div>
+
+        {/* Row 2: Filters */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
 
           {/* Role Filter */}
-          <div className="relative min-w-[200px]">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 text-sm bg-white cursor-pointer"
+          >
+            <option value="all">Tất cả vai trò</option>
+            <option value="student">Học sinh</option>
+            <option value="teacher">Giáo viên</option>
+            <option value="system_admin">Quản trị viên</option>
+          </select>
+
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "blocked")}
+            className={`px-3 py-2 border-2 rounded-lg focus:outline-none text-sm bg-white cursor-pointer transition-colors ${
+              statusFilter !== "all"
+                ? "border-orange-300 text-orange-700 focus:border-orange-400"
+                : "border-gray-200 focus:border-blue-400"
+            }`}
+          >
+            <option value="all">Tất cả trạng thái</option>
+            <option value="active">Đang hoạt động</option>
+            <option value="blocked">Bị chặn</option>
+          </select>
+
+          {/* Grade Filter */}
+          <select
+            value={gradeFilter}
+            onChange={(e) => {
+              setGradeFilter(e.target.value === "all" ? "all" : parseInt(e.target.value));
+              setClassFilter("all");
+            }}
+            className={`px-3 py-2 border-2 rounded-lg focus:outline-none text-sm bg-white cursor-pointer transition-colors ${
+              gradeFilter !== "all"
+                ? "border-teal-300 text-teal-700 focus:border-teal-400"
+                : "border-gray-200 focus:border-blue-400"
+            }`}
+          >
+            <option value="all">Tất cả khối</option>
+            <option value="1">Khối 1</option>
+            <option value="2">Khối 2</option>
+            <option value="3">Khối 3</option>
+            <option value="4">Khối 4</option>
+            <option value="5">Khối 5</option>
+          </select>
+
+          {/* Class Filter (cascading — only shown when a grade is selected) */}
+          {gradeFilter !== "all" && classesForGrade.length > 0 && (
             <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors appearance-none bg-white cursor-pointer"
+              value={classFilter}
+              onChange={(e) =>
+                setClassFilter(e.target.value === "all" ? "all" : parseInt(e.target.value))
+              }
+              className={`px-3 py-2 border-2 rounded-lg focus:outline-none text-sm bg-white cursor-pointer transition-colors ${
+                classFilter !== "all"
+                  ? "border-purple-300 text-purple-700 focus:border-purple-400"
+                  : "border-gray-200 focus:border-blue-400"
+              }`}
             >
-              <option value="all">Tất cả vai trò</option>
-              <option value="student">Học sinh</option>
-              <option value="teacher">Giáo viên</option>
-              <option value="system_admin">Quản trị viên</option>
+              <option value="all">Tất cả lớp</option>
+              {classesForGrade.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* Sort */}
+          <div className="flex items-center gap-1.5 px-3 py-2 border-2 border-gray-200 rounded-lg bg-white">
+            <ArrowUpDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="text-sm bg-transparent focus:outline-none cursor-pointer"
+            >
+              <option value="newest">Mới nhất</option>
+              <option value="oldest">Cũ nhất</option>
+              <option value="xp_high">XP cao → thấp</option>
+              <option value="xp_low">XP thấp → cao</option>
+              <option value="name_asc">Tên A → Z</option>
+              <option value="streak_high">Streak cao nhất</option>
             </select>
           </div>
 
-          {/* Add User Button */}
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold flex items-center gap-2 whitespace-nowrap"
-          >
-            <UserPlus className="w-5 h-5" />
-            Thêm người dùng
-          </button>
+          {/* Clear filters */}
+          {isFiltered && (
+            <button
+              onClick={clearFilters}
+              className="flex items-center gap-1 px-3 py-2 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 border-2 border-gray-200 hover:border-red-200 rounded-lg transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+              Xóa bộ lọc
+            </button>
+          )}
         </div>
       </div>
 
@@ -218,7 +444,7 @@ export default function UsersManagementPage() {
                   Người dùng
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Vai trò
+                  Vai trò / Khối
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   XP / Streak
@@ -269,13 +495,29 @@ export default function UsersManagementPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border-2 ${getRoleBadgeColor(
-                          user.role,
-                        )}`}
-                      >
-                        {getRoleLabel(user.role)}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span
+                          className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border-2 w-fit ${getRoleBadgeColor(
+                            user.role,
+                          )}`}
+                        >
+                          {getRoleLabel(user.role)}
+                        </span>
+                        {user.role === "student" && (() => {
+                          const userClass = availableClasses.find(
+                            (c) => c.id === classStudentMap[user.id]
+                          );
+                          return userClass ? (
+                            <span className="text-xs text-gray-500">
+                              {userClass.name}
+                            </span>
+                          ) : user.grade != null ? (
+                            <span className="text-xs text-gray-500">
+                              Khối {user.grade}
+                            </span>
+                          ) : null;
+                        })()}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm">
@@ -354,6 +596,11 @@ export default function UsersManagementPage() {
       {showDetailModal && selectedUser && (
         <UserDetailModal
           user={selectedUser}
+          className={
+            availableClasses.find(
+              (c) => c.id === classStudentMap[selectedUser.id]
+            )?.name ?? null
+          }
           onClose={() => {
             setShowDetailModal(false);
             setSelectedUser(null);
@@ -364,6 +611,7 @@ export default function UsersManagementPage() {
       {showEditModal && selectedUser && (
         <UserEditModal
           user={selectedUser}
+          classId={classStudentMap[selectedUser.id] ?? null}
           onClose={() => {
             setShowEditModal(false);
             setSelectedUser(null);

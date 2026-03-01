@@ -1,18 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+
+interface ClassInfo {
+  id: number;
+  name: string;
+  grade: number;
+}
 
 interface AddUserModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function AddUserModal({
-  onClose,
-  onSuccess,
-}: AddUserModalProps) {
+export default function AddUserModal({ onClose, onSuccess }: AddUserModalProps) {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -20,21 +23,45 @@ export default function AddUserModal({
     role: "student" as "student" | "teacher" | "system_admin",
     daily_limit_minutes: 30,
   });
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+  const [availableClasses, setAvailableClasses] = useState<ClassInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      const supabase = getSupabaseBrowserClient();
+      const { data } = await supabase
+        .from("classes")
+        .select("id, name, grade")
+        .neq("status", "archived")
+        .order("grade", { ascending: true })
+        .order("name", { ascending: true });
+      setAvailableClasses(data || []);
+    };
+    fetchClasses();
+  }, []);
+
+  // Group classes by grade for the optgroup display
+  const classesByGrade = availableClasses.reduce<Record<number, ClassInfo[]>>(
+    (acc, cls) => {
+      if (!acc[cls.grade]) acc[cls.grade] = [];
+      acc[cls.grade].push(cls);
+      return acc;
+    },
+    {}
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    // Validation
     if (!formData.username || !formData.password) {
       setError("Vui lòng nhập tên đăng nhập và mật khẩu");
       setLoading(false);
       return;
     }
-
     if (formData.password.length < 6) {
       setError("Mật khẩu phải có ít nhất 6 ký tự");
       setLoading(false);
@@ -43,11 +70,8 @@ export default function AddUserModal({
 
     try {
       const supabase = getSupabaseBrowserClient();
-
-      // Create fake email from username
       const fakeEmail = `${formData.username}@ageofstudy.local`;
 
-      // Sign up user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: fakeEmail,
         password: formData.password,
@@ -62,22 +86,46 @@ export default function AddUserModal({
       if (authError) throw authError;
       if (!authData.user) throw new Error("Không thể tạo tài khoản");
 
-      // Update profile with role and settings
+      const userId = authData.user.id;
+
+      // Resolve grade from selected class
+      const selectedClass = availableClasses.find((c) => c.id === selectedClassId);
+
+      // Update profile: role + settings + grade (derived from class)
+      const profileUpdate: Record<string, unknown> = {
+        role: formData.role,
+        daily_limit_minutes:
+          formData.role === "student" ? formData.daily_limit_minutes : 60,
+      };
+      if (formData.role === "student" && selectedClass) {
+        profileUpdate.grade = selectedClass.grade;
+      }
+
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({
-          role: formData.role,
-          daily_limit_minutes: formData.daily_limit_minutes,
-        })
-        .eq("id", authData.user.id);
-
+        .update(profileUpdate)
+        .eq("id", userId);
       if (profileError) throw profileError;
+
+      // Enroll student in class
+      if (formData.role === "student" && selectedClassId) {
+        const { error: csError } = await supabase
+          .from("class_students")
+          .insert({
+            student_id: userId,
+            class_id: selectedClassId,
+            status: "active",
+          });
+        if (csError) throw csError;
+      }
 
       onSuccess();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error creating user:", err);
-      setError(err.message || "Có lỗi xảy ra khi tạo người dùng");
+      setError(
+        err instanceof Error ? err.message : "Có lỗi xảy ra khi tạo người dùng"
+      );
     } finally {
       setLoading(false);
     }
@@ -101,7 +149,10 @@ export default function AddUserModal({
         </div>
 
         {/* Form - Scrollable */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+        <form
+          onSubmit={handleSubmit}
+          className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1"
+        >
           {error && (
             <div className="p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 text-sm">
               {error}
@@ -166,9 +217,10 @@ export default function AddUserModal({
             </label>
             <select
               value={formData.role}
-              onChange={(e) =>
-                setFormData({ ...formData, role: e.target.value as any })
-              }
+              onChange={(e) => {
+                setFormData({ ...formData, role: e.target.value as typeof formData.role });
+                setSelectedClassId(null);
+              }}
               className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors bg-white text-sm sm:text-base"
             >
               <option value="student">Học sinh</option>
@@ -177,26 +229,60 @@ export default function AddUserModal({
             </select>
           </div>
 
-          {/* Daily Limit */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Giới hạn thời gian/ngày (phút)
-            </label>
-            <input
-              type="number"
-              value={formData.daily_limit_minutes}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  daily_limit_minutes: parseInt(e.target.value) || 0,
-                })
-              }
-              className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors text-sm sm:text-base"
-              min="0"
-              max="1440"
-            />
-            <p className="text-xs text-gray-500 mt-1">Mặc định: 30 phút</p>
-          </div>
+          {/* Class assignment — students only */}
+          {formData.role === "student" && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Xếp vào lớp
+              </label>
+              <select
+                value={selectedClassId ?? ""}
+                onChange={(e) =>
+                  setSelectedClassId(e.target.value ? parseInt(e.target.value) : null)
+                }
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors bg-white text-sm sm:text-base"
+              >
+                <option value="">— Chưa xếp lớp —</option>
+                {Object.entries(classesByGrade)
+                  .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                  .map(([grade, classes]) => (
+                    <optgroup key={grade} label={`Khối ${grade}`}>
+                      {classes.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Khối sẽ tự động xác định theo lớp được chọn
+              </p>
+            </div>
+          )}
+
+          {/* Daily Limit — students only */}
+          {formData.role === "student" && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Giới hạn thời gian/ngày (phút)
+              </label>
+              <input
+                type="number"
+                value={formData.daily_limit_minutes}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    daily_limit_minutes: parseInt(e.target.value) || 0,
+                  })
+                }
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors text-sm sm:text-base"
+                min="0"
+                max="1440"
+              />
+              <p className="text-xs text-gray-500 mt-1">Mặc định: 30 phút/ngày</p>
+            </div>
+          )}
 
           {/* Buttons */}
           <div className="flex gap-3 pt-4">
