@@ -12,6 +12,7 @@ import {
   TestResult,
   TestSubmissionWithAnswers,
 } from "@/types/test";
+import { syncTestProgressAction } from "@/actions/testActions";
 
 // Interface for the Supabase query result structure
 interface TestQuestionWithQuestion {
@@ -344,14 +345,18 @@ export class TestService {
       // Calculate XP: 10 XP for starting, 10 XP per correct answer
       xpEarned = 10 + (correctAnswers * 10);
       
-      await supabase.rpc("handle_test_completion_progress", {
-        p_student_id: studentId,
-        p_test_id: request.test_id,
-        p_score: score,
-        p_xp_earned: xpEarned
-      });
+      const syncResult = await syncTestProgressAction(
+        studentId,
+        request.test_id,
+        score,
+        xpEarned
+      );
+      
+      if (!syncResult?.success) {
+        console.error("syncTestProgressAction returned false/error:", syncResult?.error);
+      }
     } catch (error) {
-      console.error("Failed to sync progress/XP:", error);
+      console.error("Exception during sync progress/XP via server action:", error);
       // Don't throw here to avoid failing the whole submission UI
     }
 
