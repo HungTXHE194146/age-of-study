@@ -4,7 +4,8 @@ import { NotebookCard, NotebookCardContent } from "@/components/ui/notebook-card
 import { NotebookButton } from "@/components/ui/notebook-card";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { TestService } from "@/lib/testService";
 import { Button } from "@/components/ui/button";
@@ -56,9 +57,19 @@ interface EditableQuestion {
 }
 
 export default function TeacherTestEditPage() {
+  return (
+    <Suspense fallback={<Loading message="Đang tải..." />}>
+      <TestEditContent />
+    </Suspense>
+  );
+}
+
+function TestEditContent() {
   const router = useRouter();
   const params = useParams();
   const { user, isAuthenticated } = useAuthStore();
+  const searchParams = useSearchParams();
+  const classId = searchParams.get("classId");
   const testId = params.testId as string;
 
   const [test, setTest] = useState<TestWithQuestions | null>(null);
@@ -351,7 +362,11 @@ export default function TeacherTestEditPage() {
       if (testQuestionsError) throw testQuestionsError;
 
       alert("Bài kiểm tra đã được cập nhật thành công!");
-      router.push(`/teacher/tests`);
+      if (classId) {
+        router.push(`/teacher/classes/${classId}`);
+      } else {
+        router.push(`/teacher/tests`);
+      }
     } catch (error) {
       console.error("Error saving test:", error);
       alert("Cập nhật bài kiểm tra thất bại. Vui lòng thử lại.");
@@ -456,7 +471,11 @@ export default function TeacherTestEditPage() {
       if (testQuestionsError) throw testQuestionsError;
 
       alert("Bài kiểm tra đã được lưu nháp thành công!");
-      router.push(`/teacher/tests`); // Changed to list after draft save like creation page
+      if (classId) {
+        router.push(`/teacher/classes/${classId}`);
+      } else {
+        router.push(`/teacher/tests`); // Changed to list after draft save like creation page
+      }
     } catch (error) {
       console.error("Error saving draft:", error);
       alert("Lưu nháp bài kiểm tra thất bại. Vui lòng thử lại.");
@@ -503,7 +522,13 @@ export default function TeacherTestEditPage() {
       <div className="mb-8 border-b-4 border-dashed border-gray-300 pb-4">
         <button
           className="flex items-center gap-2 text-gray-700 font-bold hover:text-black mb-4 bg-white border-2 border-black rounded-md px-3 py-1 shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all"
-          onClick={() => router.back()}
+          onClick={() => {
+            if (classId) {
+              router.push(`/teacher/classes/${classId}`);
+            } else {
+              router.back();
+            }
+          }}
         >
           <ArrowLeft className="w-4 h-4" />
           Quay lại
@@ -717,8 +742,8 @@ export default function TeacherTestEditPage() {
                     <button
                       onClick={() => setActiveTab("manual")}
                       className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${activeTab === "manual"
-                          ? "border-black border-b-white bg-white text-gray-900 z-10"
-                          : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                        ? "border-black border-b-white bg-white text-gray-900 z-10"
+                        : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                         }`}
                     >
                       <FileText className="w-5 h-5" />
@@ -727,8 +752,8 @@ export default function TeacherTestEditPage() {
                     <button
                       onClick={() => setActiveTab("ai")}
                       className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${activeTab === "ai"
-                          ? "border-black border-b-white bg-white text-gray-900 z-10"
-                          : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                        ? "border-black border-b-white bg-white text-gray-900 z-10"
+                        : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                         }`}
                     >
                       <LinkIcon className="w-5 h-5" />
@@ -737,8 +762,8 @@ export default function TeacherTestEditPage() {
                     <button
                       onClick={() => setActiveTab("bank")}
                       className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${activeTab === "bank"
-                          ? "border-black border-b-white bg-white text-gray-900 z-10"
-                          : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                        ? "border-black border-b-white bg-white text-gray-900 z-10"
+                        : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                         }`}
                     >
                       <Book className="w-5 h-5" />

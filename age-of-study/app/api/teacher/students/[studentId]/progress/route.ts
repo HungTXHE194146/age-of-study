@@ -50,6 +50,27 @@ export async function GET(
 
     let activities: any[] = [];
     if (!activitiesErr && activitiesData) {
+      // Collect unique test IDs from metadata for generic "completed" activities
+      const testIdsToFetch = activitiesData
+        .filter((act: any) => 
+          act.activity_type === 'test_completed' && 
+          act.metadata?.test_id && 
+          (act.description === "Hoàn thành bài tập" || act.description?.startsWith("Hoàn thành bài tập với điểm số"))
+        )
+        .map((act: any) => act.metadata.test_id);
+
+      let testTitleMap = new Map();
+      if (testIdsToFetch.length > 0) {
+        const { data: testsData } = await supabaseAdmin
+          .from("tests")
+          .select("id, title")
+          .in("id", testIdsToFetch);
+        
+        if (testsData) {
+          testsData.forEach((t: any) => testTitleMap.set(t.id, t.title));
+        }
+      }
+
       activities = activitiesData.map((act: any) => {
         // Format relative time (e.g. "Hôm nay", "Hôm qua", or specific date)
         const date = new Date(act.created_at);
@@ -60,11 +81,22 @@ export async function GET(
           ? `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} Hôm nay`
           : date.toLocaleDateString('vi-VN');
 
+        let displayDesc = act.description;
+
+        // Enhance generic description with test title if available
+        if (act.activity_type === 'test_completed' && act.metadata?.test_id) {
+          const title = testTitleMap.get(act.metadata.test_id);
+          if (title && (displayDesc === "Hoàn thành bài tập" || displayDesc?.startsWith("Hoàn thành bài tập với điểm số"))) {
+            const scorePart = act.metadata.score !== undefined ? ` với điểm số ${act.metadata.score}%` : "";
+            displayDesc = `Hoàn thành bài tập: ${title}${scorePart}`;
+          }
+        }
+
         return {
           id: act.id,
           time: timeStr,
           type: act.activity_type,
-          desc: act.description,
+          desc: displayDesc,
         };
       });
     }

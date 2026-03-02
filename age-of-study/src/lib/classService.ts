@@ -496,24 +496,59 @@ export async function getTeacherClasses(
       }
     }
 
-    // Separate homeroom and subject classes
-    const homeroomClasses = (assignmentsData || [])
-      .filter((a: any) => a.is_homeroom)
-      .map((a: any) => ({
-        ...a.class,
-        student_count: countMap.get(a.class_id) || 0,
-        homeroom_teacher_name: teacherData.full_name,
-        subject: a.subject,
-      }));
+    // Separate homeroom and subject classes with grouping to handle multiple subjects per class
+    const homeroomMap = new Map<number, any>();
+    const subjectMap = new Map<number, any>();
 
-    const subjectClasses = (assignmentsData || [])
-      .filter((a: any) => !a.is_homeroom)
-      .map((a: any) => ({
-        ...a.class,
-        student_count: countMap.get(a.class_id) || 0,
-        homeroom_teacher_name: null, // Could query this if needed
-        subject: a.subject,
-      }));
+    (assignmentsData || []).forEach((a: any) => {
+      if (a.is_homeroom) {
+        if (!homeroomMap.has(a.class_id)) {
+          homeroomMap.set(a.class_id, {
+            ...a.class,
+            student_count: countMap.get(a.class_id) || 0,
+            homeroom_teacher_name: teacherData.full_name,
+            subjects: [],
+          });
+        }
+        const entry = homeroomMap.get(a.class_id);
+        if (!entry.subjects.some((s: any) => s.id === a.subject.id)) {
+          entry.subjects.push(a.subject);
+        }
+      } else {
+        if (!subjectMap.has(a.class_id)) {
+          subjectMap.set(a.class_id, {
+            ...a.class,
+            student_count: countMap.get(a.class_id) || 0,
+            homeroom_teacher_name: null,
+            subjects: [],
+          });
+        }
+        const entry = subjectMap.get(a.class_id);
+        if (!entry.subjects.some((s: any) => s.id === a.subject.id)) {
+          entry.subjects.push(a.subject);
+        }
+      }
+    });
+
+    // If a class is both homeroom and subject (e.g., teacher is GVCN and also teaches other subjects),
+    // merge them into the homeroom entry and remove from subject list to avoid duplicates.
+    for (const classId of Array.from(homeroomMap.keys())) {
+      if (subjectMap.has(classId)) {
+        const homeroomEntry = homeroomMap.get(classId);
+        const subjectEntry = subjectMap.get(classId);
+        
+        subjectEntry.subjects.forEach((s: any) => {
+          if (!homeroomEntry.subjects.some((existing: any) => existing.id === s.id)) {
+            homeroomEntry.subjects.push(s);
+          }
+        });
+        
+        subjectMap.delete(classId);
+      }
+    }
+
+    const homeroomClasses = Array.from(homeroomMap.values());
+    const subjectClasses = Array.from(subjectMap.values());
 
     const result: TeacherWithClasses = {
       ...teacherData,

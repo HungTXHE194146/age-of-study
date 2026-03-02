@@ -263,7 +263,11 @@ function CreateTestContent() {
       if (testQuestionsError) throw testQuestionsError;
 
       alert("Bài kiểm tra đã được lưu thành công!");
-      router.push("/teacher/tests");
+      if (classIdParam) {
+        router.push(`/teacher/classes/${classIdParam}`);
+      } else {
+        router.push("/teacher/tests");
+      }
     } catch (error) {
       console.error("Error saving test:", error);
       alert("Có lỗi xảy ra khi lưu bài kiểm tra");
@@ -397,7 +401,11 @@ function CreateTestContent() {
       if (testQuestionsError) throw testQuestionsError;
 
       alert("Bài kiểm tra đã được lưu nháp thành công!");
-      router.push("/teacher/tests");
+      if (classIdParam) {
+        router.push(`/teacher/classes/${classIdParam}`);
+      } else {
+        router.push("/teacher/tests");
+      }
     } catch (error) {
       console.error("Error saving draft:", error);
       alert("Có lỗi xảy ra khi lưu nháp bài kiểm tra");
@@ -1056,6 +1064,10 @@ function CreateTestContent() {
                                 difficulty: data.difficulty,
                                 subject: data.subject || "",
                                 file: data.file || null,
+                                onlyFromFile: data.onlyFromFile,
+                                fromKnowledgeBase: data.fromKnowledgeBase,
+                                fromQuestionBank: data.fromQuestionBank,
+                                questionTypes: data.questionTypes,
                               });
 
                             if (result.questions && result.questions.length > 0) {

@@ -6,6 +6,10 @@ export interface AIQuestionGenerationRequest {
   difficulty: string;
   subject?: string;
   file?: File | null;
+  onlyFromFile?: boolean;
+  fromKnowledgeBase?: boolean;
+  fromQuestionBank?: boolean;
+  questionTypes?: string[];
 }
 
 export interface AIQuestionGenerationResponse {
@@ -33,6 +37,7 @@ export class AIQuestionService {
     data: AIQuestionGenerationRequest,
   ): Promise<AIQuestionGenerationResponse> {
     try {
+      console.log('>>> [Service] generateQuestions input:', data);
       const formData = new FormData();
       
       if (data.textPrompt) {
@@ -48,6 +53,19 @@ export class AIQuestionService {
 
       if (data.file) {
         formData.append("file", data.file);
+      }
+
+      if (data.onlyFromFile !== undefined) {
+        formData.append("onlyFromFile", data.onlyFromFile.toString());
+      }
+      if (data.fromKnowledgeBase !== undefined) {
+        formData.append("fromKnowledgeBase", data.fromKnowledgeBase.toString());
+      }
+      if (data.fromQuestionBank !== undefined) {
+        formData.append("fromQuestionBank", data.fromQuestionBank.toString());
+      }
+      if (data.questionTypes) {
+        formData.append("questionTypes", JSON.stringify(data.questionTypes));
       }
 
       const supabase = await getSupabaseBrowserClient();

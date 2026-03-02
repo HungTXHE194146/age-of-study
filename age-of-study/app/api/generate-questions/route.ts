@@ -105,13 +105,34 @@ const JSON_SCHEMA = `
 // ============================================================================ 
 export async function POST(request: NextRequest) {
   try {
+    console.log('>>> [API] /api/generate-questions: Request received')
+    
     // 1. Parse request body
     const formData = await request.formData()
+    
+    // Log available keys for debugging
+    const keys = Array.from(formData.keys())
+    console.log('>>> [API] FormData keys:', keys)
+
     const textPrompt = formData.get('textPrompt') as string
     const file = formData.get('file') as File | null
     const questionCount = parseInt(formData.get('questionCount') as string)
     const difficulty = formData.get('difficulty') as string
     const subject = formData.get('subject') as string
+    const onlyFromFile = formData.get('onlyFromFile') === 'true'
+    const fromKnowledgeBase = formData.get('fromKnowledgeBase') === 'true'
+    const fromQuestionBank = formData.get('fromQuestionBank') === 'true'
+    
+    // Parse questionTypes
+    let questionTypes: string[] = ['MULTIPLE_CHOICE']
+    try {
+      const typesStr = formData.get('questionTypes') as string
+      if (typesStr) {
+        questionTypes = JSON.parse(typesStr)
+      }
+    } catch (e) {
+      console.error('Error parsing questionTypes:', e)
+    }
 
     // 2. Validate inputs
     if (!questionCount || questionCount < 1 || questionCount > 20) {
@@ -153,19 +174,152 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Vui lòng cung cấp tài liệu hoặc nội dung để tạo câu hỏi' }, { status: 400 })
     }
 
-    // 4. Validate extracted content
-    if (!content || content.trim().length === 0) {
-      return NextResponse.json({ error: 'Nội dung tài liệu không hợp lệ hoặc quá ngắn' }, { status: 400 })
+    // 4. Validate and Fetch content from other sources
+    const supabase = getServerSupabase()
+    
+    let knowledgeBaseContent = ''
+    if (fromKnowledgeBase && subject) {
+      console.log('>>> [API] Knowledge Base Retrieval Started')
+      console.log('>>> [API] Subject:', subject, 'Prompt:', textPrompt)
+
+      // 1. Normalize prompt to NFC for consistent matching
+      const normalizedPrompt = textPrompt?.normalize('NFC') || ''
+      
+      // 2. Extract potential keywords with support for common Vietnamese terms
+      // Match "Tuần X", "Bài X", "Tiết X", "Chương X" etc.
+      const keywordRegex = /(Tuần|Bài|Tiết|Chương|Tập|Lớp)\s*(\d+|I+V*X*)/gi
+      const keywordMatches = normalizedPrompt.match(keywordRegex)
+      let keywords = keywordMatches ? keywordMatches.map(k => k.trim().normalize('NFC')) : []
+      
+      // Also add subject name keywords if prompt is short
+      if (keywords.length === 0 && normalizedPrompt.length < 50) {
+          keywords = [normalizedPrompt]
+      }
+
+      console.log('>>> [API] Extracted Keywords (NFC):', keywords)
+
+      // 3. Find relevant nodes in the subject (get title and description)
+      let nodeQuery = supabase.from('nodes').select('id, title, description').eq('subject_id', parseInt(subject))
+      
+      // If keywords found, filter nodes by title
+      if (keywords.length > 0) {
+        const filterStr = keywords.map(k => `title.ilike.%${k}%`).join(',')
+        nodeQuery = nodeQuery.or(filterStr)
+      }
+
+      const { data: nodes, error: nodeError } = await nodeQuery.limit(15)
+      
+      if (nodeError) console.error('Error fetching nodes:', nodeError)
+
+      if (nodes && nodes.length > 0) {
+        console.log('Found Nodes:', nodes.map(n => n.title))
+        const nodeIds = nodes.map(n => n.id)
+        
+        // Add node info to context
+        knowledgeBaseContent += nodes.map(n => `[BÀI HỌC: ${n.title}]\n${n.description ? 'Mô tả: ' + n.description : ''}`).join('\n\n') + '\n\n'
+
+        // 3. Fetch richer lesson_sections for these nodes
+        const { data: subSections, error: sectionsError } = await supabase
+          .from('lesson_sections')
+          .select('title, section_type, content, qa_pairs, remember')
+          .in('node_id', nodeIds)
+        
+        if (sectionsError) console.error('Error fetching lesson_sections:', sectionsError)
+
+        if (subSections && subSections.length > 0) {
+          console.log(`Found ${subSections.length} lesson sections.`)
+          
+          const sectionTexts = subSections.map(s => {
+            let sectionBlock = `[PHẦN: ${s.title}] (${s.section_type})\n`
+            sectionBlock += `Nội dung: ${s.content}\n`
+            
+            // Format qa_pairs if they exist
+            if (s.qa_pairs && Array.isArray(s.qa_pairs) && s.qa_pairs.length > 0) {
+              sectionBlock += `Câu hỏi & Trả lời đi kèm:\n`
+              s.qa_pairs.forEach((qa: any, idx: number) => {
+                sectionBlock += `  - Q: ${qa.question || qa.q}\n    A: ${qa.answer || qa.a}\n`
+              })
+            }
+            
+            // Format remember if it exists
+            if (s.remember) {
+              sectionBlock += `GHI NHỚ: ${s.remember}\n`
+            }
+            
+            return sectionBlock
+          })
+          
+          knowledgeBaseContent += sectionTexts.join('\n\n')
+        }
+      } else {
+        console.log('No specific nodes found for subject and keywords.')
+      }
+
+      // If keywords didn't yield results, try direct hit if subject points to a node
+      if (!knowledgeBaseContent && subject) {
+        const { data: fallbackSections } = await supabase
+          .from('lesson_sections')
+          .select('title, section_type, content, qa_pairs, remember')
+          .eq('node_id', subject) 
+          .limit(5)
+        
+        if (fallbackSections && fallbackSections.length > 0) {
+          knowledgeBaseContent = fallbackSections.map(s => {
+             let block = `[PHẦN: ${s.title}]\nNội dung: ${s.content}\n`
+             if (s.remember) block += `GHI NHỚ: ${s.remember}\n`
+             return block
+          }).join('\n\n')
+        }
+      }
+      console.log('Total KB Content Length:', knowledgeBaseContent.length)
+      console.log('--- End Knowledge Base Retrieval ---')
     }
 
-    // 5. Authenticate user via Supabase JWT
+    let questionBankContent = ''
+    if (fromQuestionBank && subject) {
+      console.log('--- AI Question Gen: Question Bank Retrieval ---')
+      const { data: existingQuestions } = await supabase
+        .from('questions')
+        .select('content, explanation, difficulty')
+        .eq('subject_id', parseInt(subject))
+        .limit(10)
+      
+      if (existingQuestions) {
+        console.log(`Found ${existingQuestions.length} existing questions for reference.`)
+        questionBankContent = existingQuestions.map(q => {
+          const content = q.content as any
+          return `Câu hỏi: ${content.questionText}\nĐộ khó: ${q.difficulty}\nGiải thích: ${q.explanation || 'Không có'}`
+        }).join('\n---\n')
+      }
+      console.log('--- End Question Bank Retrieval ---')
+    }
+
+    // Combine all content
+    let finalContext = ''
+    
+    // Use file content if provided and either 'onlyFromFile' is true or fallback is needed
+    if (file && (onlyFromFile || (!fromKnowledgeBase && !fromQuestionBank))) {
+      finalContext += `[NỘI DUNG TỪ FILE]:\n${content}\n\n`
+    }
+    
+    if (fromKnowledgeBase) finalContext += `[NỘI DUNG TỪ KHO KIẾN THỨC]:\n${knowledgeBaseContent}\n\n`
+    if (fromQuestionBank) finalContext += `[NỘI DUNG THAM KHẢO TỪ NGÂN HÀNG CÂU HỎI]:\n${questionBankContent}\n\n`
+    
+    // If we still have no context from specific sources but we have a text prompt, use it as context
+    if (finalContext.trim().length === 0 && textPrompt) {
+       finalContext = `[NỘI DUNG TỪ YÊU CẦU]:\n${textPrompt}`
+    }
+
+    if (!finalContext || finalContext.trim().length === 0) {
+      return NextResponse.json({ error: 'Không tìm thấy nội dung phù hợp từ các nguồn đã chọn để tạo câu hỏi.' }, { status: 400 })
+    }
+
     const authHeader = request.headers.get('authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const supabase = getServerSupabase()
 
     // Verify the JWT token and get user
     const { data: { user: authUser }, error: authError } = await createClient(
@@ -211,13 +365,20 @@ export async function POST(request: NextRequest) {
     // 7. Build prompt for Gemini
     const prompt = `${SYSTEM_PROMPT}
 
-Tài liệu:
-${content}
+**NGUỒN DỮ LIỆU ĐƯỢC CUNG CẤP (CHỈ SỬ DỤNG NỘI DUNG NÀY):**
+${finalContext}
 
-Yêu cầu:
+**YÊU CẦU NGHIÊM NGẶT:**
+1. KHÔNG ĐƯỢC sử dụng kiến thức bên ngoài tài liệu được cung cấp ở trên.
+2. Bạn CHỈ được phép tạo các loại câu hỏi sau: ${questionTypes.join(', ')}.
+3. Nếu tài liệu không đủ thông tin để tạo đủ số lượng câu hỏi, chỉ tạo số lượng tối đa có thể (không được bịa thêm).
+4. Nếu tài liệu hoàn toàn không liên quan đến môn học ${subject}, hãy trả về mảng rỗng [].
+
+Yêu cầu cụ thể:
 - Tạo ${questionCount} câu hỏi
-- Độ khó: ${difficulty} (nếu chọn Hỗn Hợp, hãy tạo câu hỏi với các mức độ khó Easy, Medium, Hard xen kẽ)
+- Độ khó: ${difficulty}
 - Môn học: ${subject}
+- Prompt/Yêu cầu người dùng (nếu có): ${textPrompt || 'Không có yêu cầu thêm'}
 
 Schema JSON:
 ${JSON_SCHEMA}

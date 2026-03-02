@@ -106,24 +106,47 @@ export async function getStudentNodeStats(nodeId: number, studentId: string): Pr
     });
   }
 
-  let completed = 0;
   let needsReview = 0;
+
+  // Get overall progress for this node
+  const { data: nodeProgress } = await supabase
+    .from('student_node_progress')
+    .select('score, submit_count')
+    .eq('student_id', studentId)
+    .eq('node_id', nodeId)
+    .single();
 
   const enrichedTests = tests.map((t: any) => {
     const sub = subMap.get(t.id);
     let stStatus = 'not_started';
     let score = null;
+    let percentage = 0;
 
     if (sub) {
       if (sub.status === 'completed' || sub.status === 'submitted') {
         stStatus = 'completed';
         score = sub.score;
-        completed++;
         
-        // Giả sử làm đúng dưới 50% là need review
         if (sub.total_questions > 0) {
-           const pct = sub.score / sub.total_questions;
-           if (pct < 0.5) needsReview++;
+           // Ưu tiên dùng số câu trả lời đúng
+           if (sub.correct_answers !== undefined && sub.correct_answers !== null) {
+              percentage = Math.round((sub.correct_answers / sub.total_questions) * 100);
+           } else {
+              // Nếu bảng cũ đang lưu điểm theo thang 10 (score = 10, total = 10 -> 100%)
+              // hoặc điểm đã là phần trăm (score = 100 -> 100%)
+              if (sub.score <= 10) {
+                 percentage = Math.round((sub.score / sub.total_questions) * 100);
+              } else {
+                 percentage = sub.score;
+              }
+           }
+           // Đảm bảo phần trăm không vượt quá 100
+           percentage = Math.min(100, Math.max(0, percentage));
+           
+           if (percentage < 50) needsReview++;
+        } else {
+           // Nếu không có total_questions
+           percentage = (sub.score <= 10) ? Math.min(100, sub.score * 10) : Math.min(100, sub.score || 0);
         }
       } else {
         stStatus = 'in_progress';
@@ -133,12 +156,12 @@ export async function getStudentNodeStats(nodeId: number, studentId: string): Pr
     return {
       ...t,
       status: stStatus,
-      score
+      score: percentage
     };
   });
 
-  const bestScore = Math.max(0, ...enrichedTests.map((t: any) => t.score || 0));
-
+  const bestScore = nodeProgress?.score ? parseInt(nodeProgress.score, 10) : 0;
+  const completed = nodeProgress?.submit_count || 0;
 
   return {
     tests: enrichedTests,

@@ -25,9 +25,9 @@ export async function getTeacherDashboardSummary(teacherId: string): Promise<{ d
       ...(classesResult.data?.subject_classes || [])
     ];
 
-    const totalClasses = allClasses.length;
+    const classIds = Array.from(new Set(allClasses.map(c => c.id)));
+    const totalClasses = classIds.length;
     const totalStudents = allClasses.reduce((acc, c) => acc + (c.student_count || 0), 0);
-    const classIds = allClasses.map(c => c.id);
 
     // 2. Get students active today
     const today = new Date();
