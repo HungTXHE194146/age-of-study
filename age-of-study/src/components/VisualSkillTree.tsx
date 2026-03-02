@@ -38,6 +38,7 @@ import {
   Edit2,
   Trash2,
   Search,
+  Target,
 } from "lucide-react";
 import { transformDBNodesToFlow } from "@/utils/skillTreeMapper";
 import { updateNodeConnection, updateNodePositions } from "@/actions/skillTreeActions";
@@ -837,8 +838,8 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
           zoomOnScroll={false}
           zoomOnPinch={false}
           zoomOnDoubleClick={false}
-          panOnDrag={isTeacherMode} // Khóa kéo thả màn hình với học sinh
-          panOnScroll={isTeacherMode} // Khóa cuộn màn hình với học sinh
+          panOnDrag={true} // Cho phép vuốt/kéo màn hình
+          panOnScroll={true} // Cho phép cuộn màn hình
           nodesDraggable={isTeacherMode} // Khóa kéo thả node với học sinh
           nodesConnectable={isTeacherMode}
           elementsSelectable={true}
@@ -887,6 +888,33 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
               >
                 <Star size={isTeacherMode ? 20 : 16} />
                 Căn Chỉnh Tự Động
+              </button>
+            </Panel>
+          )}
+
+          {!isTeacherMode && (
+            <Panel position="bottom-center" className="flex gap-2 mb-6 w-full justify-center z-50">
+              <button
+                onClick={() => {
+                  if (rfInstance && nodes.length > 0) {
+                    let activeNode;
+                    if (completedNodeIds.length === 0) {
+                      activeNode = [...nodes].sort((a, b) => (a.data.id as number) - (b.data.id as number))[0];
+                    } else {
+                      activeNode = nodes.find(n => !n.data.isCompleted && !n.data.isLocked)
+                        || [...nodes].filter(n => n.data.isCompleted).pop()
+                        || nodes[0];
+                    }
+
+                    if (activeNode) {
+                      rfInstance.setCenter(activeNode.position.x + 75, activeNode.position.y + 75, { zoom: 0.8, duration: 800 });
+                    }
+                  }
+                }}
+                className="bg-white hover:bg-yellow-50 text-black border-2 border-black font-black py-3 px-6 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] flex items-center gap-2 transition-all text-sm uppercase"
+              >
+                <Target size={20} className="text-blue-500" />
+                Về Bài Hiện Tại
               </button>
             </Panel>
           )}

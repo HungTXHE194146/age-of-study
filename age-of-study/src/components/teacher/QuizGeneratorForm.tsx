@@ -27,6 +27,10 @@ export function QuizGeneratorForm({
     difficulty: "Easy",
     questionCount: 10,
     file: null,
+    onlyFromFile: true,
+    fromKnowledgeBase: false,
+    fromQuestionBank: false,
+    questionTypes: ["MULTIPLE_CHOICE"],
   });
   const [isDragging, setIsDragging] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -57,19 +61,19 @@ export function QuizGeneratorForm({
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/msword'
     ];
-    
+
     if (!validTypes.includes(file.type)) {
       setFileError('Invalid file type. Please upload PDF or DOCX files only.');
       return;
     }
-    
+
     // Validate file size (10MB max)
     const maxSize = 10 * 1024 * 1024; // 10MB in bytes
     if (file.size > maxSize) {
       setFileError(`File size exceeds 10MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`);
       return;
     }
-    
+
     // Clear any previous errors and set the file
     setFileError(null);
     setFormData((prev) => ({ ...prev, file }));
@@ -124,68 +128,67 @@ export function QuizGeneratorForm({
         {/* File Upload Area */}
         <div>
           <div
-            className={`border-4 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer relative overflow-hidden ${
-              isDragging
-                ? "border-blue-400 bg-blue-50"
-                : fileError
-                  ? "border-red-400 bg-red-50 relative"
-                  : "border-gray-400 bg-white hover:bg-gray-50 hover:border-blue-400"
-            }`}
-             onDragOver={handleDragOver}
-             onDragLeave={handleDragLeave}
-             onDrop={handleDrop}
-             onClick={() => document.getElementById('file-upload')?.click()}
+            className={`border-4 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer relative overflow-hidden ${isDragging
+              ? "border-blue-400 bg-blue-50"
+              : fileError
+                ? "border-red-400 bg-red-50 relative"
+                : "border-gray-400 bg-white hover:bg-gray-50 hover:border-blue-400"
+              }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => document.getElementById('file-upload')?.click()}
           >
             {formData.file ? (
-            <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center gap-3">
-                <FileText className="w-10 h-10 text-blue-600" />
-                <div className="text-left">
+              <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-3">
+                  <FileText className="w-10 h-10 text-blue-600" />
+                  <div className="text-left">
+                    <p className="font-bold text-gray-900 text-lg">
+                      {formData.file.name}
+                    </p>
+                    <p className="font-bold text-gray-500">
+                      {(formData.file.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleFileRemove}
+                  className="p-2 border-2 border-black rounded-lg bg-red-100 hover:bg-red-200 text-red-900 shadow-[2px_2px_0_0_rgba(0,0,0,1)] transition-transform hover:-translate-y-0.5"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3 pointer-events-none">
+                <CloudUpload className="w-14 h-14 mx-auto text-blue-500" />
+                <div>
                   <p className="font-bold text-gray-900 text-lg">
-                    {formData.file.name}
+                    Click hoặc kéo thả tài liệu vào đây
                   </p>
                   <p className="font-bold text-gray-500">
-                    {(formData.file.size / 1024 / 1024).toFixed(2)} MB
+                    PDF, DOCX (Tối đa 10MB)
                   </p>
                 </div>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file);
+                  }}
+                  className="hidden"
+                  id="file-upload"
+                />
               </div>
-              <button
-                type="button"
-                onClick={handleFileRemove}
-                className="p-2 border-2 border-black rounded-lg bg-red-100 hover:bg-red-200 text-red-900 shadow-[2px_2px_0_0_rgba(0,0,0,1)] transition-transform hover:-translate-y-0.5"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3 pointer-events-none">
-              <CloudUpload className="w-14 h-14 mx-auto text-blue-500" />
-              <div>
-                <p className="font-bold text-gray-900 text-lg">
-                  Click hoặc kéo thả tài liệu vào đây
-                </p>
-                <p className="font-bold text-gray-500">
-                  PDF, DOCX (Tối đa 10MB)
-                </p>
-              </div>
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFileUpload(file);
-                }}
-                className="hidden"
-                id="file-upload"
-              />
-            </div>
-          )}
+            )}
           </div>
           {fileError && (
-             <div className="mt-3 bg-red-100 border-2 border-black text-red-800 font-bold px-4 py-2 rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex items-center gap-2 w-max">
-               <AlertCircle className="w-5 h-5 flex-shrink-0" />
-               {fileError}
-             </div>
+            <div className="mt-3 bg-red-100 border-2 border-black text-red-800 font-bold px-4 py-2 rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex items-center gap-2 w-max">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              {fileError}
+            </div>
           )}
         </div>
 
@@ -214,12 +217,73 @@ export function QuizGeneratorForm({
               setFormData((prev) => ({ ...prev, topic: e.target.value }))
             }
             className="w-full min-h-[140px] p-4 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem] leading-8 border-2 border-black rounded-lg resize-y focus:outline-none focus:ring-4 focus:ring-blue-100 transition-shadow font-medium text-gray-900"
-            required={!formData.file}
+            required={!formData.file && !formData.fromKnowledgeBase && !formData.fromQuestionBank}
           />
         </div>
 
+        {/* Source Selection Checkboxes */}
+        <div className="space-y-4 pt-2">
+          <label className="block text-xl font-black text-gray-800 font-handwritten tracking-tight">
+            Nguồn dữ liệu câu hỏi
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div
+              className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.onlyFromFile ? 'border-blue-600 bg-blue-50 shadow-[2px_2px_0_0_rgba(0,0,0,1)]' : 'border-black bg-white hover:bg-gray-50'}`}
+              onClick={() => setFormData(prev => ({ ...prev, onlyFromFile: !prev.onlyFromFile }))}
+            >
+              <input
+                type="checkbox"
+                checked={formData.onlyFromFile}
+                onChange={() => { }} // Controlled by div click
+                className="w-5 h-5 accent-blue-600 cursor-pointer"
+              />
+              <div>
+                <p className="font-bold text-gray-900 leading-tight">Từ File đã tải</p>
+                <p className="text-xs text-gray-600">Dựa trên nội dung file PDF/DOCX</p>
+              </div>
+            </div>
+
+            <div
+              className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.fromKnowledgeBase ? 'border-green-600 bg-green-50 shadow-[2px_2px_0_0_rgba(0,0,0,1)]' : 'border-black bg-white hover:bg-gray-50'}`}
+              onClick={() => setFormData(prev => ({ ...prev, fromKnowledgeBase: !prev.fromKnowledgeBase }))}
+            >
+              <input
+                type="checkbox"
+                checked={formData.fromKnowledgeBase}
+                onChange={() => { }}
+                className="w-5 h-5 accent-green-600 cursor-pointer"
+              />
+              <div>
+                <p className="font-bold text-gray-900 leading-tight">Kho kiến thức</p>
+                <p className="text-xs text-gray-600">Từ các mục bài học trong hệ thống</p>
+              </div>
+            </div>
+
+            <div
+              className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.fromQuestionBank ? 'border-purple-600 bg-purple-50 shadow-[2px_2px_0_0_rgba(0,0,0,1)]' : 'border-black bg-white hover:bg-gray-50'}`}
+              onClick={() => setFormData(prev => ({ ...prev, fromQuestionBank: !prev.fromQuestionBank }))}
+            >
+              <input
+                type="checkbox"
+                checked={formData.fromQuestionBank}
+                onChange={() => { }}
+                className="w-5 h-5 accent-purple-600 cursor-pointer"
+              />
+              <div>
+                <p className="font-bold text-gray-900 leading-tight">Ngân hàng câu hỏi</p>
+                <p className="text-xs text-gray-600">Tham khảo các câu hỏi sẵn có</p>
+              </div>
+            </div>
+          </div>
+          {(!formData.onlyFromFile && !formData.fromKnowledgeBase && !formData.fromQuestionBank && !formData.topic.trim()) && (
+            <p className="text-red-600 font-bold text-sm flex items-center gap-1">
+              <AlertCircle className="w-4 h-4" /> Vui lòng chọn ít nhất một nguồn dữ liệu hoặc nhập yêu cầu
+            </p>
+          )}
+        </div>
+
         {/* Controls */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 items-end">
           <div className="space-y-2">
             <label
               htmlFor="subject"
@@ -267,7 +331,7 @@ export function QuizGeneratorForm({
                   difficulty: e.target.value as DifficultyLevel,
                 }))
               }
-               className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-blue-100 appearance-none shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+              className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-blue-100 appearance-none shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
             >
               {difficultyOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -293,7 +357,7 @@ export function QuizGeneratorForm({
                   questionCount: parseInt(e.target.value),
                 }))
               }
-               className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-blue-100 appearance-none shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+              className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-blue-100 appearance-none shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
             >
               {questionCountOptions.map((option) => (
                 <option key={option.value} value={option.value.toString()}>
@@ -304,17 +368,52 @@ export function QuizGeneratorForm({
           </div>
         </div>
 
+        {/* Question Type Selection */}
+        <div className="space-y-4 pt-2">
+          <label className="block text-xl font-black text-gray-800 font-handwritten tracking-tight">
+            Loại câu hỏi muốn tạo
+          </label>
+          <div className="flex flex-wrap gap-4">
+            {[
+              { id: 'MULTIPLE_CHOICE', label: 'Trắc nghiệm' },
+              { id: 'TRUE_FALSE', label: 'Đúng/Sai' },
+              { id: 'ESSAY', label: 'Tự luận' }
+            ].map((type) => (
+              <label
+                key={type.id}
+                className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-all ${formData.questionTypes.includes(type.id as any) ? 'border-orange-600 bg-orange-50' : 'border-black bg-white'}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.questionTypes.includes(type.id as any)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setFormData(prev => ({ ...prev, questionTypes: [...prev.questionTypes, type.id as any] }));
+                    } else {
+                      if (formData.questionTypes.length > 1) {
+                        setFormData(prev => ({ ...prev, questionTypes: prev.questionTypes.filter(t => t !== type.id) }));
+                      }
+                    }
+                  }}
+                  className="w-4 h-4 accent-orange-600"
+                />
+                <span className="font-bold text-gray-800">{type.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         {/* Action Button */}
         <div className="pt-8">
           <button
             type="submit"
-            disabled={isLoading || (!formData.topic.trim() && !formData.file)}
+            disabled={isLoading || (!formData.topic.trim() && !formData.file && !formData.fromKnowledgeBase && !formData.fromQuestionBank)}
             className="w-full flex items-center justify-center gap-3 bg-[#ffde59] hover:bg-[#efce49] border-2 border-black text-black font-black py-4 px-6 rounded-lg text-lg transition-transform hover:-translate-y-1 shadow-[4px_4px_0_0_rgba(0,0,0,1)] uppercase disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
           >
             {isLoading ? (
-               <><Loader2 className="w-6 h-6 animate-spin" /> Đang tạo câu hỏi bằng AI...</>
+              <><Loader2 className="w-6 h-6 animate-spin" /> Đang tạo câu hỏi bằng AI...</>
             ) : (
-               <><span>✨</span> Bắt đầu Nhờ AI Tạo Câu Hỏi</>
+              <><span>✨</span> Bắt đầu Nhờ AI Tạo Câu Hỏi</>
             )}
           </button>
         </div>

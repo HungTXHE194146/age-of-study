@@ -36,7 +36,7 @@ export async function getClassDetailServer(classId: number): Promise<{ data: Cla
             id, username, full_name, avatar_url, grade, total_xp, last_study_date,
             dob, gender, ethnicity, phone_number, enroll_status, sessions_per_week,
             activity_logs (
-              id, activity_type, description, xp_earned, created_at
+              id, activity_type, description, xp_earned, created_at, metadata
             ),
             student_node_progress (
               node_id, status, score, last_accessed_at, completed_at,
@@ -56,6 +56,46 @@ export async function getClassDetailServer(classId: number): Promise<{ data: Cla
     const classData = classResult.data as any;
     const teachersData = (teachersResult.data || []) as any[];
     const studentsData = (studentsResult.data || []) as any[];
+
+    // --- ENHANCE ACTIVITY LOGS WITH TEST TITLES ---
+    // Collect all unique test IDs that need title fetching
+    const activityLogsToEnhance: any[] = [];
+    const testIdsToFetchSet = new Set<string>();
+
+    studentsData.forEach((s: any) => {
+      if (s.profile.activity_logs) {
+        s.profile.activity_logs.forEach((log: any) => {
+          if (log.activity_type === 'test_completed' && log.metadata?.test_id) {
+            // Only enhance if description is generic
+            if (log.description === "Hoàn thành bài tập" || log.description?.startsWith("Hoàn thành bài tập với điểm số")) {
+              testIdsToFetchSet.add(log.metadata.test_id);
+              activityLogsToEnhance.push(log);
+            }
+          }
+        });
+      }
+    });
+
+    if (testIdsToFetchSet.size > 0) {
+      const { data: testsData } = await supabase
+        .from('tests')
+        .select('id, title')
+        .in('id', Array.from(testIdsToFetchSet));
+      
+      if (testsData) {
+        const testTitleMap = new Map();
+        testsData.forEach((t: any) => testTitleMap.set(t.id, t.title));
+        
+        activityLogsToEnhance.forEach(log => {
+          const title = testTitleMap.get(log.metadata.test_id);
+          if (title) {
+            const scorePart = log.metadata.score !== undefined ? ` với điểm số ${log.metadata.score}%` : "";
+            log.description = `Hoàn thành bài tập: ${title}${scorePart}`;
+          }
+        });
+      }
+    }
+    // ----------------------------------------------
 
     const homeroomTeachers = teachersData.filter((ct: any) => ct.is_homeroom);
     const homeroomTeacher = homeroomTeachers.length > 0 ? {

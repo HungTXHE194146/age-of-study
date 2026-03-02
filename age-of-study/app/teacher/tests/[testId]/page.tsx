@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { TestService } from "@/lib/testService";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ export default function TeacherTestDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { user, isAuthenticated } = useAuthStore();
+  const searchParams = useSearchParams();
+  const classId = searchParams.get("classId");
   const testId = params.testId as string;
 
   const [test, setTest] = useState<TestWithQuestions | null>(null);
@@ -80,7 +82,8 @@ export default function TeacherTestDetailPage() {
   };
 
   const handleEditTest = () => {
-    router.push(`/teacher/tests/${testId}/edit`);
+    const editUrl = `/teacher/tests/${testId}/edit${classId ? `?classId=${classId}` : ""}`;
+    router.push(editUrl);
   };
 
   const handlePublishTest = async () => {
@@ -152,11 +155,20 @@ export default function TeacherTestDetailPage() {
       <div className="mb-8 p-8 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2.5rem] border-b-2 border-dashed border-gray-400 relative">
         <div className="absolute top-4 left-4 w-4 h-4 rounded-full bg-blue-200 border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]"></div>
         <div className="absolute top-4 right-4 w-4 h-4 rounded-full bg-blue-200 border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]"></div>
-        
-        <NotebookButton onClick={() => router.back()} className="mb-6 bg-white border-2 border-black text-gray-800 hover:bg-gray-100 px-4 py-1 text-sm font-bold flex items-center gap-2">
-            Quay lại
+
+        <NotebookButton
+          onClick={() => {
+            if (classId) {
+              router.push(`/teacher/classes/${classId}`);
+            } else {
+              router.back();
+            }
+          }}
+          className="mb-6 bg-white border-2 border-black text-gray-800 hover:bg-gray-100 px-4 py-1 text-sm font-bold flex items-center gap-2"
+        >
+          Quay lại
         </NotebookButton>
-        
+
         <h1 className="text-5xl font-black text-gray-900 mb-4 font-handwritten tracking-tight drop-shadow-sm leading-10 pl-6">
           {test.title}
         </h1>
@@ -182,78 +194,76 @@ export default function TeacherTestDetailPage() {
                     </p>
                   </div>
                 </div>
-              <div className="text-right">
-                <span className="text-4xl font-black text-blue-700 font-handwritten drop-shadow-sm">
-                  {test.questions.length}
-                </span>
-                <p className="text-sm font-bold text-gray-600 uppercase mt-1">câu hỏi</p>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              {test.questions.map((question, index) => (
-                <div
-                  key={question.id}
-                  className="bg-white border-2 border-black rounded-xl p-6 shadow-[4px_4px_0_0_rgba(0,0,0,1)] relative transition-transform hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] group"
-                >
-                  <div className="absolute top-0 right-4 w-4 h-8 bg-red-400/50 transform -translate-y-1/2 -rotate-[15deg] border border-red-500 rounded-sm"></div>
-                  
-                  <div className="flex items-start justify-between mb-4 border-b-2 border-dashed border-gray-200 pb-4">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <NotebookBadge variant="default" className="text-sm">
-                        Câu {index + 1}
-                      </NotebookBadge>
-                      <NotebookBadge
-                        variant={index % 2 === 0 ? "success" : "warning"}
-                        className="text-sm"
-                      >
-                        {index % 2 === 0 ? "Trắc nghiệm" : "Tự luận"}
-                      </NotebookBadge>
-                      <NotebookBadge variant="danger" className="text-sm">
-                        {question.points || 10} pts
-                      </NotebookBadge>
-                    </div>
-                    <span className="text-sm font-black text-blue-800 bg-blue-100 px-3 py-1 rounded border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] uppercase">
-                      Đáp án:{" "}
-                      {String.fromCharCode(65 + question.correct_option_index)}
-                    </span>
-                  </div>
-
-                  <div className="text-gray-900 mb-6 text-xl font-bold font-handwritten tracking-tight">
-                    {question.content.questionText}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {question.content.options.map((option, optionIndex) => (
-                      <div
-                        key={optionIndex}
-                        className={`p-3 rounded-lg border-2 flex items-center gap-3 transition-colors ${
-                          optionIndex === question.correct_option_index
-                            ? "border-green-600 bg-green-50 shadow-[2px_2px_0_0_rgba(22,163,74,1)]"
-                            : "border-black bg-gray-50 hover:bg-white shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
-                        }`}
-                      >
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm border-2 ${
-                            optionIndex === question.correct_option_index
-                            ? "bg-green-500 text-white border-green-700"
-                            : "bg-white text-gray-900 border-black"
-                        }`}>
-                          {option.label}
-                        </span>
-                        <span className={`flex-1 font-bold ${optionIndex === question.correct_option_index ? "text-green-900" : "text-gray-800"}`}>
-                            {option.text}
-                        </span>
-                        {optionIndex === question.correct_option_index && (
-                          <span className="ml-2 text-green-700 font-black px-2 py-1 bg-white border-2 border-green-600 rounded-md shadow-[2px_2px_0_0_rgba(22,163,74,1)] text-xs uppercase transform rotate-2">
-                            ✓ Đúng
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                <div className="text-right">
+                  <span className="text-4xl font-black text-blue-700 font-handwritten drop-shadow-sm">
+                    {test.questions.length}
+                  </span>
+                  <p className="text-sm font-bold text-gray-600 uppercase mt-1">câu hỏi</p>
                 </div>
-              ))}
-            </div>
+              </div>
+
+              <div className="space-y-6">
+                {test.questions.map((question, index) => (
+                  <div
+                    key={question.id}
+                    className="bg-white border-2 border-black rounded-xl p-6 shadow-[4px_4px_0_0_rgba(0,0,0,1)] relative transition-transform hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] group"
+                  >
+                    <div className="absolute top-0 right-4 w-4 h-8 bg-red-400/50 transform -translate-y-1/2 -rotate-[15deg] border border-red-500 rounded-sm"></div>
+
+                    <div className="flex items-start justify-between mb-4 border-b-2 border-dashed border-gray-200 pb-4">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <NotebookBadge variant="default" className="text-sm">
+                          Câu {index + 1}
+                        </NotebookBadge>
+                        <NotebookBadge
+                          variant={index % 2 === 0 ? "success" : "warning"}
+                          className="text-sm"
+                        >
+                          {index % 2 === 0 ? "Trắc nghiệm" : "Tự luận"}
+                        </NotebookBadge>
+                        <NotebookBadge variant="danger" className="text-sm">
+                          {question.points || 10} pts
+                        </NotebookBadge>
+                      </div>
+                      <span className="text-sm font-black text-blue-800 bg-blue-100 px-3 py-1 rounded border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] uppercase">
+                        Đáp án:{" "}
+                        {String.fromCharCode(65 + question.correct_option_index)}
+                      </span>
+                    </div>
+
+                    <div className="text-gray-900 mb-6 text-xl font-bold font-handwritten tracking-tight">
+                      {question.content.questionText}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {question.content.options.map((option, optionIndex) => (
+                        <div
+                          key={optionIndex}
+                          className={`p-3 rounded-lg border-2 flex items-center gap-3 transition-colors ${optionIndex === question.correct_option_index
+                              ? "border-green-600 bg-green-50 shadow-[2px_2px_0_0_rgba(22,163,74,1)]"
+                              : "border-black bg-gray-50 hover:bg-white shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+                            }`}
+                        >
+                          <span className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm border-2 ${optionIndex === question.correct_option_index
+                              ? "bg-green-500 text-white border-green-700"
+                              : "bg-white text-gray-900 border-black"
+                            }`}>
+                            {option.label}
+                          </span>
+                          <span className={`flex-1 font-bold ${optionIndex === question.correct_option_index ? "text-green-900" : "text-gray-800"}`}>
+                            {option.text}
+                          </span>
+                          {optionIndex === question.correct_option_index && (
+                            <span className="ml-2 text-green-700 font-black px-2 py-1 bg-white border-2 border-green-600 rounded-md shadow-[2px_2px_0_0_rgba(22,163,74,1)] text-xs uppercase transform rotate-2">
+                              ✓ Đúng
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </NotebookCardContent>
           </NotebookCard>
         </div>
@@ -348,11 +358,10 @@ export default function TeacherTestDetailPage() {
 
                 <NotebookButton
                   onClick={handlePublishTest}
-                  className={`w-full py-3 text-base flex justify-center ${
-                    test.is_published
+                  className={`w-full py-3 text-base flex justify-center ${test.is_published
                       ? "bg-white text-green-700 border-green-700 shadow-none border-dashed"
                       : "bg-green-100 text-green-900 border-green-900"
-                  }`}
+                    }`}
                 >
                   <FileCheck className="w-5 h-5 mr-3" />
                   {test.is_published ? "Đang xuất bản (Hủy)" : "Xuất bản"}
@@ -368,7 +377,13 @@ export default function TeacherTestDetailPage() {
                 </NotebookButton>
 
                 <NotebookButton
-                  onClick={() => router.push("/teacher/tests")}
+                  onClick={() => {
+                    if (classId) {
+                      router.push(`/teacher/classes/${classId}`);
+                    } else {
+                      router.push("/teacher/tests");
+                    }
+                  }}
                   className="w-full bg-white text-gray-700 border-gray-400 py-3 text-base flex justify-center hover:bg-gray-100 border-dashed"
                 >
                   <Eye className="w-5 h-5 mr-3" />

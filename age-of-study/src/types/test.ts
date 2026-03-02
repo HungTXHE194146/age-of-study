@@ -77,12 +77,13 @@ export interface TestSubmission {
 }
 
 export interface QuizAnswer {
-  id: string;
+  id?: string;
   submission_id: string;
   question_id: string;
-  selected_option_index: number;
+  selected_option_index?: number;
+  text_answer?: string;
   is_correct: boolean;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface TestWithQuestions extends Test {
@@ -119,7 +120,8 @@ export interface SubmitTestRequest {
   test_id: string;
   answers: {
     question_id: string;
-    selected_option_index: number;
+    selected_option_index?: number;
+    text_answer?: string;
   }[];
 }
 
