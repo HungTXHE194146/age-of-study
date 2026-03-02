@@ -381,7 +381,7 @@ export class TestService {
       .from("student_node_progress")
       .select("node_id")
       .eq("student_id", studentId)
-      .eq("is_completed", true);
+      .eq("status", "completed");
 
     if (error) {
       console.error("Error fetching completed nodes:", error);

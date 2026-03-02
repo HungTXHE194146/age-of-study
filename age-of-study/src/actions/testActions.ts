@@ -100,21 +100,9 @@ export async function syncTestProgressAction(
     const supabaseClient = getSupabaseServerClient();
     const supabase = supabaseClient as any; // Cast to any to bypass strict typing for missing tables
     
-    // 1. First attempt to use the RPC if it exists
-    const { error: rpcError } = await supabase.rpc("handle_test_completion_progress", {
-      p_student_id: studentId,
-      p_test_id: testId,
-      p_score: score,
-      p_xp_earned: xpEarned
-    });
+    // 1. We bypass the RPC function to run JS logic because the DB one might not have the correct submit_count/bestScore logic
     
-    if (!rpcError) {
-      return { success: true };
-    }
-    
-    console.log("RPC failed, falling back to manual service_role update:", rpcError);
-    
-    // 2. Fallback: Get the node_id for this test
+    // 2. Get the node_id for this test
     const { data: testData } = await supabase
       .from("tests")
       .select("node_id")
@@ -124,17 +112,47 @@ export async function syncTestProgressAction(
     if (testData?.node_id) {
       const isCompleted = score >= 50;
       
-      // Update progress
+      // Get existing progress to prevent overwriting with lower scores
+      const { data: existingProgress } = await supabase
+        .from("student_node_progress")
+        .select("*")
+        .eq("student_id", studentId)
+        .eq("node_id", testData.node_id)
+        .single();
+
+      let finalStatus = isCompleted ? "completed" : "in_progress";
+      let finalScoreStr = score.toString();
+      let finalCompletedAt = isCompleted ? new Date().toISOString() : null;
+      let submitCount = 1;
+
+      if (existingProgress) {
+        // Keep completed status if it was already completed
+        if (existingProgress.status === "completed") {
+          finalStatus = "completed";
+          finalCompletedAt = existingProgress.completed_at || finalCompletedAt;
+        }
+        
+        // Keep the higher score
+        const existingScoreNum = parseInt(existingProgress.score || "0", 10);
+        if (score < existingScoreNum) {
+          finalScoreStr = existingProgress.score;
+        }
+        
+        // Increment submit count
+        submitCount = (existingProgress.submit_count || 0) + 1;
+      }
+
+      // Update progress with best stats
       await supabase
         .from("student_node_progress")
         .upsert({
           student_id: studentId,
           node_id: testData.node_id,
-          is_completed: isCompleted,
-          completed_at: isCompleted ? new Date().toISOString() : null,
-          best_score: score,
-          attempts_count: 1, // Simplified, ideally we'd increment
-          last_activity_at: new Date().toISOString()
+          status: finalStatus,
+          completed_at: finalCompletedAt,
+          score: finalScoreStr,
+          submit_count: submitCount,
+          last_accessed_at: new Date().toISOString()
         }, { onConflict: "student_id, node_id" });
     }
     

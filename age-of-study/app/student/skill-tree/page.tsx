@@ -219,7 +219,7 @@ export default function StudentSkillTreePage() {
 
             {/* Floating Detail Card (Duolingo Style) */}
             {selectedNodeId && (
-              <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-full max-w-sm px-4 z-40 animate-in slide-in-from-bottom-10 fade-in duration-300">
+              <div className="absolute bottom-37 left-1/2 -translate-x-1/2 w-full max-w-sm px-4 z-40 animate-in slide-in-from-bottom-10 fade-in duration-300">
                 <NotebookCard className="shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
                   <NotebookCardHeader className="relative">
                     <button
@@ -269,7 +269,7 @@ export default function StudentSkillTreePage() {
 
                   <NotebookButton
                     onClick={handleStartLesson}
-                    className="w-full h-14 bg-green-500 hover:bg-green-600 !text-white text-2xl font-black border-none rounded-xl mb-6 mx-auto max-w-[90%] flex"
+                    className="w-full h-14 bg-green-500 hover:bg-green-600 !text-white text-2xl font-black border-none rounded-xl mb-6 mx-4 max-w-[90%] flex"
                   >
                     BẮT ĐẦU NGAY
                   </NotebookButton>

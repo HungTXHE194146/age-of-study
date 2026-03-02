@@ -32,7 +32,7 @@ interface ClassData {
   school_year: string;
   class_code: string;
   student_count: number;
-  subject?: { name: string };
+  subjects: Array<{ name: string }>;
   created_at: string;
   type: "homeroom" | "subject";
 }
@@ -81,12 +81,12 @@ export default function TeacherClassesPage() {
             homeroom_classes: result.data.homeroom_classes.map((c) => ({
               ...c,
               type: "homeroom" as const,
-              subject: c.subject,
+              subjects: c.subjects,
             })),
             subject_classes: result.data.subject_classes.map((c) => ({
               ...c,
               type: "subject" as const,
-              subject: c.subject,
+              subjects: c.subjects,
             })),
           };
           setTeacherData(transformedData);
@@ -115,9 +115,9 @@ export default function TeacherClassesPage() {
         searchTerm === "" ||
         classData.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         classData.class_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        classData.subject?.name
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase());
+        classData.subjects?.some(s =>
+          s.name?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
       // Type filter
       const matchesType = filterType === "all" || classData.type === filterType;
@@ -395,8 +395,8 @@ export default function TeacherClassesPage() {
                     </div>
                     <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
                       <span className="block text-sm text-gray-500 font-bold uppercase">Môn học</span>
-                      <span className="text-xl font-bold text-gray-800 truncate block" title={classData.subject?.name}>
-                        {classData.subject?.name || "N/A"}
+                      <span className="text-xl font-bold text-gray-800 truncate block" title={classData.subjects?.map(s => s.name).join(', ')}>
+                        {classData.subjects?.map(s => s.name).join(', ') || "N/A"}
                       </span>
                     </div>
                   </div>

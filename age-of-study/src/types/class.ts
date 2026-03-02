@@ -121,8 +121,8 @@ export interface StudentWithClass extends StudentProfile {
  * Used in teacher dashboard
  */
 export interface TeacherWithClasses extends TeacherProfile {
-  homeroom_classes: (ClassWithCount & { subject: Subject })[]
-  subject_classes: (ClassWithCount & { subject: Subject })[]
+  homeroom_classes: (ClassWithCount & { subjects: Subject[] })[]
+  subject_classes: (ClassWithCount & { subjects: Subject[] })[]
 }
 
 /**

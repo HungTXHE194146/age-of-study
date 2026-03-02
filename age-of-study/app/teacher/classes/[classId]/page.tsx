@@ -500,7 +500,7 @@ export default function ClassDetailPage() {
                   </div>
                 </NotebookCardContent>
                 <div className="p-4 pt-0 flex gap-2 border-t-2 border-dashed border-gray-200 mt-2">
-                  <Link href={`/teacher/tests/${test.id}`} className="flex-1">
+                  <Link href={`/teacher/tests/${test.id}?classId=${classId}`} className="flex-1">
                     <NotebookButton className="w-full text-sm py-2 bg-indigo-100 border-indigo-800 text-indigo-900 hover:bg-indigo-200">
                       <Eye className="w-4 h-4 mr-1" /> Chi tiết
                     </NotebookButton>

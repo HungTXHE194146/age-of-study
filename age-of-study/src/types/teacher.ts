@@ -72,4 +72,8 @@ export interface GeneratorFormState {
   questionCount: number;
   subject?: string;
   file?: File | null;
+  onlyFromFile: boolean;
+  fromKnowledgeBase: boolean;
+  fromQuestionBank: boolean;
+  questionTypes: QuestionType[];
 }

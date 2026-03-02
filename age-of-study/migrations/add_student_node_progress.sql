@@ -9,16 +9,15 @@ BEGIN;
 -- 1. Student Node Progress Table
 -- Tracks if a student has completed a specific node in the skill tree
 CREATE TABLE IF NOT EXISTS public.student_node_progress (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   student_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   node_id bigint NOT NULL REFERENCES public.nodes(id) ON DELETE CASCADE,
-  is_completed boolean DEFAULT false,
+  status text DEFAULT 'not_started'::text CHECK (status = ANY (ARRAY['not_started'::text, 'in_progress'::text, 'completed'::text])),
+  score text,
+  last_accessed_at timestamp with time zone DEFAULT now(),
   completed_at timestamp with time zone,
-  best_score integer DEFAULT 0,
-  attempts_count integer DEFAULT 0,
-  last_activity_at timestamp with time zone DEFAULT now(),
+  submit_count smallint DEFAULT '1'::smallint CHECK (submit_count > 0),
   
-  CONSTRAINT unique_student_node UNIQUE (student_id, node_id)
+  CONSTRAINT student_node_progress_pkey PRIMARY KEY (student_id, node_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_student_node_progress_student ON public.student_node_progress(student_id);
@@ -63,15 +62,32 @@ BEGIN
 
   -- 2. Update or insert node progress ONLY if it belongs to a node
   IF v_node_id IS NOT NULL THEN
-    INSERT INTO public.student_node_progress (student_id, node_id, is_completed, completed_at, best_score, attempts_count)
-    VALUES (p_student_id, v_node_id, (p_score >= 50), CASE WHEN p_score >= 50 THEN now() ELSE NULL END, p_score, 1)
+    INSERT INTO public.student_node_progress (student_id, node_id, status, completed_at, score, submit_count, last_accessed_at)
+    VALUES (
+      p_student_id, 
+      v_node_id, 
+      CASE WHEN p_score >= 50 THEN 'completed' ELSE 'in_progress' END,
+      CASE WHEN p_score >= 50 THEN now() ELSE NULL END, 
+      p_score::text,
+      1,
+      now()
+    )
     ON CONFLICT (student_id, node_id) DO UPDATE
     SET 
-      is_completed = CASE WHEN p_score >= 50 THEN true ELSE student_node_progress.is_completed END,
-      completed_at = CASE WHEN p_score >= 50 AND student_node_progress.completed_at IS NULL THEN now() ELSE student_node_progress.completed_at END,
-      best_score = GREATEST(student_node_progress.best_score, p_score),
-      attempts_count = student_node_progress.attempts_count + 1,
-      last_activity_at = now();
+      status = CASE 
+        WHEN p_score >= 50 THEN 'completed' 
+        ELSE student_node_progress.status 
+      END,
+      completed_at = CASE 
+        WHEN p_score >= 50 AND student_node_progress.completed_at IS NULL THEN now() 
+        ELSE student_node_progress.completed_at 
+      END,
+      score = CASE 
+        WHEN student_node_progress.score IS NULL OR p_score > student_node_progress.score::integer THEN p_score::text
+        ELSE student_node_progress.score
+      END,
+      submit_count = COALESCE(student_node_progress.submit_count, 0) + 1,
+      last_accessed_at = now();
   END IF;
 
   -- 3. Update student total XP in profiles
