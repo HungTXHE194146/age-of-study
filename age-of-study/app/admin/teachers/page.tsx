@@ -38,6 +38,7 @@ export default function TeacherActivityPage() {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     const result = await getTeacherActivityReport();
     if (result.error) {
       setError(result.error);
@@ -120,6 +121,7 @@ export default function TeacherActivityPage() {
     link.href = URL.createObjectURL(blob);
     link.download = `hoat-dong-giao-vien-${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
+    URL.revokeObjectURL(link.href);
   };
 
   const getStatusBadge = (status: string) => {

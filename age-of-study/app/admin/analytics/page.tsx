@@ -33,13 +33,18 @@ export default function ClassAnalyticsPage() {
 
   const loadData = async () => {
     setLoading(true);
-    const result = await getClassComparisonData();
-    if (result.error) {
-      setError(result.error);
-    } else {
-      setData(result.data);
+    try {
+      const result = await getClassComparisonData();
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setData(result.data);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Có lỗi khi tải dữ liệu");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSort = (key: keyof ClassAnalytics) => {
@@ -56,6 +61,10 @@ export default function ClassAnalyticsPage() {
         const aVal = a[sortBy];
         const bVal = b[sortBy];
         const modifier = sortOrder === "asc" ? 1 : -1;
+        
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
         
         if (typeof aVal === "string" && typeof bVal === "string") {
           return aVal.localeCompare(bVal) * modifier;
@@ -204,18 +213,16 @@ export default function ClassAnalyticsPage() {
         cell.border = { top: medium(), left: thin(), bottom: medium(), right: thin() };
       });
     }
-
-    // Freeze rows 1-3 (title + header)
-    sheet.views = [{ state: "frozen", ySplit: 3 }];
-
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    link.href = url;
     link.download = `phan-tich-lop-hoc-${new Date().toISOString().split("T")[0]}.xlsx`;
     link.click();
+    URL.revokeObjectURL(url);
   };
 
   const exportToCSV = () => {
@@ -224,9 +231,11 @@ export default function ClassAnalyticsPage() {
     const csv = exportClassDataToCSV(data.classes);
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    link.href = url;
     link.download = `phan-tich-lop-hoc-${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
+    URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -316,7 +325,7 @@ export default function ClassAnalyticsPage() {
             <div>
               <p className="text-sm text-gray-600 font-medium">Điểm TB chung</p>
               <p className="text-2xl font-bold text-gray-900">
-                {data.summary.averageScore.toFixed(1)}
+                {(data.summary.averageScore ?? 0).toFixed(1)}
               </p>
             </div>
           </div>
@@ -330,7 +339,7 @@ export default function ClassAnalyticsPage() {
             <div>
               <p className="text-sm text-gray-600 font-medium">Hoàn thành TB</p>
               <p className="text-2xl font-bold text-gray-900">
-                {data.summary.averageCompletion.toFixed(1)}%
+                {(data.summary.averageCompletion ?? 0).toFixed(1)}%
               </p>
             </div>
           </div>

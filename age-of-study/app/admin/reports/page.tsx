@@ -38,8 +38,14 @@ export default function ReportsPage() {
       }
 
       const [regularBytes, boldBytes] = await Promise.all([
-        fetch("/fonts/BeVietnamPro-Regular.ttf").then((r) => r.arrayBuffer()),
-        fetch("/fonts/BeVietnamPro-Bold.ttf").then((r) => r.arrayBuffer()),
+        fetch("/fonts/BeVietnamPro-Regular.ttf").then((r) => {
+          if (!r.ok) throw new Error(`Failed to load Regular font: ${r.status}`);
+          return r.arrayBuffer();
+        }),
+        fetch("/fonts/BeVietnamPro-Bold.ttf").then((r) => {
+          if (!r.ok) throw new Error(`Failed to load Bold font: ${r.status}`);
+          return r.arrayBuffer();
+        }),
       ]);
 
       const pdfDoc = await PDFDocument.create();
@@ -393,11 +399,12 @@ export default function ReportsPage() {
       });
 
       const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `bao-cao-${reportType}-${new Date().toISOString().split("T")[0]}.pdf`;
-      link.click();
+      const pdfBlob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
+      const pdfLink = document.createElement("a");
+      pdfLink.href = URL.createObjectURL(pdfBlob);
+      pdfLink.download = `bao-cao-${reportType}-${new Date().toISOString().split("T")[0]}.pdf`;
+      pdfLink.click();
+      URL.revokeObjectURL(pdfLink.href);
     } catch (error) {
       console.error("Error generating PDF:", error);
       alert("Có lỗi khi tạo PDF: " + (error as Error).message);
@@ -705,13 +712,14 @@ export default function ReportsPage() {
       }
 
       const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], {
+      const xlsxBlob = new Blob([buffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `bao-cao-${reportType}-${new Date().toISOString().split("T")[0]}.xlsx`;
-      link.click();
+      const xlsxLink = document.createElement("a");
+      xlsxLink.href = URL.createObjectURL(xlsxBlob);
+      xlsxLink.download = `bao-cao-${reportType}-${new Date().toISOString().split("T")[0]}.xlsx`;
+      xlsxLink.click();
+      URL.revokeObjectURL(xlsxLink.href);
     } catch (error) {
       console.error("Error generating Excel:", error);
       alert("Có lỗi khi tạo Excel: " + (error as Error).message);

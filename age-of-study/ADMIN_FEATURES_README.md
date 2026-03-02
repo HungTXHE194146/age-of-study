@@ -93,11 +93,12 @@ Tập trung vào:
 ### Định dạng xuất:
 
 #### PDF
-- **Ưu điểm**: 
+- **Ưu điểm**:
   - Định dạng cố định, chuyên nghiệp
   - Phù hợp cho văn bản chính thức, in ấn
   - Không thể chỉnh sửa (bảo mật)
 - **Sử dụng**: Gửi cho phòng GD, ban giám hiệu, lưu trữ
+- **Lưu ý bảo mật**: File PDF chứa dữ liệu cá nhân (PII) của giáo viên/học sinh; yêu cầu bảo vệ bằng mật khẩu trước khi gửi qua email và ghi nhật ký (audit log) mỗi lần xuất.
 
 #### Excel (.xlsx)
 - **Ưu điểm**:
@@ -105,6 +106,56 @@ Tập trung vào:
   - Hỗ trợ nhiều sheet (Tổng quan, Lớp học, Giáo viên)
   - Tương thích với Excel, Google Sheets, LibreOffice
 - **Sử dụng**: Phân tích sâu, tạo biểu đồ, báo cáo tuỳ chỉnh
+- **Lưu ý bảo mật**: File Excel chứa dữ liệu cá nhân (PII); yêu cầu mã hóa hoặc đặt mật khẩu bảo vệ file trước khi lưu trữ/truyền tải và ghi nhật ký (audit log) mỗi lần xuất.
+
+### Bảo mật & Bảo vệ dữ liệu cá nhân
+
+#### Tuân thủ pháp lý
+- Dữ liệu học sinh và giáo viên được thu thập, lưu trữ và xử lý theo **Nghị định 13/2023/NĐ-CP** về bảo vệ dữ liệu cá nhân của Việt Nam và các quy định của Bộ GD&ĐT về bảo mật thông tin trong giáo dục.
+- Các báo cáo xuất ra tuân theo nguyên tắc **tối giản dữ liệu** (data minimization): chỉ thu thập và xuất đúng trường dữ liệu cần thiết cho mục đích báo cáo.
+
+#### Phân loại PII (Thông tin cá nhân có thể nhận dạng)
+| Trường dữ liệu | Phân loại | Yêu cầu |
+|---------------|-----------|---------|
+| Họ tên giáo viên/học sinh | PII bắt buộc | Có trong báo cáo chính thức |
+| Email | PII bắt buộc | Chỉ dùng để xác định người dùng |
+| Ngày hoạt động cuối | PII tùy chọn | Ẩn danh hóa trong báo cáo so sánh |
+| Điểm số tổng hợp lớp | Không phải PII | Dùng tự do trong phân tích |
+| Số ngày không hoạt động | PII tùy chọn | Chỉ hiển thị trong báo cáo nội bộ |
+
+- **Phân tích so sánh** (analytics): Dữ liệu được tổng hợp theo lớp/trường; không xuất thông tin cá nhân từng học sinh trong báo cáo so sánh.
+
+#### Nghĩa vụ đồng ý (Consent)
+- Thông tin giáo viên và học sinh được xử lý theo **thỏa thuận sử dụng dịch vụ** đã ký kết giữa nhà trường và nền tảng.
+- Admin không được xuất dữ liệu PII ra ngoài phạm vi mục đích đã thông báo với người dùng.
+- Mọi truy cập hoặc xuất dữ liệu cá nhân phải có lý do hợp lệ và được ghi nhận trong audit log.
+
+#### Quy trình xử lý an toàn
+- **Truyền tải**: Báo cáo chỉ được gửi qua kênh mã hóa (HTTPS/email mã hóa); không chia sẻ qua kênh không bảo mật.
+- **Bảo vệ file**: File PDF và Excel chứa PII phải được đặt mật khẩu hoặc mã hóa trước khi phân phối.
+- **Lưu trữ**: Báo cáo đã xuất không được lưu trữ trên thiết bị cá nhân không có biện pháp bảo mật.
+
+#### Chính sách lưu trữ & xóa dữ liệu
+- Dữ liệu hoạt động (`student_node_progress`, `last_active_at`) được lưu giữ tối đa **3 năm** sau khi kết thúc năm học.
+- Sau thời hạn lưu trữ, dữ liệu cá nhân phải được **xóa an toàn** (secure deletion) theo quy trình của tổ chức.
+- Bản sao báo cáo PDF/Excel phải được tiêu hủy sau khi không còn cần thiết.
+
+#### Audit logging & Kiểm soát truy cập
+- Mỗi lần xuất báo cáo phải ghi vào bảng `admin_audit_log`:
+  ```sql
+  -- Cấu trúc đề xuất cho bảng audit log
+  CREATE TABLE admin_audit_log (
+    id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    admin_id    uuid REFERENCES profiles(id) NOT NULL,
+    action      text NOT NULL,           -- 'export_pdf', 'export_excel', 'export_csv'
+    report_type text,                    -- 'comprehensive', 'class', 'teacher'
+    row_count   integer,
+    created_at  timestamptz DEFAULT now() NOT NULL
+  );
+  ```
+- Log phải ghi rõ: `admin_id`, `timestamp`, `report_type`, `row_count`.
+- Chỉ tài khoản có `role = 'admin'` mới có quyền xem và xuất báo cáo.
+- Log không được xóa trong thời gian lưu trữ tối thiểu 2 năm.
 
 ---
 
@@ -188,6 +239,51 @@ Các bảng sử dụng:
 
 ---
 
+## Bảo mật & Kiểm soát truy cập
+
+### Xác thực & Phân quyền
+- Tất cả route admin (`/admin/*`) yêu cầu người dùng đã đăng nhập với `role = 'admin'` trong bảng `profiles` và session hợp lệ từ Supabase Auth.
+- Mỗi request phải vượt qua middleware xác thực session trước khi truy cập bất kỳ chức năng admin nào.
+- Phải kiểm tra `role = 'admin'` tường minh trước khi thực hiện xuất dữ liệu hoặc truy cập các bảng sau: `profiles`, `classes`, `class_students`, `class_teachers`, `student_node_progress`, `subjects`.
+
+### Row Level Security (RLS)
+- Bật RLS trên tất cả các bảng dữ liệu học sinh/giáo viên.
+- Policy RLS giới hạn admin chỉ đọc được dữ liệu thuộc tổ chức/trường của mình (organization-scoped):
+  ```sql
+  -- Ví dụ policy cho bảng profiles
+  CREATE POLICY "admin_read_org_profiles"
+    ON public.profiles FOR SELECT
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.profiles AS me
+        WHERE me.id = auth.uid() AND me.role = 'admin'
+      )
+    );
+  ```
+
+### Audit Logging
+- Mỗi hành động xuất báo cáo phải được ghi vào `admin_audit_log` với các trường:
+  - `admin_id`: ID của admin thực hiện
+  - `timestamp`: Thời điểm xuất (`NOW()`)
+  - `report_type`: Loại báo cáo (`comprehensive`, `class`, `teacher`)
+  - `row_count`: Số dòng dữ liệu được xuất
+- Ví dụ ghi log khi xuất báo cáo:
+  ```typescript
+  await supabase.from('admin_audit_log').insert({
+    admin_id: currentUser.id,
+    action: 'export_pdf',
+    report_type: reportType,
+    row_count: data.classes?.length ?? 0,
+  });
+  ```
+
+### Quy tắc dữ liệu tối thiểu
+- **Nghiêm cấm** xuất raw PII (họ tên, email, số điện thoại cá nhân) trừ khi mục đích báo cáo được phê duyệt.
+- Báo cáo so sánh lớp học (`/admin/analytics`) chỉ hiển thị dữ liệu tổng hợp theo lớp, không hiển thị thông tin từng học sinh.
+- Chỉ admin có session hợp lệ mới truy cập được endpoint analytics và reports.
+
+---
+
 ## Tối ưu hoá
 
 ### Performance:
@@ -220,7 +316,7 @@ Có thể bổ sung:
 - Component-based architecture
 - Reusable analytics service
 - CSV với UTF-8 BOM cho tiếng Việt
-- PDF với font Helvetica (hỗ trợ ASCII, cần nâng cấp font cho tiếng Việt)
+- PDF với font **Be Vietnam Pro** (TTF nhúng qua `pdf-lib` + `@pdf-lib/fontkit`; hỗ trợ đầy đủ Unicode/tiếng Việt)
 
 ---
 

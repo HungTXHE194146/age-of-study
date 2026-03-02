@@ -139,10 +139,17 @@ export async function getClassComparisonData(): Promise<{
       }
 
       // Get completion data from student_node_progress
-      const { data: progressData, error: progressError } = await supabase
-        .from('student_node_progress')
-        .select('status, score, student_id')
-        .in('student_id', studentIds);
+      let progressData: { status: string; score: number | null; student_id: string }[] | null = null;
+      let progressError: { message: string } | null = null;
+
+      if (studentIds.length > 0) {
+        const { data: pd, error: pe } = await supabase
+          .from('student_node_progress')
+          .select('status, score, student_id')
+          .in('student_id', studentIds);
+        progressData = pd;
+        progressError = pe;
+      }
 
       let completedNodes = 0;
       let totalNodes = 0;
@@ -292,9 +299,7 @@ export async function getTeacherActivityReport(): Promise<{
       }
     }
 
-    // Get activity logs for recent logins (last 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
 
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -381,6 +386,17 @@ export async function getTeacherActivityReport(): Promise<{
 }
 
 /**
+ * Escapes a CSV field by wrapping in double quotes when it contains
+ * commas, double quotes, or newlines, and doubling any internal quotes.
+ */
+function escapeCSVField(value: string): string {
+  if (/[",\n\r]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+/**
  * Export class comparison data to CSV format
  */
 export function exportClassDataToCSV(classes: ClassAnalytics[]): string {
@@ -401,16 +417,16 @@ export function exportClassDataToCSV(classes: ClassAnalytics[]): string {
     const activeRate = c.studentCount > 0 ? ((c.activeStudents / c.studentCount) * 100).toFixed(1) : '0.0';
     const inactiveStudents = c.studentCount - c.activeStudents;
     return [
-      c.className,
-      c.grade.toString(),
-      c.schoolYear,
-      c.studentCount.toString(),
-      c.averageScore.toFixed(2),
-      c.completionRate.toFixed(2),
-      c.activeStudents.toString(),
-      activeRate,
-      inactiveStudents.toString(),
-      `${c.completedNodes}/${c.totalAssignedNodes}`,
+      escapeCSVField(c.className),
+      escapeCSVField(c.grade.toString()),
+      escapeCSVField(c.schoolYear),
+      escapeCSVField(c.studentCount.toString()),
+      escapeCSVField(c.averageScore.toFixed(2)),
+      escapeCSVField(c.completionRate.toFixed(2)),
+      escapeCSVField(c.activeStudents.toString()),
+      escapeCSVField(activeRate),
+      escapeCSVField(inactiveStudents.toString()),
+      escapeCSVField(`${c.completedNodes}/${c.totalAssignedNodes}`),
     ];
   });
 
@@ -435,18 +451,28 @@ export function exportTeacherDataToCSV(teachers: TeacherActivity[]): string {
     'Lần cuối hoạt động',
   ];
 
-  const rows = teachers.map((t) => [
-    t.fullName || t.username || 'N/A',
-    t.email || 'N/A',
-    t.totalClasses.toString(),
-    t.homeroomClasses.toString(),
-    t.subjectClasses.toString(),
-    t.totalStudents.toString(),
-    t.subjects.join('; ') || 'Chưa có',
-    t.activityStatus === 'active' ? 'Hoạt động' : t.activityStatus === 'inactive' ? 'Không hoạt động' : 'Chưa đăng nhập',
-    t.daysInactive.toString(),
-    t.lastActive ? new Date(t.lastActive).toLocaleDateString('vi-VN') : 'Chưa bao giờ',
-  ]);
+  const rows = teachers.map((t) => {
+    const activityText = t.activityStatus === 'active'
+      ? 'Hoạt động'
+      : t.activityStatus === 'inactive'
+        ? 'Không hoạt động'
+        : 'Chưa đăng nhập';
+    const lastActiveText = t.lastActive
+      ? new Date(t.lastActive).toLocaleDateString('vi-VN')
+      : 'Chưa bao giờ';
+    return [
+      escapeCSVField(t.fullName || t.username || 'N/A'),
+      escapeCSVField(t.email || 'N/A'),
+      escapeCSVField(t.totalClasses.toString()),
+      escapeCSVField(t.homeroomClasses.toString()),
+      escapeCSVField(t.subjectClasses.toString()),
+      escapeCSVField(t.totalStudents.toString()),
+      escapeCSVField(t.subjects.join('; ') || 'Chưa có'),
+      escapeCSVField(activityText),
+      escapeCSVField(t.daysInactive.toString()),
+      escapeCSVField(lastActiveText),
+    ];
+  });
 
   const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
   return csv;

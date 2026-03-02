@@ -23,6 +23,7 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_catalog
 AS $$
 BEGIN
   INSERT INTO public.profiles (id, email, created_at, updated_at)
