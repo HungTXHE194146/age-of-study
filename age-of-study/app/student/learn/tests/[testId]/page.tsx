@@ -17,7 +17,8 @@ interface SubmissionResult {
   questions: Question[];
   answers: {
     question_id: string;
-    selected_option_index: number;
+    selected_option_index?: number;
+    text_answer?: string;
     is_correct: boolean;
   }[];
   xp_earned?: number;
@@ -34,7 +35,7 @@ export default function StudentTestPage() {
   const [test, setTest] = useState<TestWithQuestions | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [answers, setAnswers] = useState<Record<string, number | string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [isStarted, setIsStarted] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -111,10 +112,10 @@ export default function StudentTestPage() {
     }
   };
 
-  const handleAnswerChange = (questionId: string, optionIndex: number) => {
+  const handleAnswerChange = (questionId: string, answer: number | string) => {
     setAnswers((prev) => ({
       ...prev,
-      [questionId]: optionIndex,
+      [questionId]: answer,
     }));
   };
 
@@ -134,9 +135,10 @@ export default function StudentTestPage() {
     if (!user || !test) return;
 
     const answersArray = Object.entries(answers).map(
-      ([questionId, selectedOptionIndex]) => ({
+      ([questionId, value]) => ({
         question_id: questionId,
-        selected_option_index: selectedOptionIndex,
+        selected_option_index: typeof value === 'number' ? value : undefined,
+        text_answer: typeof value === 'string' ? value : undefined,
       }),
     );
 
@@ -328,6 +330,7 @@ export default function StudentTestPage() {
               {submissionResult.questions.map((question, index) => {
                 const userAnswer = submissionResult.answers.find((a) => a.question_id === question.id);
                 const isCorrect = userAnswer?.is_correct;
+                const isEssay = question.q_type?.toLowerCase() === 'essay' || question.content?.type === 'ESSAY';
 
                 return (
                   <div key={question.id} className={`p-6 md:p-8 rounded-3xl border-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] ${isCorrect ? "border-green-400 bg-green-50/50" : "border-red-400 bg-red-50/50"}`}>
@@ -354,46 +357,70 @@ export default function StudentTestPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                           <div className="bg-white p-5 rounded-2xl border-2 border-slate-300">
                             <p className="text-sm font-bold uppercase text-slate-500 mb-2">Câu trả lời của bạn:</p>
-                            <p className="font-bold text-lg text-slate-800">
-                              {String.fromCharCode(65 + (userAnswer?.selected_option_index || 0))}.{" "}
-                              {question.content.options[userAnswer?.selected_option_index || 0]?.text}
-                            </p>
+                            {isEssay ? (
+                              <div className="p-3 bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg whitespace-pre-wrap font-bold text-lg text-slate-800">
+                                {userAnswer?.text_answer || (
+                                  <span className="text-red-500 italic">Em đã không để lại câu trả lời</span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="font-bold text-lg text-slate-800">
+                                {userAnswer?.selected_option_index !== undefined ? (
+                                  <>
+                                    {String.fromCharCode(65 + userAnswer.selected_option_index)}.{" "}
+                                    {(question.content.options || [])[userAnswer.selected_option_index]?.text || "Lỗi dữ liệu"}
+                                  </>
+                                ) : (
+                                  <span className="text-red-500 italic">Em đã không chọn đáp án</span>
+                                )}
+                              </div>
+                            )}
                           </div>
-                          {!isCorrect && (
+                          {!isCorrect && !isEssay && (
                             <div className="bg-green-100 p-5 rounded-2xl border-2 border-green-400">
                               <p className="text-sm font-bold uppercase text-green-700 mb-2">Đáp án đúng:</p>
                               <p className="font-bold text-lg text-green-900">
                                 {String.fromCharCode(65 + question.correct_option_index)}.{" "}
-                                {question.content.options[question.correct_option_index]?.text}
+                                {(question.content.options || [])[question.correct_option_index]?.text || ""}
+                              </p>
+                            </div>
+                          )}
+                          {!isCorrect && isEssay && (
+                            <div className="bg-green-100 p-5 rounded-2xl border-2 border-green-400">
+                              <p className="text-sm font-bold uppercase text-green-700 mb-2">Gợi ý / Đáp án mẫu:</p>
+                              <p className="font-bold text-lg text-green-900 whitespace-pre-wrap">
+                                {question.model_answer || (question.content.options || [])[0]?.text || "Không có gợi ý"}
                               </p>
                             </div>
                           )}
                         </div>
 
                         {/* Options list check visual */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 pt-4 border-t-2 border-dashed border-slate-300">
-                          {question.content.options.map((option, optionIndex) => {
-                            const isUserAnswer = optionIndex === (userAnswer?.selected_option_index ?? -1);
-                            const isCorrectOption = optionIndex === question.correct_option_index;
+                        {!isEssay && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 pt-4 border-t-2 border-dashed border-slate-300">
+                            {(question.content.options || []).map((option, optionIndex) => {
+                              const isUserAnswer = optionIndex === (userAnswer?.selected_option_index ?? -1);
+                              const isCorrectOption = optionIndex === question.correct_option_index;
 
-                            let optionClasses = "border-slate-300 bg-white text-slate-500";
-                            if (isCorrectOption) optionClasses = "border-green-500 bg-green-100 text-green-900 shadow-[2px_2px_0_0_rgba(34,197,94,1)]";
-                            else if (isUserAnswer && !isCorrectOption) optionClasses = "border-red-500 bg-red-100 text-red-900 shadow-[2px_2px_0_0_rgba(239,68,68,1)]";
+                              let optionClasses = "border-slate-300 bg-white text-slate-500";
+                              if (isCorrectOption) optionClasses = "border-green-500 bg-green-100 text-green-900 shadow-[2px_2px_0_0_rgba(34,197,94,1)]";
+                              else if (isUserAnswer && !isCorrectOption) optionClasses = "border-red-500 bg-red-100 text-red-900 shadow-[2px_2px_0_0_rgba(239,68,68,1)]";
 
-                            return (
-                              <div key={optionIndex} className={`p-4 rounded-xl border-2 font-bold ${optionClasses} transition-all`}>
-                                <div className="flex items-center gap-3">
-                                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-black border-2 border-slate-800 ${isCorrectOption ? "bg-green-400 text-slate-900" : isUserAnswer && !isCorrectOption ? "bg-red-400 text-white" : "bg-slate-200 text-slate-700"}`}>
-                                    {String.fromCharCode(65 + optionIndex)}
-                                  </span>
-                                  <span className="flex-1">{option.text}</span>
-                                  {isCorrectOption && <span className="text-xl">🌟</span>}
-                                  {isUserAnswer && !isCorrectOption && <span className="text-xl">❌</span>}
+                              return (
+                                <div key={optionIndex} className={`p-4 rounded-xl border-2 font-bold ${optionClasses} transition-all`}>
+                                  <div className="flex items-center gap-3">
+                                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-black border-2 border-slate-800 ${isCorrectOption ? "bg-green-400 text-slate-900" : isUserAnswer && !isCorrectOption ? "bg-red-400 text-white" : "bg-slate-200 text-slate-700"}`}>
+                                      {String.fromCharCode(65 + optionIndex)}
+                                    </span>
+                                    <span className="flex-1">{option.text}</span>
+                                    {isCorrectOption && <span className="text-xl">🌟</span>}
+                                    {isUserAnswer && !isCorrectOption && <span className="text-xl">❌</span>}
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                              );
+                            })}
+                          </div>
+                        )}
 
                         {/* Explanation Section */}
                         {(question.explanation || question.content?.explanation) && (
@@ -436,7 +463,7 @@ export default function StudentTestPage() {
             </div>
           </div>
         </div>
-      </div>
+      </div >
     );
   }
 
@@ -554,37 +581,59 @@ export default function StudentTestPage() {
                 />
 
                 <div className="space-y-4 mb-10">
-                  {currentQuestion.content.options.map((option, index) => {
-                    const isSelected = answers[currentQuestion.id] === index;
-                    return (
-                      <label
-                        key={index}
-                        className={`flex items-start gap-4 p-4 rounded-2xl border-4 cursor-pointer transition-all ${isSelected
-                          ? "bg-indigo-100 border-indigo-500 shadow-[4px_4px_0_0_rgba(99,102,241,1)] transform -rotate-1"
-                          : "bg-slate-50 border-slate-200 hover:border-slate-800 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1"
-                          }`}
-                      >
-                        <div className="flex items-center h-6 mt-1">
-                          <input
-                            type="radio"
-                            name={`question-${currentQuestion.id}`}
-                            value={index}
-                            checked={isSelected}
-                            onChange={(e) =>
-                              handleAnswerChange(
-                                currentQuestion.id,
-                                parseInt(e.target.value),
-                              )
-                            }
-                            className="w-5 h-5 text-indigo-600 bg-white border-2 border-slate-800 focus:ring-indigo-500"
-                          />
-                        </div>
-                        <span className="text-lg font-bold text-slate-800 leading-snug">
-                          {String.fromCharCode(65 + index)}. {option.text}
-                        </span>
+                  {currentQuestion.q_type?.toLowerCase() === 'essay' || currentQuestion.content.type === 'ESSAY' ? (
+                    <div className="space-y-4">
+                      <label className="text-lg font-bold text-slate-700 block mb-2">
+                        Câu trả lời của bạn:
                       </label>
-                    );
-                  })}
+                      <textarea
+                        value={answers[currentQuestion.id] as string || ""}
+                        onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                        placeholder="Nhập câu trả lời của bạn tại đây..."
+                        className="w-full min-h-[300px] p-6 text-lg font-medium border-4 border-slate-800 rounded-[2rem] bg-[#fffdf8] focus:bg-white focus:outline-none focus:ring-8 focus:ring-indigo-100 transition-all resize-none shadow-[inside_0_4px_8px_0_rgba(0,0,0,0.05)] leading-relaxed"
+                      />
+                      <div className="flex items-center justify-between px-2">
+                        <p className="text-sm text-slate-500 font-bold italic">
+                          * Gợi ý: Hãy trình bày rõ ràng, đủ ý nhé!
+                        </p>
+                        <p className="text-xs font-black uppercase text-slate-400">
+                          {(answers[currentQuestion.id] as string || "").length} ký tự
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    (currentQuestion.content.options || []).map((option, index) => {
+                      const isSelected = answers[currentQuestion.id] === index;
+                      return (
+                        <label
+                          key={index}
+                          className={`flex items-start gap-4 p-4 rounded-2xl border-4 cursor-pointer transition-all ${isSelected
+                            ? "bg-indigo-100 border-indigo-500 shadow-[4px_4px_0_0_rgba(99,102,241,1)] transform -rotate-1 scale-[1.02]"
+                            : "bg-slate-50 border-slate-200 hover:border-slate-800 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1"
+                            }`}
+                        >
+                          <div className="flex items-center h-6 mt-1">
+                            <input
+                              type="radio"
+                              name={`question-${currentQuestion.id}`}
+                              value={index}
+                              checked={isSelected}
+                              onChange={(e) =>
+                                handleAnswerChange(
+                                  currentQuestion.id,
+                                  parseInt(e.target.value),
+                                )
+                              }
+                              className="w-5 h-5 text-indigo-600 bg-white border-2 border-slate-800 focus:ring-indigo-500"
+                            />
+                          </div>
+                          <span className="text-lg font-bold text-slate-800 leading-snug">
+                            {String.fromCharCode(65 + index)}. {option.text}
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8 pt-8 border-t-4 border-slate-800">

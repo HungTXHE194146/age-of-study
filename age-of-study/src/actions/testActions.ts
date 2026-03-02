@@ -45,7 +45,9 @@ export async function getTestWithQuestionsServer(testId: string): Promise<{ data
           difficulty,
           status,
           created_by,
-          created_at
+          created_at,
+          q_type,
+          model_answer
         )
       `)
       .eq("test_id", testId)

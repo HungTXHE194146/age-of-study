@@ -189,7 +189,8 @@ export class TestService {
         difficulty,
         status,
         created_by,
-        created_at
+        created_at,
+        q_type
       )
     `,
       )
@@ -310,14 +311,26 @@ export class TestService {
     const questionMap = new Map(testQuestions.map((q) => [q.id, q]));
 
     // Prepare answers
-    const answers = request.answers.map((answer) => ({
-      submission_id: submission.id,
-      question_id: answer.question_id,
-      selected_option_index: answer.selected_option_index,
-      is_correct:
-        questionMap.get(answer.question_id)?.correct_option_index ===
-        answer.selected_option_index,
-    })) as QuizAnswer[];
+    const answers = request.answers.map((answer) => {
+      const question = questionMap.get(answer.question_id);
+      const isEssay = question?.q_type?.toLowerCase() === 'essay' || question?.content?.type === 'ESSAY';
+      
+      let isCorrect = false;
+      if (isEssay) {
+        // For now, consider essay correct if it has some content
+        isCorrect = !!answer.text_answer && answer.text_answer.trim().length > 0;
+      } else {
+        isCorrect = question?.correct_option_index === answer.selected_option_index;
+      }
+
+      return {
+        submission_id: submission.id,
+        question_id: answer.question_id,
+        selected_option_index: answer.selected_option_index,
+        text_answer: answer.text_answer,
+        is_correct: isCorrect,
+      };
+    }) as QuizAnswer[];
 
     // Removed quiz_answers insert since it doesn't exist in the current schema
     // We just calculate the score below based on the mapping.

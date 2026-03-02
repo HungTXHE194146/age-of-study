@@ -257,7 +257,7 @@ export default function StudentClassDashboard() {
                                             </div>
                                             <div>
                                                 <p className="text-slate-800 font-semibold text-sm sm:text-base">
-                                                    <span className="font-bold text-indigo-600">{activity.studentName}</span> {activity.description?.toLowerCase()}
+                                                    <span className="font-bold text-indigo-600">{activity.studentName}</span> {activity.description}
                                                 </p>
                                                 <p className="text-xs text-slate-400 font-medium mt-1">
                                                     {new Date(activity.created_at).toLocaleDateString("vi-VN", {
