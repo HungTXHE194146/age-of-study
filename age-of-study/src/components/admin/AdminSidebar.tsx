@@ -10,6 +10,9 @@ import {
   Settings,
   LogOut,
   X,
+  BarChart3,
+  UserCog,
+  FileDown,
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
@@ -36,6 +39,21 @@ const navItems: NavItem[] = [
     name: "Quản lý lớp học",
     href: "/admin/classes",
     icon: BookOpen,
+  },
+  {
+    name: "So sánh lớp học",
+    href: "/admin/analytics",
+    icon: BarChart3,
+  },
+  {
+    name: "Hoạt động giáo viên",
+    href: "/admin/teachers",
+    icon: UserCog,
+  },
+  {
+    name: "Xuất báo cáo",
+    href: "/admin/reports",
+    icon: FileDown,
   },
   {
     name: "Tài liệu SGK",
