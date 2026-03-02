@@ -14,10 +14,28 @@ export default function StaffLoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Clear error on mount to prevent errors from persisting across pages
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     clearError();
+    setValidationError(null);
+
+    // Client-side validation
+    if (!username.trim()) {
+      setValidationError("Vui lòng nhập tên đăng nhập");
+      return;
+    }
+
+    if (!password.trim()) {
+      setValidationError("Vui lòng nhập mật khẩu");
+      return;
+    }
 
     // Role is determined by the database profile, not by user selection
     await login(username, password);
@@ -205,7 +223,7 @@ export default function StaffLoginPage() {
           </motion.div>
 
           {/* Error Alert */}
-          {error && (
+          {(error || validationError) && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -223,7 +241,7 @@ export default function StaffLoginPage() {
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-sm font-medium">{error}</span>
+                <span className="text-sm font-medium">{validationError || error}</span>
               </div>
             </motion.div>
           )}

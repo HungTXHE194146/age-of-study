@@ -34,6 +34,35 @@ function getServerSupabase() {
   )
 }
 
+// --- Default AI settings ---
+const DEFAULT_AI_QUESTION_TEMPERATURE = 0.3
+const DEFAULT_AI_QUESTION_MAX_TOKENS = 8000
+
+// --- Fetch system settings from DB (with fallback defaults) ---
+async function getAIQuestionSettings(supabase: SupabaseClient) {
+  try {
+    const { data } = await supabase
+      .from('system_settings')
+      .select('ai_question_temperature, ai_question_max_tokens')
+      .eq('id', 1)
+      .single()
+
+    if (data) {
+      return {
+        temperature: Number.isFinite(parseFloat(data.ai_question_temperature)) 
+          ? parseFloat(data.ai_question_temperature) 
+          : DEFAULT_AI_QUESTION_TEMPERATURE,
+        maxTokens: data.ai_question_max_tokens ?? DEFAULT_AI_QUESTION_MAX_TOKENS,
+      }
+    }  } catch {
+    // Fall through to defaults
+  }
+  return {
+    temperature: DEFAULT_AI_QUESTION_TEMPERATURE,
+    maxTokens: DEFAULT_AI_QUESTION_MAX_TOKENS,
+  }
+}
+
 // --- System Prompt for Vietnamese Educational Context ---
 const SYSTEM_PROMPT = `Bạn là Giáo sư Cú, một chuyên gia giáo dục tiểu học tại Việt Nam. Nhiệm vụ của bạn là tạo câu hỏi trắc nghiệm dựa trên tài liệu được cung cấp.
 
@@ -356,7 +385,10 @@ ${JSON_SCHEMA}
 
 Hãy trả về JSON theo đúng schema trên, không thêm bất kỳ nội dung nào khác.`
 
-    // 8. Call Gemini with JSON mode
+    // 8. Fetch AI settings from DB
+    const aiSettings = await getAIQuestionSettings(supabase)
+
+    // 9. Call Gemini with JSON mode
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
       safetySettings: [
@@ -367,8 +399,8 @@ Hãy trả về JSON theo đúng schema trên, không thêm bất kỳ nội dun
       ],
       generationConfig: {
         responseMimeType: "application/json",
-        temperature: 0.3, // Lower temperature for more consistent output
-        maxOutputTokens: 8000,
+        temperature: aiSettings.temperature,
+        maxOutputTokens: aiSettings.maxTokens,
       },
     })
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X, BookOpen, ShieldOff } from "lucide-react";
 import UserAvatar from "./UserAvatar";
 
 interface User {
@@ -9,21 +9,26 @@ interface User {
   full_name: string | null;
   avatar_url: string | null;
   role: string;
+  grade: number | null;
   created_at: string;
   total_xp: number;
   current_streak: number;
   weekly_xp: number;
   daily_limit_minutes: number;
   freeze_count: number;
+  is_blocked: boolean;
 }
 
 interface UserDetailModalProps {
   user: User;
+  /** Actual class name (e.g. "5A1") resolved from class_students, if available */
+  className?: string | null;
   onClose: () => void;
 }
 
 export default function UserDetailModal({
   user,
+  className,
   onClose,
 }: UserDetailModalProps) {
   const getRoleLabel = (role: string) => {
@@ -93,16 +98,38 @@ export default function UserDetailModal({
               <h3 className="text-xl font-bold text-gray-900 mb-1">
                 {user.full_name || "Chưa đặt tên"}
               </h3>
-              <p className="text-gray-600 mb-3">
+              <p className="text-gray-500 mb-3">
                 @{user.username || `user_${user.id.slice(0, 8)}`}
               </p>
-              <span
-                className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full border-2 ${getRoleBadgeColor(
-                  user.role,
-                )}`}
-              >
-                {getRoleLabel(user.role)}
-              </span>
+
+              {/* Badges row */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full border-2 ${getRoleBadgeColor(user.role)}`}
+                >
+                  {getRoleLabel(user.role)}
+                </span>
+
+                {/* Class / Grade badge for students */}
+                {user.role === "student" && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-50 text-teal-700 border-2 border-teal-200 text-sm font-semibold rounded-full">
+                    <BookOpen className="w-3.5 h-3.5" />
+                    {className
+                      ? `Lớp ${className}`
+                      : user.grade != null
+                      ? `Khối ${user.grade}`
+                      : "Chưa vào lớp"}
+                  </span>
+                )}
+
+                {/* Blocked status */}
+                {user.is_blocked && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-700 border-2 border-red-200 text-sm font-semibold rounded-full">
+                    <ShieldOff className="w-3.5 h-3.5" />
+                    Bị chặn
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -123,6 +150,18 @@ export default function UserDetailModal({
                     {formatDate(user.created_at)}
                   </p>
                 </div>
+                {user.role === "student" && (
+                  <div>
+                    <p className="text-xs text-gray-500">Lớp học</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {className
+                        ? `Lớp ${className}`
+                        : user.grade != null
+                        ? `Khối ${user.grade} (chưa xếp lớp cụ thể)`
+                        : "Chưa vào lớp"}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -143,6 +182,16 @@ export default function UserDetailModal({
                   <p className="text-xs text-gray-500">Freeze còn lại</p>
                   <p className="text-sm text-gray-900">
                     {user.freeze_count} lần
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Trạng thái</p>
+                  <p
+                    className={`text-sm font-semibold ${
+                      user.is_blocked ? "text-red-600" : "text-green-600"
+                    }`}
+                  >
+                    {user.is_blocked ? "Bị chặn" : "Đang hoạt động"}
                   </p>
                 </div>
               </div>

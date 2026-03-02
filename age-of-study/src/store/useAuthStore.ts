@@ -52,6 +52,14 @@ export const useAuthStore = create<AuthState>()(
 
           if (profileError || !profile) throw new Error('Không tìm thấy thông tin người dùng')
 
+          // Update last_active_at on login
+          supabase
+            .from('profiles')
+            .update({ last_active_at: new Date().toISOString() })
+            .eq('id', authData.user.id)
+            .then(({ error }: { error: any }) => {
+              if (error) console.warn('Failed to update last_active_at:', error.message)
+            })
           set({ user: profile, isAuthenticated: true, isLoading: false })
         } catch (error: unknown) {
           console.error('Login error:', error)
@@ -144,7 +152,14 @@ export const useAuthStore = create<AuthState>()(
             }
 
             set({ user: profile, isAuthenticated: true, isLoading: false })
-          } catch (error) {
+            // Fire-and-forget: update last_active_at for real activity tracking
+            supabase
+              .from('profiles')
+              .update({ last_active_at: new Date().toISOString() })
+              .eq('id', authUser.id)
+              .then(({ error }: { error: any }) => {
+                if (error) console.warn('Failed to update last_active_at:', error.message)
+              })          } catch (error) {
             console.error('Check auth error:', error)
             set({ user: null, isAuthenticated: false, isLoading: false })
           } finally {

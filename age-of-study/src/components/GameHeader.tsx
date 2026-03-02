@@ -19,6 +19,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { icon: "🏠", label: "Tổng quan", href: "/student" },
+  { icon: "🏫", label: "Lớp học", href: "/student/classes" },
   { icon: "⚔️", label: "Học tập", href: "/student/skill-tree" },
   { icon: "🏆", label: "Xếp hạng", href: "/student/leaderboard" },
   { icon: "🎒", label: "Balo", href: "/student/backpack" },
