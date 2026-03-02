@@ -192,7 +192,7 @@ export default function StudentLogPage() {
                   Dòng Thời Gian Hoạt Động
                 </NotebookCardTitle>
               </NotebookCardHeader>
-              <NotebookCardContent className="pt-6 h-[500px] overflow-y-auto">
+              <NotebookCardContent className="pt-6 h-[500px] overflow-y-auto custom-scrollbar">
                 <div className="mt-4 space-y-6">
                   {data.activities.slice(0, visibleActivitiesCount).map((act: any, idx: number) => (
                     <div key={act.id} className="flex gap-4 relative">
@@ -245,9 +245,9 @@ export default function StudentLogPage() {
                   Bản Đồ Tiến Độ
                 </NotebookCardTitle>
               </NotebookCardHeader>
-              <NotebookCardContent className="pt-6">
+              <NotebookCardContent className="pt-6 h-[500px] overflow-y-auto custom-scrollbar">
                 <div className="space-y-3">
-                  {data.progress.slice(0, visibleProgressCount).map((p: { id: string, title: string, status: string, score: string }) => (
+                  {data.progress.map((p: { id: string, title: string, status: string, score: string }) => (
                     <div
                       key={p.id}
                       className={`p-3 border-2 border-black rounded-lg flex items-center justify-between ${p.status === 'completed' ? 'bg-green-50/50' :
@@ -272,17 +272,7 @@ export default function StudentLogPage() {
                     </div>
                   ))}
 
-                  {data.progress.length > visibleProgressCount && (
-                    <div className="pt-3 text-center">
-                      <Button
-                        variant="outline"
-                        onClick={() => setVisibleProgressCount(prev => prev + 6)}
-                        className="w-full bg-purple-50 hover:bg-purple-100 text-purple-900 border-2 border-dashed border-purple-300 font-bold"
-                      >
-                        Hiển thị thêm bài...
-                      </Button>
-                    </div>
-                  )}
+
                 </div>
               </NotebookCardContent>
             </NotebookCard>

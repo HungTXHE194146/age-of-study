@@ -176,7 +176,7 @@ export default function StudentSkillTreePage() {
             </div>
 
             {isSubjectSelectorOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white border-4 border-black rounded-xl p-2 shadow-[8px_8px_0_0_rgba(0,0,0,1)] z-50 animate-in fade-in zoom-in-95 max-h-64 overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border-4 border-black rounded-xl p-2 shadow-[8px_8px_0_0_rgba(0,0,0,1)] z-50 animate-in fade-in zoom-in-95 max-h-64 overflow-y-auto custom-scrollbar">
                 {subjects.map((subject) => (
                   <div
                     key={subject.id}

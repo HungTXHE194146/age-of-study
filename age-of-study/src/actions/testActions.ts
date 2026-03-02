@@ -102,10 +102,10 @@ export async function syncTestProgressAction(
     
     // 1. We bypass the RPC function to run JS logic because the DB one might not have the correct submit_count/bestScore logic
     
-    // 2. Get the node_id for this test
+    // 2. Get the node_id and title for this test
     const { data: testData } = await supabase
       .from("tests")
-      .select("node_id")
+      .select("node_id, title")
       .eq("id", testId)
       .single();
       
@@ -171,12 +171,13 @@ export async function syncTestProgressAction(
     }
     
     // 4. Activity Log
+    const testTitle = testData?.title || 'bài tập';
     await supabase
       .from("activity_logs")
       .insert({
          student_id: studentId,
          activity_type: 'test_completed',
-         description: `Hoàn thành bài tập với điểm số ${score}%`,
+         description: `Hoàn thành bài tập: ${testTitle} với điểm số ${score}%`,
          xp_earned: xpEarned,
          metadata: { test_id: testId, score, node_id: testData?.node_id }
       });
