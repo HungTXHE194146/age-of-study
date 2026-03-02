@@ -7,7 +7,7 @@ import UserAvatar from "@/components/admin/UserAvatar";
 import Loading from "@/components/ui/loading";
 import {
   Users, GraduationCap, UserCog, Activity,
-  TrendingUp, UserPlus, Clock,
+  TrendingUp, UserPlus, Clock, BarChart3, FileDown,
 } from "lucide-react";
 
 interface UserStats {
@@ -300,6 +300,63 @@ export default function AdminDashboard() {
           iconBgColor="bg-orange-50"
           textColor="text-gray-900"
         />
+      </div>
+
+      {/* Quick Access to New Features */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <a
+          href="/admin/analytics"
+          className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-5 hover:shadow-lg transition-all transform hover:-translate-y-1"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <BarChart3 className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-blue-900">So sánh lớp học</h3>
+              <p className="text-xs text-blue-600">Phân tích hiệu suất</p>
+            </div>
+          </div>
+          <p className="text-sm text-blue-700">
+            Xem điểm TB, tỷ lệ hoàn thành và so sánh giữa các lớp →
+          </p>
+        </a>
+
+        <a
+          href="/admin/teachers"
+          className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl p-5 hover:shadow-lg transition-all transform hover:-translate-y-1"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+              <UserCog className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-purple-900">Hoạt động GV</h3>
+              <p className="text-xs text-purple-600">Theo dõi giáo viên</p>
+            </div>
+          </div>
+          <p className="text-sm text-purple-700">
+            Xem giáo viên nào tích cực / chưa sử dụng hệ thống →
+          </p>
+        </a>
+
+        <a
+          href="/admin/reports"
+          className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-xl p-5 hover:shadow-lg transition-all transform hover:-translate-y-1"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+              <FileDown className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-green-900">Xuất báo cáo</h3>
+              <p className="text-xs text-green-600">PDF & Excel</p>
+            </div>
+          </div>
+          <p className="text-sm text-green-700">
+            Tạo báo cáo tổng hợp cho Phòng Giáo dục →
+          </p>
+        </a>
       </div>
 
       {/* Row 2: Secondary stats + Activity chart */}
