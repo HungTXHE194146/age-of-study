@@ -43,6 +43,7 @@ export default function LearnPage() {
   const [currentClass, setCurrentClass] = useState<StudentWithClass | null>(
     null,
   );
+  const [loadingClass, setLoadingClass] = useState(true);
   const [classSubjects, setClassSubjects] = useState<ClassSubject[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [pendingTestsCount, setPendingTestsCount] = useState(0);
@@ -80,6 +81,7 @@ export default function LearnPage() {
   const loadClassInfo = async () => {
     if (!user) return;
 
+    setLoadingClass(true);
     try {
       const result = await getStudentClass(user.id);
       if (result.error) {
@@ -94,6 +96,8 @@ export default function LearnPage() {
       }
     } catch (error) {
       console.error("Failed to load class:", error);
+    } finally {
+      setLoadingClass(false);
     }
   };
 
@@ -340,7 +344,11 @@ export default function LearnPage() {
       </motion.div>
 
       {/* 3. Lớp học của bạn (Assigned by Teacher) */}
-      {!currentClass?.class ? (
+      {loadingClass ? (
+        <div className="mb-12 bg-white rounded-3xl p-8 border-2 border-gray-100 shadow-md flex items-center justify-center min-h-[200px]">
+          <Loading message="Đang kiểm tra lớp học..." size="sm" />
+        </div>
+      ) : !currentClass?.class ? (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -373,7 +381,7 @@ export default function LearnPage() {
                   }}
                   placeholder="Nhập mã lớp (8 ký tự)"
                   maxLength={8}
-                  className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl text-xl text-center font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl text-xl text-center font-bold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   disabled={joiningClass}
                 />
               </div>

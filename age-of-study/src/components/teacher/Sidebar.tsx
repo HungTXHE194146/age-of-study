@@ -107,6 +107,7 @@ export function Sidebar({ className, isOpen = true, onClose }: SidebarProps) {
                 <Image
                   src="/school-logo.svg"
                   alt="Age of Study Logo"
+                  loading="eager"
                   width={48}
                   height={48}
                   className="w-full h-full bg-gray-100 rounded-lg "

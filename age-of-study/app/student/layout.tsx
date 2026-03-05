@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { checkRoutePermission } from "@/lib/routeMiddleware";
+import { useBlockedCheck } from "@/hooks/useBlockedCheck";
 
 export default function DashboardLayout({
   children,
@@ -15,6 +16,9 @@ export default function DashboardLayout({
   const { user, checkAuth, isAuthenticated, isLoading } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Periodic check for blocked users
+  useBlockedCheck();
 
   // Run checkAuth only once on mount
   useEffect(() => {

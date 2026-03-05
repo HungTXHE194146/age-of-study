@@ -24,15 +24,12 @@ import { NotebookCard, NotebookCardHeader, NotebookCardTitle, NotebookCardConten
 import { getTeacherDashboardSummary, DashboardSummary } from "@/lib/dashboardService";
 
 export default function TeacherDashboard() {
-  const { user, checkAuth, isAuthenticated, isLoading } = useAuthStore();
+  const { user, isAuthenticated, isLoading } = useAuthStore();
   const router = useRouter();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(true);
 
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
+  // No need to call checkAuth() here - the layout already does it
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
       // Check route permissions using centralized middleware

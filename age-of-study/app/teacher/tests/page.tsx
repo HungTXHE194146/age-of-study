@@ -24,7 +24,14 @@ import Loading, { LoadingInline } from "@/components/ui/loading";
 import { TestService } from "@/lib/testService";
 import { subjectService } from "@/lib/subjectService";
 import { Subject } from "@/types/teacher";
-import { NotebookCard, NotebookCardHeader, NotebookCardTitle, NotebookCardContent, NotebookButton, NotebookBadge } from "@/components/ui/notebook-card";
+import {
+  NotebookCard,
+  NotebookCardHeader,
+  NotebookCardTitle,
+  NotebookCardContent,
+  NotebookButton,
+  NotebookBadge,
+} from "@/components/ui/notebook-card";
 
 interface Test {
   id: string;
@@ -41,7 +48,7 @@ interface Test {
 }
 
 export default function TestManagementPage() {
-  const { user, checkAuth, isAuthenticated, isLoading } = useAuthStore();
+  const { user, isAuthenticated, isLoading } = useAuthStore();
   const router = useRouter();
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,10 +70,6 @@ export default function TestManagementPage() {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
 
   useEffect(() => {
     if (user?.id) {
@@ -228,8 +231,8 @@ export default function TestManagementPage() {
     setCurrentPage(page);
   };
 
-  if (isLoading) {
-    return <Loading message="Đang tải dữ liệu giáo viên..." fullScreen />;
+  if (isLoading || loading) {
+    return <Loading message="Đang tải dữ liệu bài kiểm tra..." fullScreen />;
   }
 
   if (!isAuthenticated || !user) {
@@ -255,7 +258,7 @@ export default function TestManagementPage() {
                 </p>
               </div>
             </div>
-            
+
             <NotebookButton
               className="bg-emerald-100 text-emerald-900 border-emerald-900 py-3 text-lg"
               onClick={() => router.push("/teacher/tests/create")}
@@ -271,40 +274,56 @@ export default function TestManagementPage() {
           <NotebookCard className="bg-blue-50">
             <NotebookCardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-gray-600 uppercase text-sm">Tổng bài KT</span>
+                <span className="font-bold text-gray-600 uppercase text-sm">
+                  Tổng bài KT
+                </span>
                 <BookOpen className="w-8 h-8 text-blue-900" />
               </div>
-              <p className="text-4xl font-black text-blue-900">{tests.length}</p>
+              <p className="text-4xl font-black text-blue-900">
+                {tests.length}
+              </p>
             </NotebookCardContent>
           </NotebookCard>
-          
+
           <NotebookCard className="bg-green-50">
             <NotebookCardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-gray-600 uppercase text-sm">Đã xuất bản</span>
+                <span className="font-bold text-gray-600 uppercase text-sm">
+                  Đã xuất bản
+                </span>
                 <Eye className="w-8 h-8 text-green-900" />
               </div>
-              <p className="text-4xl font-black text-green-900">{tests.filter((t) => t.status === "published").length}</p>
+              <p className="text-4xl font-black text-green-900">
+                {tests.filter((t) => t.status === "published").length}
+              </p>
             </NotebookCardContent>
           </NotebookCard>
 
           <NotebookCard className="bg-yellow-50">
             <NotebookCardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-gray-600 uppercase text-sm">Nháp</span>
+                <span className="font-bold text-gray-600 uppercase text-sm">
+                  Nháp
+                </span>
                 <Edit className="w-8 h-8 text-yellow-900" />
               </div>
-              <p className="text-4xl font-black text-yellow-900">{tests.filter((t) => t.status === "draft").length}</p>
+              <p className="text-4xl font-black text-yellow-900">
+                {tests.filter((t) => t.status === "draft").length}
+              </p>
             </NotebookCardContent>
           </NotebookCard>
-          
+
           <NotebookCard className="bg-purple-50">
             <NotebookCardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-gray-600 uppercase text-sm">Tổng câu hỏi</span>
+                <span className="font-bold text-gray-600 uppercase text-sm">
+                  Tổng câu hỏi
+                </span>
                 <Tag className="w-8 h-8 text-purple-900" />
               </div>
-              <p className="text-4xl font-black text-purple-900">{totalQuestions}</p>
+              <p className="text-4xl font-black text-purple-900">
+                {totalQuestions}
+              </p>
             </NotebookCardContent>
           </NotebookCard>
         </div>
@@ -343,7 +362,9 @@ export default function TestManagementPage() {
               <select
                 value={filterStatus}
                 onChange={(e) => {
-                  setFilterStatus(e.target.value as "all" | "published" | "draft");
+                  setFilterStatus(
+                    e.target.value as "all" | "published" | "draft",
+                  );
                   setCurrentPage(1);
                 }}
                 className="px-4 py-3 border-2 border-black rounded-md focus:ring-0 focus:border-blue-600 text-lg font-bold bg-white/80"
@@ -369,26 +390,33 @@ export default function TestManagementPage() {
                 ))}
               </select>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 border-t-2 border-dashed border-gray-400 pt-6">
-               <div className="text-lg font-bold text-gray-700 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem]">
-                 Tìm thấy {filteredAndSortedTests.length} bài.
-               </div>
-               <div className="flex items-center gap-2 mt-4 sm:mt-0">
-                 <span className="font-bold">Sắp xếp:</span>
-                 <select
-                   value={sortBy}
-                   onChange={(e) => setSortBy(e.target.value as "date" | "title" | "questions")}
-                   className="px-3 py-1 border-2 border-black rounded-md focus:ring-0 text-base font-bold bg-white"
-                 >
-                   <option value="date">Ngày tạo</option>
-                   <option value="title">Tiêu đề</option>
-                   <option value="questions">Số câu</option>
-                 </select>
-                 <button onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")} className="border-2 border-black bg-white p-1 rounded-md hover:bg-gray-200">
-                   {sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />}
-                 </button>
-               </div>
+              <div className="text-lg font-bold text-gray-700 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem]">
+                Tìm thấy {filteredAndSortedTests.length} bài.
+              </div>
+              <div className="flex items-center gap-2 mt-4 sm:mt-0">
+                <span className="font-bold">Sắp xếp:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) =>
+                    setSortBy(e.target.value as "date" | "title" | "questions")
+                  }
+                  className="px-3 py-1 border-2 border-black rounded-md focus:ring-0 text-base font-bold bg-white"
+                >
+                  <option value="date">Ngày tạo</option>
+                  <option value="title">Tiêu đề</option>
+                  <option value="questions">Số câu</option>
+                </select>
+                <button
+                  onClick={() =>
+                    setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                  }
+                  className="border-2 border-black bg-white p-1 rounded-md hover:bg-gray-200"
+                >
+                  {sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />}
+                </button>
+              </div>
             </div>
           </NotebookCardContent>
         </NotebookCard>
@@ -396,82 +424,121 @@ export default function TestManagementPage() {
         {/* Tests Grid instead of Table */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 mb-8">
           {filteredAndSortedTests.length === 0 ? (
-             <div className="col-span-full py-12 text-center text-gray-500 font-bold border-4 border-dashed border-gray-400 bg-white/50 rounded-2xl text-xl">
-                Không tìm thấy bài kiểm tra nào.
-             </div>
+            <div className="col-span-full py-12 text-center text-gray-500 font-bold border-4 border-dashed border-gray-400 bg-white/50 rounded-2xl text-xl">
+              Không tìm thấy bài kiểm tra nào.
+            </div>
           ) : (
             currentTests.map((test) => (
-              <NotebookCard key={test.id} className="group hover:-translate-y-1 transition-transform relative">
+              <NotebookCard
+                key={test.id}
+                className="group hover:-translate-y-1 transition-transform relative"
+              >
                 {/* Status Tape/Pin */}
                 <div className="absolute -top-3 -right-3 rotate-[15deg] z-10">
-                   {test.status === "published" ? (
-                     <NotebookBadge variant="success" className="shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-xs py-1 px-3 bg-green-200">Xuất bản</NotebookBadge>
-                   ) : (
-                     <NotebookBadge variant="warning" className="shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-xs py-1 px-3 bg-yellow-200">Nháp</NotebookBadge>
-                   )}
+                  {test.status === "published" ? (
+                    <NotebookBadge
+                      variant="success"
+                      className="shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-xs py-1 px-3 bg-green-200"
+                    >
+                      Xuất bản
+                    </NotebookBadge>
+                  ) : (
+                    <NotebookBadge
+                      variant="warning"
+                      className="shadow-[2px_2px_0_0_rgba(0,0,0,1)] text-xs py-1 px-3 bg-yellow-200"
+                    >
+                      Nháp
+                    </NotebookBadge>
+                  )}
                 </div>
 
                 <NotebookCardHeader className="bg-orange-50/80 pr-16 border-b border-dashed border-gray-300">
-                   <div className="space-y-1">
-                     <NotebookCardTitle className="text-2xl sm:text-2xl line-clamp-2 leading-tight" title={test.title}>{test.title}</NotebookCardTitle>
-                     {test.description && <p className="text-sm font-bold text-gray-600 line-clamp-1 truncate">{test.description}</p>}
-                   </div>
+                  <div className="space-y-1">
+                    <NotebookCardTitle
+                      className="text-2xl sm:text-2xl line-clamp-2 leading-tight"
+                      title={test.title}
+                    >
+                      {test.title}
+                    </NotebookCardTitle>
+                    {test.description && (
+                      <p className="text-sm font-bold text-gray-600 line-clamp-1 truncate">
+                        {test.description}
+                      </p>
+                    )}
+                  </div>
                 </NotebookCardHeader>
                 <NotebookCardContent className="py-6 space-y-4">
-                   <div className="grid grid-cols-2 gap-3">
-                     <div className="bg-white/60 p-2 rounded-lg border-2 border-gray-300">
-                       <span className="block text-xs text-gray-500 font-bold uppercase mb-1">Môn học</span>
-                       <span className="text-lg font-black text-gray-800 truncate block" title={test.subject_name}>
-                         {test.subject_name || "N/A"}
-                       </span>
-                     </div>
-                     <div className="bg-white/60 p-2 rounded-lg border-2 border-gray-300">
-                       <span className="block text-xs text-gray-500 font-bold uppercase mb-1">Số câu hỏi</span>
-                       <span className="text-lg font-black text-gray-800 flex items-center gap-1">
-                         <Tag className="w-4 h-4" /> {test.question_count || 0}
-                       </span>
-                     </div>
-                     <div className="bg-white/60 p-2 rounded-lg border-2 border-gray-300">
-                       <span className="block text-xs text-gray-500 font-bold uppercase mb-1">Loại bài</span>
-                       <span className={`text-sm font-black truncate block ${test.type === 'practice' ? 'text-blue-700' : 'text-purple-700'}`}>
-                         {test.type === "practice" ? "Luyện tập" : "Kỹ năng"}
-                       </span>
-                     </div>
-                     <div className="bg-white/60 p-2 rounded-lg border-2 border-gray-300">
-                       <span className="block text-xs text-gray-500 font-bold uppercase mb-1">Thời gian</span>
-                       <span className="text-lg font-black text-gray-800 flex items-center gap-1">
-                          <Clock className="w-4 h-4" /> {test.time_limit || 0} p
-                       </span>
-                     </div>
-                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white/60 p-2 rounded-lg border-2 border-gray-300">
+                      <span className="block text-xs text-gray-500 font-bold uppercase mb-1">
+                        Môn học
+                      </span>
+                      <span
+                        className="text-lg font-black text-gray-800 truncate block"
+                        title={test.subject_name}
+                      >
+                        {test.subject_name || "N/A"}
+                      </span>
+                    </div>
+                    <div className="bg-white/60 p-2 rounded-lg border-2 border-gray-300">
+                      <span className="block text-xs text-gray-500 font-bold uppercase mb-1">
+                        Số câu hỏi
+                      </span>
+                      <span className="text-lg font-black text-gray-800 flex items-center gap-1">
+                        <Tag className="w-4 h-4" /> {test.question_count || 0}
+                      </span>
+                    </div>
+                    <div className="bg-white/60 p-2 rounded-lg border-2 border-gray-300">
+                      <span className="block text-xs text-gray-500 font-bold uppercase mb-1">
+                        Loại bài
+                      </span>
+                      <span
+                        className={`text-sm font-black truncate block ${test.type === "practice" ? "text-blue-700" : "text-purple-700"}`}
+                      >
+                        {test.type === "practice" ? "Luyện tập" : "Kỹ năng"}
+                      </span>
+                    </div>
+                    <div className="bg-white/60 p-2 rounded-lg border-2 border-gray-300">
+                      <span className="block text-xs text-gray-500 font-bold uppercase mb-1">
+                        Thời gian
+                      </span>
+                      <span className="text-lg font-black text-gray-800 flex items-center gap-1">
+                        <Clock className="w-4 h-4" /> {test.time_limit || 0} p
+                      </span>
+                    </div>
+                  </div>
                 </NotebookCardContent>
                 <div className="p-4 bg-gray-50 border-t-2 border-dashed border-gray-300 flex items-center gap-2 flex-wrap">
-                   <NotebookButton 
-                     className="flex-1 bg-white" 
-                     onClick={() => router.push(`/teacher/tests/${test.id}`)}
-                   >
-                     <Eye className="w-4 h-4 mr-1" /> Xem
-                   </NotebookButton>
-                   <NotebookButton 
-                     className="flex-1 bg-yellow-100 border-yellow-800 text-yellow-900" 
-                     onClick={() => router.push(`/teacher/tests/${test.id}/edit`)}
-                   >
-                     <Edit className="w-4 h-4 mr-1" /> Sửa
-                   </NotebookButton>
-                   
-                   <NotebookButton 
-                     className={`flex-1 ${test.status === 'published' ? 'bg-orange-100 border-orange-800 text-orange-900' : 'bg-green-100 border-green-800 text-green-900'}`}
-                     onClick={() => handlePublishTest(test.id, test.status === "published")}
-                   >
-                     {test.status === "published" ? "Hủy XB" : "+ XB"}
-                   </NotebookButton>
+                  <NotebookButton
+                    className="flex-1 bg-white"
+                    onClick={() => router.push(`/teacher/tests/${test.id}`)}
+                  >
+                    <Eye className="w-4 h-4 mr-1" /> Xem
+                  </NotebookButton>
+                  <NotebookButton
+                    className="flex-1 bg-yellow-100 border-yellow-800 text-yellow-900"
+                    onClick={() =>
+                      router.push(`/teacher/tests/${test.id}/edit`)
+                    }
+                  >
+                    <Edit className="w-4 h-4 mr-1" /> Sửa
+                  </NotebookButton>
 
-                   <NotebookButton 
-                     className="bg-red-100 border-red-800 text-red-900 aspect-square p-2"
-                     onClick={() => handleDeleteTest(test.id)}
-                   >
-                     <Trash2 className="w-4 h-4" />
-                   </NotebookButton>
+                  <NotebookButton
+                    className={`flex-1 ${test.status === "published" ? "bg-orange-100 border-orange-800 text-orange-900" : "bg-green-100 border-green-800 text-green-900"}`}
+                    onClick={() =>
+                      handlePublishTest(test.id, test.status === "published")
+                    }
+                  >
+                    {test.status === "published" ? "Hủy XB" : "+ XB"}
+                  </NotebookButton>
+
+                  <NotebookButton
+                    className="bg-red-100 border-red-800 text-red-900 aspect-square p-2"
+                    onClick={() => handleDeleteTest(test.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </NotebookButton>
                 </div>
               </NotebookCard>
             ))
@@ -488,15 +555,15 @@ export default function TestManagementPage() {
             >
               <ChevronLeft className="w-6 h-6" />
             </NotebookButton>
-            
+
             <div className="text-xl font-black text-gray-800 bg-white border-2 border-black px-6 py-2 rounded-md shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               {currentPage} / {totalPages}
             </div>
-            
+
             <NotebookButton
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-               className="px-4 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-gray-400"
+              className="px-4 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-gray-400"
             >
               <ChevronRight className="w-6 h-6" />
             </NotebookButton>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { SETTINGS_CONSTRAINTS } from '@/types/settings'
 import type { SystemSettingsUpdate } from '@/types/settings'
+import { createAuditLog } from '@/lib/auditService'
 
 // --- Server-side Supabase client (bypasses RLS) ---
 function getServerSupabase() {
@@ -178,8 +179,19 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // --- Execute update ---
+    // --- Get old values for audit log ---
     const supabase = getServerSupabase()
+    const { data: oldSettings, error: oldSettingsError } = await supabase
+      .from('system_settings')
+      .select('*')
+      .eq('id', 1)
+      .single()
+    
+    if (oldSettingsError) {
+      console.warn('Failed to fetch old settings for audit log:', oldSettingsError)
+    }
+
+    // --- Execute update ---
     const { data, error } = await supabase
       .from('system_settings')
       .update(updatePayload)
@@ -193,6 +205,23 @@ export async function PUT(request: NextRequest) {
         { error: 'Không thể lưu cài đặt. Vui lòng thử lại.' },
         { status: 500 }
       )
+    }
+
+    // ✅ AUDIT LOG
+    try {
+      await createAuditLog(userId, {
+        action: 'system_settings_changed',
+        resourceType: 'system_settings',
+        resourceId: '1',
+        description: `Cập nhật cài đặt hệ thống: ${Object.keys(body).join(', ')}`,
+        oldValues: oldSettings || undefined,
+        newValues: updatePayload,
+        metadata: {
+          fields_changed: Object.keys(body)
+        }
+      }, request)
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError)
     }
 
     return NextResponse.json({ data, message: 'Cài đặt đã được lưu thành công' })
