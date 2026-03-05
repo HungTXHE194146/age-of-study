@@ -158,19 +158,79 @@ export async function syncTestProgressAction(
         }, { onConflict: "student_id, node_id" });
     }
     
-    // 3. Update XP
+    // 3. Update XP + Streak + Weekly/Monthly XP (atomic via RPC)
+    // ── Compute streak delta client-side, then apply atomically ─────────────
+    const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
+    const toVNDate = (d: Date): string =>
+      new Date(d.getTime() + VN_OFFSET_MS).toISOString().slice(0, 10);
+    const today = toVNDate(new Date());
+
+    // Fetch only what we need to compute streak / freeze changes
     const { data: profile } = await supabase
       .from("profiles")
-      .select("total_xp")
+      .select("current_streak, last_study_date, freeze_count")
       .eq("id", studentId)
       .single();
-      
+
+    let streakDelta = 0;     // signed change to current_streak
+    let freezeDelta = 0;     // signed change to freeze_count (negative = consumed)
+    let freezeUsed  = false;
+
     if (profile) {
-      await supabase
-        .from("profiles")
-        .update({ total_xp: (profile.total_xp || 0) + xpEarned })
-        .eq("id", studentId);
+      const lastStudy: string | null = profile.last_study_date
+        ? toVNDate(new Date(profile.last_study_date as string))
+        : null;
+      const currentStreak: number = profile.current_streak ?? 0;
+      const freezeCount: number   = profile.freeze_count   ?? 0;
+
+      if (!lastStudy) {
+        // First-ever study session: initialise streak to 1
+        streakDelta = 1 - currentStreak;
+      } else if (lastStudy === today) {
+        // Already studied today — idempotent
+        streakDelta = 0;
+      } else {
+        const daysDiff = Math.floor(
+          (new Date(today).getTime() - new Date(lastStudy).getTime()) / 86_400_000,
+        );
+
+        if (daysDiff === 1) {
+          // Studied yesterday — extend streak
+          streakDelta = 1;
+        } else {
+          // Missed ≥2 days: need (daysDiff - 1) freezes to cover all gaps
+          const neededFreezes = daysDiff - 1;
+          if (freezeCount >= neededFreezes) {
+            // Enough freezes — maintain streak, consume exactly what's needed
+            freezeDelta = -neededFreezes;
+            freezeUsed  = true;
+            streakDelta = 0; // streak is maintained, NOT incremented
+          } else {
+            // Not enough freezes — reset streak
+            streakDelta = 1 - currentStreak;
+          }
+        }
+      }
     }
+
+    // Single atomic RPC: increments XP columns and adjusts streak/freeze_count
+    const { error: rpcError } = await supabase.rpc("increment_profile_xp", {
+      p_student_id:     studentId,
+      p_xp_delta:       xpEarned,
+      p_streak_delta:   streakDelta,
+      p_freeze_delta:   freezeDelta,
+      p_last_study_date: today,
+    });
+
+    if (rpcError) {
+      console.error(`[syncTestProgress] increment_profile_xp RPC failed for ${studentId}:`, rpcError);
+      return { success: false, error: rpcError.message };
+    }
+
+    if (freezeUsed) {
+      console.log(`[streak] ${-freezeDelta} freeze(s) consumed for student ${studentId}.`);
+    }
+
     
     // 4. Activity Log
     const testTitle = testData?.title || 'bài tập';
