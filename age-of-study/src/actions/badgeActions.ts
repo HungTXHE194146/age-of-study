@@ -1,28 +1,50 @@
 "use server";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 /**
  * Claim the one-time XP reward for an earned badge.
- * Guards: badge must be earned, XP not yet claimed.
+ *
+ * Security model:
+ *  - We verify the caller's identity using the SSR client (reads the browser
+ *    cookie session), then use the service-role client for the DB writes.
+ *  - The service-role client used here DOES NOT call auth.getUser() — it has
+ *    no session; that's by design (it bypasses RLS on the server).
  */
 export async function claimBadgeXpAction(
   studentId: string,
-  badgeId: string
+  badgeId: string,
 ): Promise<{ xpAwarded: number } | { error: string }> {
-  // Use the typed client for auth, then cast for DB ops (project has no generated Supabase types)
-  const supabaseTyped = getSupabaseServerClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = supabaseTyped as any;
+  // ── 1. Verify the caller is who they say they are ──────────────────────────
+  const cookieStore = await cookies();
+  const ssrClient = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: () => {}, // server action — no need to set cookies
+      },
+    },
+  );
 
-  // Verify the caller is the owner of the badge being claimed
-  const { data: { user }, error: authError } = await supabaseTyped.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await ssrClient.auth.getUser();
+
   if (authError || !user || user.id !== studentId) {
-    return { error: "Unauthorized" };
+    return { error: "Bạn cần đăng nhập để nhận thưởng." };
   }
 
+  // ── 2. All DB writes use the service-role client (bypasses RLS) ────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = getSupabaseServerClient() as any;
+
   try {
-    // 1. Fetch user_badge row — must exist and be unclaimed
+    // Fetch user_badge row — must exist and be unclaimed
     const { data: userBadge, error: ubError } = await supabase
       .from("user_badges")
       .select("badge_id, xp_claimed_at")
@@ -38,7 +60,7 @@ export async function claimBadgeXpAction(
       return { error: "XP đã được nhận rồi." };
     }
 
-    // 2. Read the XP reward from badges table
+    // Read the XP reward from badges table
     const { data: badge, error: badgeError } = await supabase
       .from("badges")
       .select("xp_reward")
@@ -51,10 +73,10 @@ export async function claimBadgeXpAction(
 
     const xpAwarded: number = badge.xp_reward ?? 50;
 
-    // 3. Mark XP as claimed
+    // Mark XP as claimed (optimistic-lock: only if still null)
     const { error: claimError, count } = await supabase
       .from("user_badges")
-      .update({ xp_claimed_at: new Date().toISOString() }, { count: 'exact' })
+      .update({ xp_claimed_at: new Date().toISOString() }, { count: "exact" })
       .eq("user_id", studentId)
       .eq("badge_id", badgeId)
       .is("xp_claimed_at", null);
@@ -63,7 +85,7 @@ export async function claimBadgeXpAction(
       return { error: claimError?.message || "XP đã được nhận rồi." };
     }
 
-    // 4. Add XP to profile (total + weekly + monthly)
+    // Add XP to profile
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("total_xp, weekly_xp, monthly_xp")
@@ -77,17 +99,17 @@ export async function claimBadgeXpAction(
     const { error: updateError } = await supabase
       .from("profiles")
       .update({
-        total_xp:   (profile.total_xp   || 0) + xpAwarded,
-        weekly_xp:  (profile.weekly_xp  || 0) + xpAwarded,
+        total_xp: (profile.total_xp || 0) + xpAwarded,
+        weekly_xp: (profile.weekly_xp || 0) + xpAwarded,
         monthly_xp: (profile.monthly_xp || 0) + xpAwarded,
       })
       .eq("id", studentId);
 
     if (updateError) {
-      // Consider rolling back the xp_claimed_at update or logging for manual reconciliation
       console.error("Failed to update XP after marking badge claimed:", updateError);
       return { error: "Không thể cập nhật XP. Vui lòng thử lại." };
     }
+
     return { xpAwarded };
   } catch (err: any) {
     console.error("claimBadgeXpAction error:", err);

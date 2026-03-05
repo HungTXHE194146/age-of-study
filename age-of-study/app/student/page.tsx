@@ -8,6 +8,7 @@ import {
   getStudentClass,
   getClassSubjects,
 } from "@/lib/classService";
+import { calculateTier, getTierConfig } from "@/lib/tierSystem";
 import type { StudentWithClass } from "@/types/class";
 import { TestService } from "@/lib/testService";
 import { motion, AnimatePresence } from "framer-motion";
@@ -107,12 +108,12 @@ export default function LearnPage() {
       const testService = new TestService();
       const tests = await testService.getTestsByClass(classId);
       const submissions = await testService.getStudentSubmissions(user.id);
-      
+
       // Count tests that have no submission
-      const pending = tests.filter(test => 
-        !submissions.some(sub => sub.test_id === test.id)
+      const pending = tests.filter(
+        (test) => !submissions.some((sub) => sub.test_id === test.id),
       ).length;
-      
+
       setPendingTestsCount(pending);
     } catch (error) {
       console.error("Failed to load pending tests:", error);
@@ -197,30 +198,32 @@ export default function LearnPage() {
 
   const remainder = xp % 1000;
   const xpToNextLevel = remainder === 0 && xp > 0 ? 0 : 1000 - remainder;
-  const progressPercent = remainder === 0 && xp > 0 ? 100 : (remainder / 1000) * 100;
-  const getRank = () => {
-    if (streak >= 30)
-      return {
-        name: "Vàng",
-        color: "text-yellow-500",
-        bg: "bg-yellow-100",
-        border: "border-yellow-200",
-      };
-    if (streak >= 7)
-      return {
-        name: "Bạc",
-        color: "text-gray-400",
-        bg: "bg-gray-100",
-        border: "border-gray-200",
-      };
-    return {
-      name: "Đồng",
-      color: "text-amber-700",
-      bg: "bg-amber-100",
-      border: "border-amber-200",
-    };
+  const progressPercent =
+    remainder === 0 && xp > 0 ? 100 : (remainder / 1000) * 100;
+  // Use the same tier system as the leaderboard (XP-based)
+  const tierLevel = calculateTier(xp);
+  const tierConfig = getTierConfig(tierLevel);
+  const rank = {
+    name: tierConfig.name,
+    color: `text-${tierConfig.color}`,
+    bg:
+      tierLevel === "bronze"
+        ? "bg-amber-100"
+        : tierLevel === "silver"
+          ? "bg-gray-100"
+          : tierLevel === "gold"
+            ? "bg-yellow-100"
+            : "bg-cyan-100",
+    border:
+      tierLevel === "bronze"
+        ? "border-amber-200"
+        : tierLevel === "silver"
+          ? "border-gray-200"
+          : tierLevel === "gold"
+            ? "border-yellow-200"
+            : "border-cyan-200",
+    icon: tierConfig.icon,
   };
-  const rank = getRank();
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -328,13 +331,17 @@ export default function LearnPage() {
                 Muốn giỏi hơn? Hãy luyện tập thêm! 💪
               </h2>
               <p className="text-emerald-100">
-                Mỗi ngày luyện tập một chút, kiến thức sẽ vững vàng hơn. Vào phần Học tập để chinh phục thêm nhiều bài học mới nhé!
+                Mỗi ngày luyện tập một chút, kiến thức sẽ vững vàng hơn. Vào
+                phần Học tập để chinh phục thêm nhiều bài học mới nhé!
               </p>
             </div>
           </div>
 
           <button
-            onClick={(e) => { e.stopPropagation(); router.push("/student/skill-tree"); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push("/student/skill-tree");
+            }}
             className="w-full lg:w-auto px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-white font-bold text-lg rounded-2xl shadow-[0_4px_14px_0_rgba(251,146,60,0.39)] transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
           >
             <Play className="w-5 h-5 fill-current" />
@@ -431,7 +438,9 @@ export default function LearnPage() {
             animate={{ opacity: 1, scale: 1 }}
             onClick={() => {
               if (currentClass?.class?.class_code) {
-                router.push(`/student/classes/${currentClass.class.class_code}`);
+                router.push(
+                  `/student/classes/${currentClass.class.class_code}`,
+                );
               }
             }}
             className="relative bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-2xl p-8 hover:shadow-2xl transition-all group overflow-hidden cursor-pointer"
@@ -480,16 +489,19 @@ export default function LearnPage() {
               {/* Class info */}
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-4">
                 <p className="text-white/90 text-sm">
-                  Hãy vào lớp để xem chi tiết bài học, bài tập và thông báo từ giáo viên
+                  Hãy vào lớp để xem chi tiết bài học, bài tập và thông báo từ
+                  giáo viên
                 </p>
               </div>
 
               {/* Enter class button */}
               <button
-                onClick={(e) => { 
-                  e.stopPropagation(); 
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (currentClass?.class?.class_code) {
-                    router.push(`/student/classes/${currentClass.class.class_code}`);
+                    router.push(
+                      `/student/classes/${currentClass.class.class_code}`,
+                    );
                   }
                 }}
                 className="w-full px-6 py-4 bg-white text-indigo-600 text-lg font-bold rounded-xl shadow-lg hover:bg-indigo-50 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
