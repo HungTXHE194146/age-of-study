@@ -13,6 +13,7 @@ import {
   BarChart3,
   UserCog,
   FileDown,
+  Shield,
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
@@ -59,6 +60,11 @@ const navItems: NavItem[] = [
     name: "Tài liệu SGK",
     href: "/admin/documents",
     icon: FileText,
+  },
+  {
+    name: "Nhật ký kiểm tra",
+    href: "/admin/audit-logs",
+    icon: Shield,
   },
   {
     name: "Cài đặt",

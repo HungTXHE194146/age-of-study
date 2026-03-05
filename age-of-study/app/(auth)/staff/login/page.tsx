@@ -15,6 +15,7 @@ export default function StaffLoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Clear error on mount to prevent errors from persisting across pages
   useEffect(() => {
@@ -43,14 +44,18 @@ export default function StaffLoginPage() {
 
   // Auto-navigate after successful login
   useEffect(() => {
-    if (user) {
+    if (user && !isLoading && !isNavigating) {
+      setIsNavigating(true);
+      
       if (user.role === "teacher") {
-        router.push("/teacher/dashboard");
+        router.replace("/teacher/dashboard");
+      } else if (user.role === "system_admin") {
+        router.replace("/admin/dashboard");
       } else {
-        router.push("/student");
+        router.replace("/student");
       }
     }
-  }, [user, router]);
+  }, [user, isLoading, router, isNavigating]);
 
   return (
     <div className="min-h-screen bg-slate-900 flex">

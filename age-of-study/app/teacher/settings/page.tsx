@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import UserAvatar from "@/components/admin/UserAvatar";
 import { useRouter } from "next/navigation";
+import { MFASettings } from "@/components/auth/MFASettings";
 
 export default function TeacherSettingsPage() {
   const { user, logout } = useAuthStore();
@@ -266,6 +267,22 @@ export default function TeacherSettingsPage() {
           </NotebookCardContent>
         </NotebookCard>
       </div>
+
+      {/* MFA Security Card */}
+      <NotebookCard className="bg-[#fffdf8]">
+        <NotebookCardHeader className="border-b-2 border-dashed border-gray-300 pb-4 mb-6 bg-green-50/50">
+          <NotebookCardTitle className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-100 border-2 border-black rounded-full flex items-center justify-center rotate-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+              <Shield className="w-5 h-5 text-green-800" />
+            </div>
+            <span className="text-2xl font-black">Xác Thực 2 Yếu Tố (2FA)</span>
+          </NotebookCardTitle>
+        </NotebookCardHeader>
+        
+        <NotebookCardContent>
+          <MFASettings userId={user.id} />
+        </NotebookCardContent>
+      </NotebookCard>
 
     </div>
   );

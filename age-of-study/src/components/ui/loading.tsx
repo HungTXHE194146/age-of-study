@@ -54,7 +54,7 @@ export default function Loading({
           src="/Sandy Loading.lottie"
           background="transparent"
           speed="1"
-          loop
+          loop={true}
           autoplay
           style={{ width: "100%", height: "100%" }}
         />
@@ -82,7 +82,7 @@ export function LoadingInline({
           src="/Sandy Loading.lottie"
           background="transparent"
           speed="1"
-          loop
+          loop={true}
           autoplay
           style={{ width: "100%", height: "100%" }}
         />
@@ -107,7 +107,7 @@ export function LoadingSpinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
         src="/Sandy Loading.lottie"
         background="transparent"
         speed="1.2"
-        loop
+        loop={true}
         autoplay
         style={{ width: "100%", height: "100%" }}
       />

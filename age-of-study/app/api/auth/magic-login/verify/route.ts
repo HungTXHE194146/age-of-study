@@ -56,12 +56,20 @@ export async function POST(request: NextRequest) {
       // Verify this ID corresponds to a student profile
       const { data: profile } = await supabaseAdmin
         .from("profiles")
-        .select("id, full_name")
+        .select("id, full_name, is_blocked")
         .eq("id", candidate.student_id)
         .eq("role", "student")
         .single();
 
       if (!profile) continue;
+
+      // ✅ Check if account is blocked
+      if (profile.is_blocked) {
+        return NextResponse.json(
+          { error: "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ giáo viên để được hỗ trợ." },
+          { status: 403 }
+        );
+      }
 
       matchedCodeId = candidate.id;
       matchedProfile = profile;
