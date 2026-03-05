@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { RouteProtectedWrapper } from "@/lib/routeMiddleware";
@@ -36,7 +36,7 @@ export default function TeacherSkillTreePage() {
   const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null);
   const [nodeStats, setNodeStats] = useState<TeacherNodeStats | null>(null);
   const [nodeStatsLoading, setNodeStatsLoading] = useState(false);
-  
+
   // Node mapping for Editor
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [nodeToEdit, setNodeToEdit] = useState<Node | null>(null);
@@ -54,11 +54,11 @@ export default function TeacherSkillTreePage() {
   >(null);
   const router = useRouter();
 
-  const handleSubjectSelect = (subject: Subject) => {
+  const handleSubjectSelect = useCallback((subject: Subject) => {
     setSelectedSubject(subject);
     setIsSubjectSelectorOpen(false);
     setSelectedNodeId(null);
-  };
+  }, []);
 
   useEffect(() => {
     const fetchSubjects = async () => {
@@ -99,7 +99,7 @@ export default function TeacherSkillTreePage() {
     fetchNodes();
   }, [selectedSubject]);
 
-  const refreshNodes = async () => {
+  const refreshNodes = useCallback(async () => {
     if (selectedSubject) {
       try {
         const { nodes } = await fetchSubjectSkillTree(selectedSubject.id);
@@ -109,17 +109,17 @@ export default function TeacherSkillTreePage() {
         console.error("Failed to refresh nodes:", error);
       }
     }
-  };
+  }, [selectedSubject]);
 
-  const handleEditNode = (nodeId: number) => {
+  const handleEditNode = useCallback((nodeId: number) => {
     const node = allNodesAsNode.find(n => n.id === nodeId);
     if (node) {
       setNodeToEdit(node);
       setIsEditorOpen(true);
     }
-  };
+  }, [allNodesAsNode]);
 
-  const handleDeleteNode = async (nodeId: number) => {
+  const handleDeleteNode = useCallback(async (nodeId: number) => {
     if (confirm("Bạn có chắc chắn muốn xóa bài học này?")) {
       const result = await deleteNode(nodeId);
       if (result.success) {
@@ -129,12 +129,16 @@ export default function TeacherSkillTreePage() {
         alert(`Lỗi: ${result.error}`);
       }
     }
-  };
+  }, [refreshNodes, selectedNodeId]);
 
-  const handleAddNode = () => {
+  const handleAddNode = useCallback(() => {
     setNodeToEdit(null);
     setIsEditorOpen(true);
-  };
+  }, []);
+
+  const handleNodeSelected = useCallback((id: string | number) => {
+    setSelectedNodeId(Number(id));
+  }, []);
 
   // Fetch node stats when a node is selected
   useEffect(() => {
@@ -249,7 +253,7 @@ export default function TeacherSkillTreePage() {
                 gradeCode={selectedSubject.grade_level}
                 isTeacherMode={true}
                 subjectNodes={subjectNodes}
-                onNodeSelected={(id: string | number) => setSelectedNodeId(Number(id))}
+                onNodeSelected={handleNodeSelected}
                 onEditNode={handleEditNode}
                 onDeleteNode={handleDeleteNode}
               />
@@ -261,7 +265,7 @@ export default function TeacherSkillTreePage() {
               </div>
             )}
           </div>
-          
+
           {/* Right Sidebar Desktop */}
           <div className="hidden lg:flex w-80 xl:w-96 flex-col bg-[#fffdf8] border-l-2 border-dashed border-gray-400 h-full relative z-20">
             <div className="p-6 h-full overflow-y-auto custom-scrollbar">
@@ -272,7 +276,7 @@ export default function TeacherSkillTreePage() {
               <p className="text-sm font-bold text-gray-600 mb-6">
                 Xem thống kê và danh sách bài test.
               </p>
-              
+
               {selectedNodeId ? (
                 nodeStatsLoading ? (
                   <div className="flex justify-center p-6"><Loading size="md" /></div>
@@ -293,7 +297,7 @@ export default function TeacherSkillTreePage() {
                         </div>
                       </NotebookCardContent>
                     </NotebookCard>
-                    
+
                     <NotebookCard className="bg-purple-50/50">
                       <NotebookCardContent className="pt-6">
                         <div className="flex items-center justify-between mb-4 border-b-2 border-dashed border-gray-300 pb-2">

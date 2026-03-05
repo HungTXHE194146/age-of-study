@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuthStore } from "@/store/useAuthStore";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { QrCode } from "lucide-react";
 import { QRScanner } from "@/components/qr-scanner";
@@ -75,7 +75,7 @@ export default function LoginPage() {
         setIsScanningQR(false);
         await login(parsed.username, parsed.password);
       } else {
-         setScanError("Mã QR không hợp lệ hoặc đã cũ. Hãy xin thầy cô thẻ mới nhé!");
+        setScanError("Mã QR không hợp lệ hoặc đã cũ. Hãy xin thầy cô thẻ mới nhé!");
       }
     } catch (err: any) {
       console.error(err);
@@ -378,14 +378,16 @@ export default function LoginPage() {
       )}
         © {new Date().getFullYear()} Age Of Study. Cùng bé khôn lớn mỗi ngày.
       </div>
-      
+
       {/* Scanner Modal overlay */}
-      {isScanningQR && (
-        <QRScanner 
-          onScanSuccess={handleQRScanSuccess} 
-          onClose={() => setIsScanningQR(false)} 
-        />
-      )}
+      <AnimatePresence>
+        {isScanningQR && (
+          <QRScanner
+            onScanSuccess={handleQRScanSuccess}
+            onClose={() => setIsScanningQR(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
