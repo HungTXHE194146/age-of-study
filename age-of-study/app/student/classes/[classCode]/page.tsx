@@ -149,7 +149,7 @@ export default function StudentClassDashboard() {
 
             <div className="relative z-10">
                 {/* Header Section */}
-                <div className="mb-10 bg-white rounded-[2rem] p-8 shadow-[8px_8px_0_0_rgba(0,0,0,1)] border-4 border-slate-800 transform -rotate-1 relative overflow-hidden group">
+                <div className="mb-10 bg-white rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 md:p-8 shadow-[8px_8px_0_0_rgba(0,0,0,1)] border-4 border-slate-800 sm:-rotate-1 relative overflow-hidden group">
                     <div className="absolute top-2 right-4 w-12 h-4 bg-red-200/80 border border-red-300 rounded-sm italic transform rotate-3"></div>
                     <div className="absolute -top-4 -left-4 w-16 h-16 bg-blue-100 rounded-full border-4 border-slate-800 opacity-50 block mix-blend-multiply"></div>
 
@@ -158,8 +158,8 @@ export default function StudentClassDashboard() {
                             <SchoolIcon className="w-12 h-12 text-slate-800" />
                         </div>
                         <div className="flex-1 text-center md:text-left">
-                            <div className="flex items-center justify-center md:justify-start gap-4 mb-2">
-                                <h1 className="text-4xl font-black text-slate-800 uppercase tracking-tight" style={{ textShadow: "2px 2px 0 #fff" }}>
+                            <div className="flex items-center justify-center md:justify-start gap-4 mb-2 flex-wrap">
+                                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 uppercase tracking-tight" style={{ textShadow: "2px 2px 0 #fff" }}>
                                     {classDetail.name}
                                 </h1>
                                 <span className="px-4 py-1.5 bg-green-400 text-slate-900 text-sm font-black rounded-xl shadow-[2px_2px_0_0_rgba(0,0,0,1)] border-2 border-slate-800 transform -rotate-3">
@@ -194,7 +194,7 @@ export default function StudentClassDashboard() {
                                 <div className="p-3 bg-indigo-100 rounded-xl border-2 border-slate-800 transform -rotate-3 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
                                     <Trophy className="w-6 h-6 text-indigo-600" />
                                 </div>
-                                <h2 className="text-2xl font-black text-slate-800 uppercase tracking-widest">Bài Kiểm Tra Được Giao</h2>
+                                <h2 className="text-lg sm:text-2xl font-black text-slate-800 uppercase tracking-wide sm:tracking-widest">Bài Kiểm Tra Được Giao</h2>
                             </div>
 
                             {assignedTests.length > 0 ? (
@@ -240,12 +240,12 @@ export default function StudentClassDashboard() {
                         </div>
 
                         {/* Recent Activity */}
-                        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-[6px_6px_0_0_rgba(0,0,0,1)] border-4 border-slate-800 transform rotate-1">
+                        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-[6px_6px_0_0_rgba(0,0,0,1)] border-4 border-slate-800 sm:rotate-1">
                             <div className="flex items-center gap-3 mb-6 border-b-4 border-slate-800 pb-4">
                                 <div className="p-3 bg-fuchsia-100 rounded-xl border-2 border-slate-800 transform rotate-3 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
                                     <Activity className="w-6 h-6 text-fuchsia-600" />
                                 </div>
-                                <h2 className="text-2xl font-black text-slate-800 uppercase tracking-widest">Hoạt Động Gần Đây</h2>
+                                <h2 className="text-lg sm:text-2xl font-black text-slate-800 uppercase tracking-wide sm:tracking-widest">Hoạt Động Gần Đây</h2>
                             </div>
 
                             {allActivities.length > 0 ? (

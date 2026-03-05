@@ -93,15 +93,14 @@ interface VisualSkillTreeProps {
 }
 
 // --- STYLED CUSTOM NODE COMPONENT ---
-const CustomNode = React.memo(({
-  data,
-  selected,
-}: NodeProps<CustomNodeType>) => {
-  const { onEditNode, onDeleteNode, isTeacherMode } = React.useContext(NodeCallbacksContext);
-  const isTeacher = isTeacherMode;
-  const isLocked = isTeacher ? false : data.isLocked || false;
-  const isCompleted = data.isCompleted || false;
-  const baseColor = isLocked ? "#9ca3af" : data.color || "#fbbf24";
+const CustomNode = React.memo(
+  ({ data, selected }: NodeProps<CustomNodeType>) => {
+    const { onEditNode, onDeleteNode, isTeacherMode } =
+      React.useContext(NodeCallbacksContext);
+    const isTeacher = isTeacherMode;
+    const isLocked = isTeacher ? false : data.isLocked || false;
+    const isCompleted = data.isCompleted || false;
+    const baseColor = isLocked ? "#9ca3af" : data.color || "#fbbf24";
 
     const Icon = useMemo(() => {
       if (isLocked) return Lock;
@@ -283,44 +282,44 @@ const CustomNode = React.memo(({
             )}
           </div>
 
-        {!isTeacher && isLocked && (
-          <div className="absolute inset-0 bg-slate-200/60 rounded-[1.8rem] flex items-center justify-center backdrop-blur-[1px] pointer-events-none z-20">
-            <div className="w-12 h-12 bg-slate-100 border-2 border-slate-800 rounded-full flex items-center justify-center shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
-              <Lock size={24} className="text-slate-700" />
+          {!isTeacher && isLocked && (
+            <div className="absolute inset-0 bg-slate-200/60 rounded-[1.8rem] flex items-center justify-center backdrop-blur-[1px] pointer-events-none z-20">
+              <div className="w-12 h-12 bg-slate-100 border-2 border-slate-800 rounded-full flex items-center justify-center shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+                <Lock size={24} className="text-slate-700" />
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-
-        {/* --- NÚT QUẢN LÝ CỦA GIÁO VIÊN (Chỉ hiện khi hover) --- */}
-        {isTeacher && Number(data.id) > 0 && (
-          <div className="absolute -top-4 -right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onEditNode) onEditNode(Number(data.id));
-              }}
-              className="w-8 h-8 bg-white border-2 border-black text-black rounded-none flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform"
-              title="Chỉnh sửa"
-            >
-              <Edit2 size={14} />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onDeleteNode) onDeleteNode(Number(data.id));
-              }}
-              className="w-8 h-8 bg-red-100 border-2 border-black text-red-600 rounded-none flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform"
-              title="Xóa"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-        )}
+          {/* --- NÚT QUẢN LÝ CỦA GIÁO VIÊN (Chỉ hiện khi hover) --- */}
+          {isTeacher && Number(data.id) > 0 && (
+            <div className="absolute -top-4 -right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onEditNode) onEditNode(Number(data.id));
+                }}
+                className="w-8 h-8 bg-white border-2 border-black text-black rounded-none flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform"
+                title="Chỉnh sửa"
+              >
+                <Edit2 size={14} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onDeleteNode) onDeleteNode(Number(data.id));
+                }}
+                className="w-8 h-8 bg-red-100 border-2 border-black text-red-600 rounded-none flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform"
+                title="Xóa"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 // --- STYLED CUSTOM EDGE COMPONENT ---
 const CustomEdge = React.memo(
@@ -352,25 +351,6 @@ const CustomEdge = React.memo(
 
     return (
       <>
-        <svg
-          style={{ position: "absolute", top: 0, left: 0, height: 0, width: 0 }}
-        >
-          <defs>
-            <filter
-              id={`glow-${id}`}
-              x="-50%"
-              y="-50%"
-              width="200%"
-              height="200%"
-            >
-              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-        </svg>
         {/* Nét chính của line */}
         <BaseEdge
           path={edgePath}
@@ -413,7 +393,7 @@ const CustomEdge = React.memo(
           <circle
             r="6"
             fill="#fff"
-            filter={!data?.isLowData ? `url(#glow-${id})` : "none"}
+            filter={!data?.isLowData ? "url(#glow-shared)" : "none"}
           >
             {!data?.isLowData && (
               <animateMotion
@@ -483,7 +463,6 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   onEditNode,
   onDeleteNode,
 }) => {
-
   // Create refs for values used in focus logic to avoid dependency loop re-renders
   const completedNodeIdsRef = React.useRef(completedNodeIds);
   useEffect(() => {
@@ -498,7 +477,10 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   const [isLowData, setIsLowData] = useState(false);
 
   // MUST BE CALLED TOP LEVEL TO AVOID REACT HOOK ORDER VIOLATION
-  const contextValue = useMemo(() => ({ onEditNode, onDeleteNode, isTeacherMode }), [onEditNode, onDeleteNode, isTeacherMode]);
+  const contextValue = useMemo(
+    () => ({ onEditNode, onDeleteNode, isTeacherMode }),
+    [onEditNode, onDeleteNode, isTeacherMode],
+  );
 
   // Lọc kết quả tìm kiếm dựa trên query
   const searchResults = useMemo(() => {
@@ -576,7 +558,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     return transformDBNodesToFlow(
       subjectNodes,
       isTeacherMode || false,
-      completedNodeIds
+      completedNodeIds,
     );
   }, [subjectNodes, isTeacherMode, completedNodeIds]);
 
@@ -585,7 +567,12 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     if (mappedData) {
       setNodes(mappedData.nodes);
       // Inject isLowData and isTeacherMode into edge data
-      setEdges(mappedData.edges.map(e => ({ ...e, data: { ...e.data, isLowData, isTeacherMode } })));
+      setEdges(
+        mappedData.edges.map((e) => ({
+          ...e,
+          data: { ...e.data, isLowData, isTeacherMode },
+        })),
+      );
     } else {
       setNodes([]);
       setEdges([]);
@@ -595,7 +582,12 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   // 3. Auto-focus logic separated
   const hasAutoFocused = React.useRef(false);
   useEffect(() => {
-    if (rfInstance && !hasAutoFocused.current && subjectNodes && subjectNodes.length > 0) {
+    if (
+      rfInstance &&
+      !hasAutoFocused.current &&
+      subjectNodes &&
+      subjectNodes.length > 0
+    ) {
       if (!isTeacherMode) {
         // Logic: Lấy node ID đã học cao nhất + 1 để xác định node mục tiêu
         const currentCompletedIds = completedNodeIdsRef.current || [];
@@ -609,16 +601,17 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
           const nextNodeId = maxCompletedId + 1;
 
           // Tìm node tiếp theo hoặc fallback về node cao nhất đã học
-          targetNode = subjectNodes.find(n => n.id === nextNodeId)
-            || subjectNodes.find(n => n.id === maxCompletedId)
-            || subjectNodes[0];
+          targetNode =
+            subjectNodes.find((n) => n.id === nextNodeId) ||
+            subjectNodes.find((n) => n.id === maxCompletedId) ||
+            subjectNodes[0];
         }
 
         if (targetNode) {
           // Tính toán centerX từ toàn bộ subjectNodes để căn giữa trục dọc
           let minX = Infinity;
           let maxX = -Infinity;
-          subjectNodes.forEach(n => {
+          subjectNodes.forEach((n) => {
             const x = n.position_x ?? 0;
             if (x < minX) minX = x;
             if (x > maxX) maxX = x;
@@ -627,7 +620,10 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
           const targetY = targetNode.position_y ?? 0;
 
           // Focus TỨC THÌ ngay khi có rfInstance, không đợi ReactFlow render nodes
-          rfInstance.setCenter(centerX, targetY + 75, { zoom: 0.8, duration: 0 });
+          rfInstance.setCenter(centerX, targetY + 75, {
+            zoom: 0.8,
+            duration: 0,
+          });
           hasAutoFocused.current = true;
         }
       } else {
@@ -640,10 +636,15 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     }
   }, [rfInstance, isTeacherMode, subjectNodes]);
 
-
-
   const nodeTypes = useMemo(() => ({ custom: CustomNode }), []);
-  const edgeTypes = useMemo(() => ({ custom: (props: EdgeProps) => <CustomEdge {...props} setEdges={setEdges} /> }), [setEdges]);
+  const edgeTypes = useMemo(
+    () => ({
+      custom: (props: EdgeProps) => (
+        <CustomEdge {...props} setEdges={setEdges} />
+      ),
+    }),
+    [setEdges],
+  );
 
   // Xử lý sự kiện kéo nối dây (onConnect)
   const onConnect = useCallback(
@@ -819,36 +820,102 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
 
   return (
     <NodeCallbacksContext.Provider value={contextValue}>
-      <div className={`w-full h-full relative overflow-hidden flex flex-col ${isTeacherMode ? 'max-w-[400px] mx-auto border-x-4 border-black shadow-[4px_0_0_0_rgba(0,0,0,1),-4px_0_0_0_rgba(0,0,0,1)] bg-[#fffdf8]' : 'bg-transparent'}`}>
-
+      <div
+        className={`w-full h-full relative overflow-hidden flex flex-col ${isTeacherMode ? "max-w-[400px] mx-auto border-x-4 border-black shadow-[4px_0_0_0_rgba(0,0,0,1),-4px_0_0_0_rgba(0,0,0,1)] bg-[#fffdf8]" : "bg-transparent"}`}
+      >
+        {/* Shared SVG filter – rendered once to avoid duplicate DOM nodes per edge */}
+        <svg
+          style={{
+            position: "absolute",
+            width: 0,
+            height: 0,
+            overflow: "hidden",
+          }}
+        >
+          <defs>
+            <filter
+              id="glow-shared"
+              x="-50%"
+              y="-50%"
+              width="200%"
+              height="200%"
+            >
+              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+        </svg>
         {/* Cảnh vật trang trí cho Notebook */}
         {isTeacherMode && (
           <>
             {/* Lưới gáy sổ bên trái */}
             <div className="absolute left-0 top-0 bottom-0 w-8 border-r-2 border-dashed border-gray-300 z-0 pointer-events-none flex flex-col justify-around py-10 opacity-60">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="w-4 h-4 rounded-full bg-gray-200 border-2 border-gray-300 ml-1 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]"></div>
+                <div
+                  key={i}
+                  className="w-4 h-4 rounded-full bg-gray-200 border-2 border-gray-300 ml-1 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]"
+                ></div>
               ))}
             </div>
 
             {/* Doodle hành tinh/ngôi sao */}
             <div className="absolute bottom-16 right-4 opacity-[0.15] pointer-events-none z-0 rotate-12">
-              <svg width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10,90 Q50,10 90,90 Q50,50 10,90 Z" fill="none" stroke="#000" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="50" cy="50" r="10" fill="none" stroke="#000" strokeWidth="4" />
+              <svg
+                width="60"
+                height="60"
+                viewBox="0 0 100 100"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10,90 Q50,10 90,90 Q50,50 10,90 Z"
+                  fill="none"
+                  stroke="#000"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="10"
+                  fill="none"
+                  stroke="#000"
+                  strokeWidth="4"
+                />
               </svg>
             </div>
 
             {/* Doodle mũi tên vẽ tay */}
             <div className="absolute top-40 right-6 opacity-20 pointer-events-none z-0 rotate-[15deg] scale-100">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="40"
+                height="40"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#000"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </div>
 
             {/* Doodle chữ thập */}
             <div className="absolute bottom-40 left-12 opacity-15 pointer-events-none z-0 -rotate-12 scale-75">
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="30"
+                height="30"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#000"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
@@ -861,7 +928,16 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
 
             {/* Doodle đám mây */}
             <div className="absolute top-16 left-12 opacity-[0.15] pointer-events-none z-0 -rotate-6 scale-90">
-              <svg width="60" height="40" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="60"
+                height="40"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#000"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M17.5 19c2.485 0 4.5-2.015 4.5-4.5S19.985 10 17.5 10c-.394 0-.776.05-1.144.148C15.422 7.025 12.518 5 9 5c-3.866 0-7 3.134-7 7 0 .195.008.388.024.579A4.5 4.5 0 0 0 3.5 19h14z" />
               </svg>
             </div>
@@ -890,17 +966,27 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
                   : "w-full bg-slate-800/90 text-slate-100 placeholder-slate-400 border border-indigo-500/50 rounded-full pl-10 pr-4 py-3 shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all backdrop-blur-md text-sm"
               }
             />
-            <Search className={isTeacherMode ? "w-6 h-6 text-gray-600 absolute left-3" : "w-5 h-5 text-indigo-400 absolute left-3"} />
-            <button type="submit" className="hidden">Search</button>
+            <Search
+              className={
+                isTeacherMode
+                  ? "w-6 h-6 text-gray-600 absolute left-3"
+                  : "w-5 h-5 text-indigo-400 absolute left-3"
+              }
+            />
+            <button type="submit" className="hidden">
+              Search
+            </button>
           </form>
 
           {/* Dropdown Gợi ý */}
           {showSuggestions && searchResults.length > 0 && (
-            <div className={
-              isTeacherMode
-                ? "absolute mt-2 w-full bg-orange-50/95 border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] max-h-60 overflow-y-auto z-50 font-bold"
-                : "absolute mt-2 w-full bg-slate-800/95 border border-slate-700 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden max-h-60 overflow-y-auto z-50"
-            }>
+            <div
+              className={
+                isTeacherMode
+                  ? "absolute mt-2 w-full bg-orange-50/95 border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] max-h-60 overflow-y-auto z-50 font-bold"
+                  : "absolute mt-2 w-full bg-slate-800/95 border border-slate-700 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden max-h-60 overflow-y-auto z-50"
+              }
+            >
               {searchResults.map((node) => (
                 <div
                   key={node.id}
@@ -911,24 +997,39 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
                       : "px-4 py-3 hover:bg-slate-700/50 cursor-pointer transition-colors border-b border-slate-700/50 last:border-0 flex items-center gap-3"
                   }
                 >
-                  <div className={
-                    isTeacherMode
-                      ? "w-8 h-8 rounded-full border-2 border-black flex items-center justify-center shrink-0 bg-white"
-                      : "w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0"
-                  }>
-                    <Star size={14} className={isTeacherMode ? "text-black" : "text-indigo-400"} />
+                  <div
+                    className={
+                      isTeacherMode
+                        ? "w-8 h-8 rounded-full border-2 border-black flex items-center justify-center shrink-0 bg-white"
+                        : "w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0"
+                    }
+                  >
+                    <Star
+                      size={14}
+                      className={
+                        isTeacherMode ? "text-black" : "text-indigo-400"
+                      }
+                    />
                   </div>
                   <div>
-                    <div className={
-                      isTeacherMode
-                        ? "text-base font-black text-black line-clamp-1"
-                        : "text-sm font-medium text-slate-200 line-clamp-1"
-                    }>{node.data.title as string}</div>
-                    <div className={
-                      isTeacherMode
-                        ? "text-xs text-gray-600 mt-0.5 capitalize font-bold"
-                        : "text-xs text-slate-500 mt-0.5 capitalize"
-                    }>{node.data.nodeType as string}</div>
+                    <div
+                      className={
+                        isTeacherMode
+                          ? "text-base font-black text-black line-clamp-1"
+                          : "text-sm font-medium text-slate-200 line-clamp-1"
+                      }
+                    >
+                      {node.data.title as string}
+                    </div>
+                    <div
+                      className={
+                        isTeacherMode
+                          ? "text-xs text-gray-600 mt-0.5 capitalize font-bold"
+                          : "text-xs text-slate-500 mt-0.5 capitalize"
+                      }
+                    >
+                      {node.data.nodeType as string}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -936,7 +1037,9 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
           )}
         </div>
 
-        <div className={`flex-1 w-full h-full relative ${isTeacherMode ? 'pl-8' : ''}`}>
+        <div
+          className={`flex-1 w-full h-full relative ${isTeacherMode ? "pl-8" : ""}`}
+        >
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -965,7 +1068,10 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
             elementsSelectable={true}
             translateExtent={(() => {
               if (!nodes || nodes.length === 0) {
-                return [[-1000, -Infinity], [1000, Infinity]];
+                return [
+                  [-1000, -Infinity],
+                  [1000, Infinity],
+                ];
               }
 
               let minY = Infinity;
@@ -973,7 +1079,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
               let minX = Infinity;
               let maxX = -Infinity;
 
-              nodes.forEach(node => {
+              nodes.forEach((node) => {
                 const x = node.position.x;
                 const y = node.position.y;
                 if (y < minY) minY = y;
@@ -987,14 +1093,14 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
               // For students, we want to lock horizontal scroll.
               // To prevent the 'snapping' issue, the X range should be centered around the nodes.
               // We use a safe margin that prevents significant horizontal movement but avoids snapping.
-              const horizontalRange =  1;
+              const horizontalRange = 1;
 
               const headerMarginY = 150;
               const bottomMarginY = 250;
 
               return [
                 [centerX - horizontalRange, minY - headerMarginY],
-                [centerX + horizontalRange, maxY + bottomMarginY]
+                [centerX + horizontalRange, maxY + bottomMarginY],
               ] as any;
             })()}
             defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
@@ -1010,7 +1116,10 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
             />
 
             {isTeacherMode && (
-              <Panel position="bottom-center" className="flex gap-2 mb-4 w-full justify-center">
+              <Panel
+                position="bottom-center"
+                className="flex gap-2 mb-4 w-full justify-center"
+              >
                 <button
                   onClick={onLayout}
                   className={
@@ -1026,33 +1135,48 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
             )}
 
             {!isTeacherMode && (
-              <Panel position="bottom-center" className="flex gap-2 mb-6 w-full justify-center z-50">
+              <Panel
+                position="bottom-center"
+                className="flex gap-2 mb-6 w-full justify-center z-50"
+              >
                 <button
                   onClick={() => {
                     if (rfInstance && nodes.length > 0) {
                       let activeNode;
                       if (completedNodeIds.length === 0) {
-                        activeNode = [...nodes].sort((a, b) => (a.data.id as number) - (b.data.id as number))[0];
+                        activeNode = [...nodes].sort(
+                          (a, b) =>
+                            (a.data.id as number) - (b.data.id as number),
+                        )[0];
                       } else {
                         // Logic: Lấy node ID đã hoàn thành cao nhất + 1
                         const maxCompletedId = Math.max(...completedNodeIds);
                         const nextNodeId = maxCompletedId + 1;
-                        activeNode = nodes.find(n => (n.data.id as number) === nextNodeId)
-                          || nodes.find(n => (n.data.id as number) === maxCompletedId)
-                          || nodes[0];
+                        activeNode =
+                          nodes.find(
+                            (n) => (n.data.id as number) === nextNodeId,
+                          ) ||
+                          nodes.find(
+                            (n) => (n.data.id as number) === maxCompletedId,
+                          ) ||
+                          nodes[0];
                       }
 
                       if (activeNode) {
                         // Tính toán centerX động để đảm bảo viewport không bị lệch khi bấm nút
                         let minX = Infinity;
                         let maxX = -Infinity;
-                        nodes.forEach(n => {
+                        nodes.forEach((n) => {
                           if (n.position.x < minX) minX = n.position.x;
                           if (n.position.x > maxX) maxX = n.position.x;
                         });
                         const centerX = (minX + maxX) / 2 + 75;
 
-                        rfInstance.setCenter(centerX, activeNode.position.y + 75, { zoom: 0.8, duration: 800 });
+                        rfInstance.setCenter(
+                          centerX,
+                          activeNode.position.y + 75,
+                          { zoom: 0.8, duration: 800 },
+                        );
                       }
                     }
                   }}

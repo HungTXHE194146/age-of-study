@@ -136,10 +136,10 @@ export default function TeacherLeaderboardPage() {
   const topStudent = filteredStudents[0];
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
           📊 Bảng Xếp Hạng Học Sinh
         </h1>
         <p className="text-gray-600">
@@ -208,7 +208,7 @@ export default function TeacherLeaderboardPage() {
           </div>
 
           {/* Grade Filter */}
-          <div className="relative min-w-[200px]">
+          <div className="relative sm:min-w-[200px]">
             <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <select
               value={gradeFilter}

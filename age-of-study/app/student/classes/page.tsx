@@ -94,12 +94,12 @@ export default function StudentClassesPage() {
         return;
       }
 
-      // 2) Get tests for the class
-      const classTests = await testService.getTestsByClass(classId);
+      // 2 & 3) Fetch tests and submissions in parallel for faster load
+      const [classTests, submissions] = await Promise.all([
+        testService.getTestsByClass(classId),
+        testService.getStudentSubmissions(user.id),
+      ]);
       const publishedTests = classTests.filter((t) => t.is_published !== false);
-
-      // 3) Get student's submissions
-      const submissions = await testService.getStudentSubmissions(user.id);
 
       // 4) Enrich tests with submission data
       const enriched: EnrichedTest[] = publishedTests.map((test) => {
@@ -108,7 +108,7 @@ export default function StudentClassesPage() {
           .sort(
             (a, b) =>
               new Date(b.started_at).getTime() -
-              new Date(a.started_at).getTime()
+              new Date(a.started_at).getTime(),
           );
         const latestSub = testSubs[0];
         const bestScore =
@@ -468,8 +468,8 @@ function TestCard({
             )}
             {isCompleted && test.bestScore !== undefined && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 border-2 border-green-300 rounded-lg text-xs font-bold text-green-700">
-                <Star className="w-3.5 h-3.5 fill-green-500" />{" "}
-                Điểm: {test.bestScore}
+                <Star className="w-3.5 h-3.5 fill-green-500" /> Điểm:{" "}
+                {test.bestScore}
               </span>
             )}
           </div>

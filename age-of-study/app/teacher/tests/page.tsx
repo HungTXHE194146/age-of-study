@@ -2,7 +2,7 @@
 
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Plus,
   Edit,
@@ -32,6 +32,9 @@ import {
   NotebookButton,
   NotebookBadge,
 } from "@/components/ui/notebook-card";
+
+// Module-level singleton – shared across all operations, avoids repeated instantiation
+const testService = new TestService();
 
 interface Test {
   id: string;
@@ -81,11 +84,11 @@ export default function TestManagementPage() {
   const fetchTests = async (teacherId: string) => {
     setLoading(true);
     try {
-      const testService = new TestService();
-      const teacherTests =
-        await testService.getTestsWithQuestionCounts(teacherId);
-      const totalQuestionCount =
-        await testService.getTeacherTotalQuestionCount(teacherId);
+      // Fetch tests and total question count in parallel
+      const [teacherTests, totalQuestionCount] = await Promise.all([
+        testService.getTestsWithQuestionCounts(teacherId),
+        testService.getTeacherTotalQuestionCount(teacherId),
+      ]);
 
       // Map Supabase test data to our interface
       const mappedTests: Test[] = teacherTests.map((test) => ({
@@ -123,7 +126,6 @@ export default function TestManagementPage() {
   const handleDeleteTest = async (testId: string) => {
     if (confirm("Bạn có chắc chắn muốn xóa bài kiểm tra này?")) {
       try {
-        const testService = new TestService();
         await testService.deleteTest(testId);
         setTests(tests.filter((test) => test.id !== testId));
       } catch (error) {
@@ -135,7 +137,6 @@ export default function TestManagementPage() {
 
   const handlePublishTest = async (testId: string, currentStatus: boolean) => {
     try {
-      const testService = new TestService();
       await testService.updateTest(testId, {
         is_published: !currentStatus,
       });
@@ -176,50 +177,65 @@ export default function TestManagementPage() {
     }
   };
 
-  // Filter and sort tests
-  const filteredAndSortedTests = tests
-    .filter((test) => {
-      // Search filter
-      const matchesSearch =
-        searchTerm === "" ||
-        test.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        test.description.toLowerCase().includes(searchTerm.toLowerCase());
+  // Filter and sort tests – memoized to avoid recomputing on pagination state changes
+  const filteredAndSortedTests = useMemo(
+    () =>
+      tests
+        .filter((test) => {
+          // Search filter
+          const matchesSearch =
+            searchTerm === "" ||
+            test.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            test.description.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // Type filter
-      const matchesType = filterType === "all" || test.type === filterType;
+          // Type filter
+          const matchesType = filterType === "all" || test.type === filterType;
 
-      // Status filter
-      const matchesStatus =
-        filterStatus === "all" || test.status === filterStatus;
+          // Status filter
+          const matchesStatus =
+            filterStatus === "all" || test.status === filterStatus;
 
-      // Subject filter
-      const matchesSubject =
-        filterSubject === 0 ||
-        (test.subject_id !== null &&
-          test.subject_id !== undefined &&
-          test.subject_id === filterSubject);
+          // Subject filter
+          const matchesSubject =
+            filterSubject === 0 ||
+            (test.subject_id !== null &&
+              test.subject_id !== undefined &&
+              test.subject_id === filterSubject);
 
-      return matchesSearch && matchesType && matchesStatus && matchesSubject;
-    })
-    .sort((a, b) => {
-      let comparison = 0;
+          return (
+            matchesSearch && matchesType && matchesStatus && matchesSubject
+          );
+        })
+        .sort((a, b) => {
+          let comparison = 0;
 
-      switch (sortBy) {
-        case "title":
-          comparison = a.title.localeCompare(b.title);
-          break;
-        case "questions":
-          comparison = (a.question_count || 0) - (b.question_count || 0);
-          break;
-        case "date":
-        default:
-          comparison =
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          break;
-      }
+          switch (sortBy) {
+            case "title":
+              comparison = a.title.localeCompare(b.title);
+              break;
+            case "questions":
+              comparison = (a.question_count || 0) - (b.question_count || 0);
+              break;
+            case "date":
+            default:
+              comparison =
+                new Date(a.created_at).getTime() -
+                new Date(b.created_at).getTime();
+              break;
+          }
 
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
+          return sortOrder === "asc" ? comparison : -comparison;
+        }),
+    [
+      tests,
+      searchTerm,
+      filterType,
+      filterStatus,
+      filterSubject,
+      sortBy,
+      sortOrder,
+    ],
+  );
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedTests.length / itemsPerPage);
@@ -250,10 +266,10 @@ export default function TestManagementPage() {
                 <BookOpen className="w-8 h-8 text-blue-900" />
               </div>
               <div>
-                <h1 className="text-4xl font-black text-gray-900 tracking-tight font-handwritten">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 tracking-tight font-handwritten">
                   Quản lý Bài Kiểm Tra
                 </h1>
-                <p className="text-xl font-bold text-gray-600 font-handwritten mt-1">
+                <p className="text-base sm:text-xl font-bold text-gray-600 font-handwritten mt-1">
                   Danh sách bài kiểm tra đã tạo
                 </p>
               </div>

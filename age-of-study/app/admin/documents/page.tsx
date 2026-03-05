@@ -114,9 +114,9 @@ export default function AdminDocumentManagementPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                 Quản Lý Tài Liệu SGK
               </h1>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -205,7 +205,7 @@ export default function AdminDocumentManagementPage() {
                     key={doc.id}
                     className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
                           <FileText className="w-5 h-5 text-blue-500 flex-shrink-0" />
@@ -232,7 +232,7 @@ export default function AdminDocumentManagementPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 ml-4">
+                      <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"

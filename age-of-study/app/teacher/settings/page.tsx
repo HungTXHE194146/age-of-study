@@ -77,10 +77,10 @@ export default function TeacherSettingsPage() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-8">
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-black font-handwritten text-gray-900 mb-2 drop-shadow-sm">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black font-handwritten text-gray-900 mb-2 drop-shadow-sm">
           Cài đặt chung
         </h1>
         <p className="text-gray-600 font-bold font-handwritten text-lg">

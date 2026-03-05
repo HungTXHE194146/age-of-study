@@ -86,8 +86,8 @@ export default function BackpackPage() {
 
               <div className="flex items-center gap-3">
                 <motion.div
-                  animate={{ rotate: [0, -10, 10, -10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                  whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                  transition={{ duration: 0.5 }}
                 >
                   <Backpack className="w-8 h-8 text-sky-600" />
                 </motion.div>

@@ -314,7 +314,7 @@ export default function AdminSettingsPage() {
   // --- Loading state ---
   if (isLoading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-[60vh]">
+      <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
           <span className="text-gray-500 text-sm">Đang tải cài đặt...</span>
@@ -326,7 +326,7 @@ export default function AdminSettingsPage() {
   // --- Error: could not load ---
   if (!settings) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
           <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
           <h2 className="text-lg font-bold text-red-800 mb-1">
@@ -345,10 +345,10 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
           <Settings className="w-8 h-8 text-gray-700" />
           Cài đặt hệ thống
         </h1>
@@ -529,7 +529,7 @@ export default function AdminSettingsPage() {
       {/* ============================================================ */}
       {/* Sticky save bar */}
       {/* ============================================================ */}
-      <div className="sticky bottom-0 bg-white/95 backdrop-blur border-t border-gray-200 mt-8 -mx-8 px-8 py-4 flex items-center justify-between">
+      <div className="sticky bottom-0 bg-white/95 backdrop-blur border-t border-gray-200 mt-8 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="text-xs text-gray-400">
           {settings.updated_at && (
             <span>

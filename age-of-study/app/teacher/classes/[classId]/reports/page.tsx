@@ -139,30 +139,30 @@ export default function ReportsPage() {
         {/* Report Content - This part gets exported */}
         <div
           ref={reportRef}
-          className="bg-white p-8 border-4 border-black shadow-[8px_8px_0_0_rgba(0,0,0,1)] print:shadow-none print:border-none"
+          className="bg-white p-4 sm:p-6 lg:p-8 border-4 border-black shadow-[8px_8px_0_0_rgba(0,0,0,1)] print:shadow-none print:border-none"
         >
           {/* Report Header */}
           <div className="text-center border-b-4 border-black pb-6 mb-6">
-            <h1 className="text-4xl font-black uppercase text-blue-900 mb-2">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black uppercase text-blue-900 mb-2">
               Báo Cáo Tóm Tắt Lớp Học
             </h1>
-            <h2 className="text-3xl font-bold">Lớp: {classData?.name}</h2>
-            <p className="text-xl font-bold text-gray-600 mt-2">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold">Lớp: {classData?.name}</h2>
+            <p className="text-base sm:text-xl font-bold text-gray-600 mt-2">
               Năm học: {classData?.school_year} • Ngày xuất: {new Date().toLocaleDateString('vi-VN')}
             </p>
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-2 gap-6 mb-8">
-            <div className="border-4 border-black rounded-xl p-6 bg-yellow-100 text-center">
-              <div className="text-2xl font-bold mb-2">Tổng Sĩ Số</div>
-              <div className="text-6xl font-black text-blue-900">{totalStudents}</div>
-              <div className="text-lg font-bold mt-2">Học sinh</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8">
+            <div className="border-4 border-black rounded-xl p-4 sm:p-6 bg-yellow-100 text-center">
+              <div className="text-lg sm:text-2xl font-bold mb-2">Tổng Sĩ Số</div>
+              <div className="text-4xl sm:text-6xl font-black text-blue-900">{totalStudents}</div>
+              <div className="text-base sm:text-lg font-bold mt-2">Học sinh</div>
             </div>
-            <div className="border-4 border-black rounded-xl p-6 bg-purple-100 text-center">
-              <div className="text-2xl font-bold mb-2">Điểm TB Lớp</div>
-              <div className="text-6xl font-black text-purple-900">{avgXp}</div>
-              <div className="text-lg font-bold mt-2">XP / Học sinh</div>
+            <div className="border-4 border-black rounded-xl p-4 sm:p-6 bg-purple-100 text-center">
+              <div className="text-lg sm:text-2xl font-bold mb-2">Điểm TB Lớp</div>
+              <div className="text-4xl sm:text-6xl font-black text-purple-900">{avgXp}</div>
+              <div className="text-base sm:text-lg font-bold mt-2">XP / Học sinh</div>
             </div>
           </div>
 
@@ -174,10 +174,10 @@ export default function ReportsPage() {
             <div className="border-4 border-black rounded-xl overflow-hidden">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-gray-200 border-b-4 border-black text-xl">
-                    <th className="p-4 font-black border-r-4 border-black w-24 text-center">Hạng</th>
-                    <th className="p-4 font-black border-r-4 border-black">Họ và Tên</th>
-                    <th className="p-4 font-black">Điểm XP</th>
+                  <tr className="bg-gray-200 border-b-4 border-black text-base sm:text-xl">
+                    <th className="p-2 sm:p-4 font-black border-r-4 border-black w-16 sm:w-24 text-center">Hạng</th>
+                    <th className="p-2 sm:p-4 font-black border-r-4 border-black">Họ và Tên</th>
+                    <th className="p-2 sm:p-4 font-black">Điểm XP</th>
                   </tr>
                 </thead>
                 <tbody>
