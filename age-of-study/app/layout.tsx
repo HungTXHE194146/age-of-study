@@ -6,12 +6,14 @@ const splineSans = Spline_Sans({
   variable: "--font-spline-sans",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
+  preload: false,
 });
 
 const splineSansMono = Spline_Sans_Mono({
   variable: "--font-spline-sans-mono",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
+  preload: false,
 });
 
 export const metadata: Metadata = {

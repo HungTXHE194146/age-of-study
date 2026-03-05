@@ -1,36 +1,44 @@
 /**
  * Badge Collection Component
- * 
- * Displays all badges like a Pokemon card collection:
- * - Earned badges: Full color, 3D effect, shiny
- * - Locked badges: Grayscale, faded, with lock icon
- * - Progress indicator for badges close to earning
- * - Tooltips with unlock requirements
- * 
- * Clean code practices:
- * - Component is focused and single-purpose
- * - Proper error handling and loading states
- * - Accessible hover states and tooltips
- * - Responsive design with Tailwind
+ *
+ * - Earned badges: Full color, with "NEW" pulsing indicator when XP unclaimed
+ * - Locked badges: Grayscale with progress bar
+ * - Clicking an unclaimed badge opens a modal to claim XP reward
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, Trophy, Award, TrendingUp } from 'lucide-react';
-import type { BadgeWithStatus } from '@/types/achievement';
-import { getBadgeCollection, checkAndAwardBadges } from '@/lib/achievementService';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Lock,
+  Trophy,
+  Award,
+  TrendingUp,
+  Sparkles,
+  CheckCircle,
+} from "lucide-react";
+import confetti from "canvas-confetti";
+import type { BadgeWithStatus } from "@/types/achievement";
+import {
+  getBadgeCollection,
+  checkAndAwardBadges,
+} from "@/lib/achievementService";
+import { claimBadgeXpAction } from "@/actions/badgeActions";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface BadgeCollectionProps {
   userId: string;
 }
 
 export default function BadgeCollection({ userId }: BadgeCollectionProps) {
+  const { checkAuth } = useAuthStore();
   const [badges, setBadges] = useState<BadgeWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedBadge, setSelectedBadge] = useState<BadgeWithStatus | null>(null);
+  const [selectedBadge, setSelectedBadge] = useState<BadgeWithStatus | null>(
+    null,
+  );
 
   useEffect(() => {
     loadBadges();
@@ -39,27 +47,41 @@ export default function BadgeCollection({ userId }: BadgeCollectionProps) {
   const loadBadges = async () => {
     setLoading(true);
     setError(null);
-
-    // First, check and auto-award any eligible badges
-    await checkAndAwardBadges(userId);
-
-    // Then fetch all badges with updated earned status
-    const response = await getBadgeCollection(userId);
-
-    if (response.error) {
-      setError(response.error);
+    try {
+      await checkAndAwardBadges(userId);
+      const response = await getBadgeCollection(userId);
+      if (response.error) {
+        setError(response.error);
+      } else {
+        setBadges(response.data ?? []);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Lỗi không xác định khi tải huy hiệu.",
+      );
+    } finally {
       setLoading(false);
-      return;
     }
+  };
 
-    setBadges(response.data ?? []);
-    setLoading(false);
+  const handleClaimSuccess = async (badgeId: string) => {
+    // Optimistically update local state
+    setBadges((prev) =>
+      prev.map((b) => (b.id === badgeId ? { ...b, xp_claimed: true } : b)),
+    );
+    setSelectedBadge((prev) =>
+      prev?.id === badgeId ? { ...prev, xp_claimed: true } : prev,
+    );
+    // Sync global XP
+    await checkAuth();
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500" />
         <span className="ml-3 text-gray-600">Đang tải bộ sưu tập...</span>
       </div>
     );
@@ -81,7 +103,11 @@ export default function BadgeCollection({ userId }: BadgeCollectionProps) {
 
   const earnedCount = badges.filter((b) => b.is_earned).length;
   const totalCount = badges.length;
-  const completionPercentage = totalCount > 0 ? (earnedCount / totalCount) * 100 : 0;
+  const unclaimedCount = badges.filter(
+    (b) => b.is_earned && !b.xp_claimed,
+  ).length;
+  const completionPercentage =
+    totalCount > 0 ? (earnedCount / totalCount) * 100 : 0;
 
   return (
     <div className="space-y-6">
@@ -91,9 +117,13 @@ export default function BadgeCollection({ userId }: BadgeCollectionProps) {
           <div className="flex items-center gap-3">
             <Trophy className="w-8 h-8 text-yellow-500" />
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Bộ Sưu Tập Huy Hiệu</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Bộ Sưu Tập Huy Hiệu
+              </h2>
               <p className="text-sm text-gray-600">
-                Giống như thẻ bài Pokemon, hãy thu thập tất cả nhé!
+                {unclaimedCount > 0
+                  ? `🎁 Bạn có ${unclaimedCount} phần thưởng chưa nhận!`
+                  : "Giống như thẻ bài Pokemon, hãy thu thập tất cả nhé!"}
               </p>
             </div>
           </div>
@@ -105,12 +135,11 @@ export default function BadgeCollection({ userId }: BadgeCollectionProps) {
           </div>
         </div>
 
-        {/* Progress Bar */}
         <div className="relative w-full h-4 bg-gray-200 rounded-full overflow-hidden">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${completionPercentage}%` }}
-            transition={{ duration: 1, ease: 'easeOut' }}
+            transition={{ duration: 1, ease: "easeOut" }}
             className="absolute top-0 left-0 h-full bg-gradient-to-r from-yellow-400 to-orange-500"
           />
           <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow">
@@ -134,16 +163,19 @@ export default function BadgeCollection({ userId }: BadgeCollectionProps) {
       {/* Badge Detail Modal */}
       <AnimatePresence>
         {selectedBadge && (
-          <BadgeDetailModal badge={selectedBadge} onClose={() => setSelectedBadge(null)} />
+          <BadgeDetailModal
+            badge={selectedBadge}
+            userId={userId}
+            onClose={() => setSelectedBadge(null)}
+            onClaimSuccess={handleClaimSuccess}
+          />
         )}
       </AnimatePresence>
     </div>
   );
 }
 
-// ============================================================================
-// Badge Card Component
-// ============================================================================
+// ─── Badge Card ───────────────────────────────────────────────────────────────
 
 interface BadgeCardProps {
   badge: BadgeWithStatus;
@@ -153,7 +185,11 @@ interface BadgeCardProps {
 
 function BadgeCard({ badge, index, onClick }: BadgeCardProps) {
   const isEarned = badge.is_earned;
-  const hasProgress = !isEarned && badge.progress !== undefined && badge.progress_max !== undefined;
+  const isNew = isEarned && !badge.xp_claimed;
+  const hasProgress =
+    !isEarned &&
+    badge.progress !== undefined &&
+    badge.progress_max !== undefined;
   const progressPercentage = hasProgress
     ? (badge.progress! / badge.progress_max!) * 100
     : 0;
@@ -167,42 +203,65 @@ function BadgeCard({ badge, index, onClick }: BadgeCardProps) {
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
       className={`
-        relative p-4 rounded-xl border-2 transition-all
+        relative p-4 rounded-xl border-2 transition-all text-left
         ${
           isEarned
-            ? 'bg-gradient-to-br from-yellow-100 to-orange-100 border-yellow-300 shadow-lg hover:shadow-xl'
-            : 'bg-gray-100 border-gray-300 hover:border-gray-400'
+            ? isNew
+              ? "bg-gradient-to-br from-yellow-50 to-amber-100 border-amber-400 shadow-lg shadow-amber-200 ring-2 ring-amber-300 ring-offset-1"
+              : "bg-gradient-to-br from-yellow-100 to-orange-100 border-yellow-300 shadow-md hover:shadow-lg"
+            : "bg-gray-100 border-gray-300 hover:border-gray-400"
         }
       `}
     >
-      {/* Badge Icon */}
-      <div
-        className={`
-        text-5xl mb-2 transition-all
-        ${isEarned ? 'filter-none animate-pulse' : 'grayscale opacity-40'}
-      `}
-      >
-        {badge.icon_url || '🏅'}
-      </div>
+      {/* NEW indicator */}
+      {isNew && (
+        <motion.div
+          animate={{ scale: [1, 1.15, 1] }}
+          transition={{ repeat: Infinity, duration: 1.2 }}
+          className="absolute -top-2 -left-2 bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shadow z-10 leading-none"
+        >
+          NEW
+        </motion.div>
+      )}
 
-      {/* Lock Icon for Locked Badges */}
+      {/* Lock icon for locked badges */}
       {!isEarned && (
         <div className="absolute top-2 right-2 bg-gray-700 rounded-full p-1">
           <Lock className="w-3 h-3 text-gray-300" />
         </div>
       )}
 
+      {/* Badge Icon */}
+      <div
+        className={`text-5xl mb-2 transition-all ${
+          isEarned ? "filter-none" : "grayscale opacity-40"
+        }`}
+      >
+        {badge.icon_url || "🏅"}
+      </div>
+
       {/* Badge Name */}
       <div
-        className={`
-        text-xs font-semibold mb-1 line-clamp-2
-        ${isEarned ? 'text-gray-900' : 'text-gray-500'}
-      `}
+        className={`text-xs font-semibold mb-1 line-clamp-2 ${
+          isEarned ? "text-gray-900" : "text-gray-500"
+        }`}
       >
         {badge.name}
       </div>
 
-      {/* Progress Bar (for locked badges with progress) */}
+      {/* XP reward hint */}
+      {isEarned && (
+        <div
+          className={`text-[10px] font-bold flex items-center gap-0.5 ${
+            isNew ? "text-amber-600" : "text-gray-400"
+          }`}
+        >
+          <Sparkles className="w-3 h-3" />
+          {isNew ? `+${badge.xp_reward} XP` : "Đã nhận"}
+        </div>
+      )}
+
+      {/* Progress bar for locked badges */}
       {hasProgress && (
         <div className="mt-2">
           <div className="relative w-full h-1.5 bg-gray-300 rounded-full overflow-hidden">
@@ -218,29 +277,63 @@ function BadgeCard({ badge, index, onClick }: BadgeCardProps) {
         </div>
       )}
 
-      {/* Earned Date */}
+      {/* Earned date */}
       {isEarned && badge.earned_at && (
         <div className="text-[10px] text-gray-500 mt-1">
-          {new Date(badge.earned_at).toLocaleDateString('vi-VN')}
+          {new Date(badge.earned_at).toLocaleDateString("vi-VN")}
         </div>
       )}
     </motion.button>
   );
 }
 
-// ============================================================================
-// Badge Detail Modal
-// ============================================================================
+// ─── Badge Detail Modal ───────────────────────────────────────────────────────
 
 interface BadgeDetailModalProps {
   badge: BadgeWithStatus;
+  userId: string;
   onClose: () => void;
+  onClaimSuccess: (badgeId: string) => void;
 }
 
-function BadgeDetailModal({ badge, onClose }: BadgeDetailModalProps) {
+function BadgeDetailModal({
+  badge,
+  userId,
+  onClose,
+  onClaimSuccess,
+}: BadgeDetailModalProps) {
   const isEarned = badge.is_earned;
-  const hasProgress = !isEarned && badge.progress !== undefined && badge.progress_max !== undefined;
+  const hasProgress =
+    !isEarned &&
+    badge.progress !== undefined &&
+    badge.progress_max !== undefined;
+  const [claiming, setClaiming] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+  const [claimed, setClaimed] = useState(badge.xp_claimed);
 
+  const handleClaim = async () => {
+    setClaiming(true);
+    setClaimError(null);
+
+    try {
+      const result = await claimBadgeXpAction(userId, badge.id);
+
+      if ("error" in result) {
+        setClaimError(result.error);
+        setClaiming(false);
+        return;
+      }
+
+      // Success!
+      setClaimed(true);
+      setClaiming(false);
+      confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+      onClaimSuccess(badge.id);
+    } catch {
+      setClaimError("Đã xảy ra lỗi khi nhận thưởng");
+      setClaiming(false);
+    }
+  };
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -258,12 +351,11 @@ function BadgeDetailModal({ badge, onClose }: BadgeDetailModalProps) {
           relative max-w-md w-full rounded-2xl p-8 shadow-2xl
           ${
             isEarned
-              ? 'bg-gradient-to-br from-yellow-100 via-orange-100 to-yellow-100'
-              : 'bg-gradient-to-br from-gray-100 to-gray-200'
+              ? "bg-gradient-to-br from-yellow-100 via-orange-100 to-yellow-100"
+              : "bg-gradient-to-br from-gray-100 to-gray-200"
           }
         `}
       >
-        {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center transition-colors"
@@ -271,15 +363,14 @@ function BadgeDetailModal({ badge, onClose }: BadgeDetailModalProps) {
           ✕
         </button>
 
-        {/* Badge Icon (Large) */}
+        {/* Badge Icon */}
         <div className="text-center mb-6">
           <div
-            className={`
-            text-8xl mb-4 inline-block
-            ${isEarned ? 'filter-none animate-bounce' : 'grayscale opacity-50'}
-          `}
+            className={`text-8xl mb-4 inline-block ${
+              isEarned ? "filter-none animate-bounce" : "grayscale opacity-50"
+            }`}
           >
-            {badge.icon_url || '🏅'}
+            {badge.icon_url || "🏅"}
           </div>
 
           {!isEarned && (
@@ -298,13 +389,13 @@ function BadgeDetailModal({ badge, onClose }: BadgeDetailModalProps) {
             <p className="text-gray-600">{badge.description}</p>
           )}
 
-          {/* Requirements */}
           {badge.condition_type && badge.condition_value && (
             <div
-              className={`
-              p-4 rounded-lg border-2
-              ${isEarned ? 'bg-green-50 border-green-300' : 'bg-blue-50 border-blue-300'}
-            `}
+              className={`p-4 rounded-lg border-2 ${
+                isEarned
+                  ? "bg-green-50 border-green-300"
+                  : "bg-blue-50 border-blue-300"
+              }`}
             >
               <div className="flex items-center justify-center gap-2 mb-2">
                 {isEarned ? (
@@ -313,12 +404,14 @@ function BadgeDetailModal({ badge, onClose }: BadgeDetailModalProps) {
                   <TrendingUp className="w-5 h-5 text-blue-600" />
                 )}
                 <span className="font-semibold text-sm">
-                  {isEarned ? 'Đã hoàn thành' : 'Yêu cầu mở khóa'}
+                  {isEarned ? "Đã hoàn thành" : "Yêu cầu mở khóa"}
                 </span>
               </div>
-
               <p className="text-sm text-gray-700">
-                {getConditionDescription(badge.condition_type, badge.condition_value)}
+                {getConditionDescription(
+                  badge.condition_type,
+                  badge.condition_value,
+                )}
               </p>
 
               {hasProgress && (
@@ -343,14 +436,44 @@ function BadgeDetailModal({ badge, onClose }: BadgeDetailModalProps) {
             </div>
           )}
 
+          {/* XP Claim Button */}
+          {isEarned && (
+            <div className="pt-2">
+              {claimed ? (
+                <div className="flex items-center justify-center gap-2 py-3 px-6 bg-gray-100 rounded-xl text-gray-500 font-semibold">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  Đã nhận thưởng
+                </div>
+              ) : (
+                <>
+                  <motion.button
+                    onClick={handleClaim}
+                    disabled={claiming}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="w-full py-3 px-6 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-bold rounded-xl shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <Sparkles className="w-5 h-5" />
+                    {claiming
+                      ? "Đang nhận..."
+                      : `Nhận thưởng +${badge.xp_reward} XP`}
+                  </motion.button>
+                  {claimError && (
+                    <p className="text-red-500 text-sm mt-2">{claimError}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
           {/* Earned Date */}
           {isEarned && badge.earned_at && (
-            <div className="text-sm text-gray-500 pt-2">
-              🎉 Đạt được ngày{' '}
-              {new Date(badge.earned_at).toLocaleDateString('vi-VN', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
+            <div className="text-sm text-gray-500 pt-1">
+              🎉 Đạt được ngày{" "}
+              {new Date(badge.earned_at).toLocaleDateString("vi-VN", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
               })}
             </div>
           )}
@@ -360,25 +483,26 @@ function BadgeDetailModal({ badge, onClose }: BadgeDetailModalProps) {
   );
 }
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
+// ─── Helper ───────────────────────────────────────────────────────────────────
 
-function getConditionDescription(conditionType: string, conditionValue: number): string {
+function getConditionDescription(
+  conditionType: string,
+  conditionValue: number,
+): string {
   switch (conditionType) {
-    case 'streak':
+    case "streak":
       return `Học liên tục ${conditionValue} ngày không nghỉ`;
-    case 'quiz_count':
+    case "quiz_count":
       return `Hoàn thành ${conditionValue} bài quiz`;
-    case 'rank_weekly':
+    case "rank_weekly":
       return `Lọt vào Top ${conditionValue} bảng xếp hạng tuần`;
-    case 'rank_monthly':
+    case "rank_monthly":
       return `Lọt vào Top ${conditionValue} bảng xếp hạng tháng`;
-    case 'improvement':
+    case "improvement":
       return `Cải thiện ${conditionValue}% so với kỳ trước`;
-    case 'persistence':
+    case "persistence":
       return `Kiên trì làm bài dù gặp khó khăn`;
-    case 'tier':
+    case "tier":
       return `Đạt Tier ${conditionValue}`;
     default:
       return `Hoàn thành điều kiện đặc biệt`;
