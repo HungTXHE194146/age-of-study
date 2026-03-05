@@ -39,12 +39,24 @@ export const transformDBNodesToFlow = (
   });
 
   // 3. Hàm đệ quy để lấy màu của nhánh cha
+  const colorCache = new Map<number, string>();
   const getBranchColor = (nodeId: number): string => {
+    if (colorCache.has(nodeId)) return colorCache.get(nodeId)!;
+
     const node = nodeMap.get(nodeId);
     if (!node) return "#fbbf24";
-    if (chapterColors.has(node.id)) return chapterColors.get(node.id);
-    if (node.parent_node_id) return getBranchColor(node.parent_node_id);
-    return "#fbbf24";
+    
+    let color: string;
+    if (chapterColors.has(node.id)) {
+      color = chapterColors.get(node.id);
+    } else if (node.parent_node_id) {
+      color = getBranchColor(node.parent_node_id);
+    } else {
+      color = "#fbbf24";
+    }
+
+    colorCache.set(nodeId, color);
+    return color;
   };
 
   // 4. Khởi tạo Nodes và Edges

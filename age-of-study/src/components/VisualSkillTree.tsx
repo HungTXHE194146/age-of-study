@@ -197,11 +197,11 @@ const CustomNode = React.memo(({
         }}
         className={
           isTeacher
-            ? `relative w-36 h-36 border-2 flex flex-col items-center justify-center p-2 transition-transform duration-200
+            ? `relative w-36 h-36 border-2 flex flex-col items-center justify-center p-2 transition-transform duration-200 will-change-transform
                ${!isLocked ? "hover:-translate-y-1" : ""}
                ${selected ? "scale-105 -rotate-2" : "rotate-1"}
               `
-            : `relative w-32 h-32 rounded-[2rem] border-[3px] border-slate-800 flex flex-col items-center justify-center p-2 transition-all duration-300 ease-out notebook-lines
+            : `relative w-32 h-32 rounded-[2rem] border-[3px] border-slate-800 flex flex-col items-center justify-center p-2 transition-all duration-300 ease-out notebook-lines will-change-transform
                ${!isLocked ? "hover:scale-105 hover:-translate-y-1 cursor-pointer" : "opacity-80 cursor-not-allowed"}
                ${selected ? "scale-105 -rotate-2 ring-4 ring-offset-2 ring-blue-500" : "rotate-1"}
               `
@@ -314,25 +314,6 @@ const CustomEdge = React.memo(({
 
   return (
     <>
-      <svg
-        style={{ position: "absolute", top: 0, left: 0, height: 0, width: 0 }}
-      >
-        <defs>
-          <filter
-            id={`glow-${id}`}
-            x="-50%"
-            y="-50%"
-            width="200%"
-            height="200%"
-          >
-            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-      </svg>
       {/* Nét chính của line */}
       <BaseEdge
         path={edgePath}
@@ -371,7 +352,7 @@ const CustomEdge = React.memo(({
         />
       )}
       {!data?.isTeacherMode && (
-        <circle r="6" fill="#fff" filter={!data?.isLowData ? `url(#glow-${id})` : "none"}>
+        <circle r="6" fill="#fff" filter={!data?.isLowData ? `url(#global-glow)` : "none"}>
           {!data?.isLowData && (
             <animateMotion
               dur="3s"
@@ -525,9 +506,10 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
         }
 
         if (activeNode) {
-          setTimeout(() => {
-            rfInstance.setCenter(activeNode.position.x + 75, activeNode.position.y + 75, { zoom: 0.8, duration: 1000 });
-          }, 400);
+          // IMMEDIATE focus without animation to prevent flash of wrong area
+          if (rfInstance) {
+            rfInstance.setCenter(activeNode.position.x + 75, activeNode.position.y + 75, { zoom: 0.8, duration: 0 });
+          }
         }
       }
     } else {
@@ -535,6 +517,25 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
       setEdges([]);
     }
   }, [isTeacherMode, subjectNodes, setNodes, setEdges, isLowData, completedNodeIds, rfInstance]);
+
+  // Memoize translateExtent to avoid expensive recalculations during flow movement
+  const translateExtent = useMemo<[[number, number], [number, number]]>(() => {
+    if (!nodes || nodes.length === 0) {
+      return [[-100, -Infinity], [400, Infinity]];
+    }
+
+    let minY = Infinity;
+    let maxY = -Infinity;
+
+    nodes.forEach(node => {
+      if (node.position.y < minY) minY = node.position.y;
+      if (node.position.y > maxY) maxY = node.position.y;
+    });
+
+    const headerMarginY = 150;
+    const bottomMarginY = 250;
+    return [[-100, minY - headerMarginY], [400, maxY + bottomMarginY]] as [[number, number], [number, number]];
+  }, [nodes]);
 
 
 
@@ -748,6 +749,19 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
         </>
       )}
 
+      {/* Global SVG Filters defined once to save rendering performance */}
+      <svg style={{ position: "absolute", width: 0, height: 0, pointerEvents: "none" }}>
+        <defs>
+          <filter id="global-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+      </svg>
+
       {/* Thanh Search Nổi */}
       <div className="absolute top-4 left-4 right-4 z-50">
         <form onSubmit={handleSearch} className="relative flex items-center">
@@ -829,7 +843,8 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
           onInit={setRfInstance}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-          fitView
+          fitView={isTeacherMode} // ONLY fitView for teacher to see overview, students jump to active node
+          onlyRenderVisibleElements={true}
           attributionPosition="bottom-right"
           connectionMode={ConnectionMode.Strict}
           connectionLineType={ConnectionLineType.Bezier}
@@ -843,28 +858,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
           nodesDraggable={isTeacherMode} // Khóa kéo thả node với học sinh
           nodesConnectable={isTeacherMode}
           elementsSelectable={true}
-          translateExtent={(() => {
-
-            if (!nodes || nodes.length === 0) {
-              return [[-100, -Infinity], [400, Infinity]];
-            }
-
-            let minY = Infinity;
-            let maxY = -Infinity;
-
-            nodes.forEach(node => {
-              if (node.position.y < minY) minY = node.position.y;
-              if (node.position.y > maxY) maxY = node.position.y;
-            });
-
-            // Add tighter margins to prevent scrolling too far past the top/bottom nodes
-            const headerMarginY = 150;
-            const bottomMarginY = 250;
-
-            // Lock X axis between a tight boundary on mobile to prevent horizontal scroll
-            // Y axis is bounded strictly by the top and bottom nodes plus some padding
-            return [[-100, minY - headerMarginY], [400, maxY + bottomMarginY]] as any;
-          })()}
+          translateExtent={translateExtent}
           defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
           selectionMode={isTeacherMode ? SelectionMode.Partial : undefined}
         >
