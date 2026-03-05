@@ -2,66 +2,57 @@
  * Verify MFA Modal - Yêu cầu OTP khi login hoặc re-auth
  */
 
-"use client";
+'use client'
 
-import { useState } from "react";
-import { X, Shield, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { OTPInput } from "./OTPInput";
-import { MFA_CODE_LENGTH } from "@/types/mfa";
+import { useState } from 'react'
+import { X, Shield, AlertCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { OTPInput } from './OTPInput'
+import { MFA_CODE_LENGTH } from '@/types/mfa'
 
 interface VerifyMFAModalProps {
-  title?: string;
-  description?: string;
-  onVerify: (code: string) => Promise<{ success: boolean; error?: string }>;
-  onClose?: () => void;
-  canClose?: boolean;
+  title?: string
+  description?: string
+  onVerify: (code: string) => Promise<{ success: boolean; error?: string }>
+  onClose?: () => void
+  canClose?: boolean
 }
 
 export function VerifyMFAModal({
-  title = "Xác thực 2 yếu tố",
-  description = "Nhập mã 6 số từ app xác thực của bạn",
+  title = 'Xác thực 2 yếu tố',
+  description = 'Nhập mã 6 số từ app xác thực của bạn',
   onVerify,
   onClose,
   canClose = true,
 }: VerifyMFAModalProps) {
-  const [otpCode, setOtpCode] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [otpCode, setOtpCode] = useState('')
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleVerify = async () => {
     if (otpCode.length !== MFA_CODE_LENGTH) {
-      setError("Vui lòng nhập đủ 6 số");
-      return;
+      setError('Vui lòng nhập đủ 6 số')
+      return
     }
 
-    setIsVerifying(true);
-    setError(null);
+    setIsVerifying(true)
+    setError(null)
 
-    try {
-      const result = await onVerify(otpCode);
+    const result = await onVerify(otpCode)
 
-      if (!result.success) {
-        setError(result.error || "Mã OTP không đúng");
-        setOtpCode("");
-      }
-    } catch (err) {
-      setError("Đã xảy ra lỗi, vui lòng thử lại");
-      setOtpCode("");
-    } finally {
-      setIsVerifying(false);
+    setIsVerifying(false)
+
+    if (!result.success) {
+      setError(result.error || 'Mã OTP không đúng')
+      setOtpCode('')
     }
-  };
+  }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (
-      e.key === "Enter" &&
-      otpCode.length === MFA_CODE_LENGTH &&
-      !isVerifying
-    ) {
-      handleVerify();
+    if (e.key === 'Enter' && otpCode.length === MFA_CODE_LENGTH && !isVerifying) {
+      handleVerify()
     }
-  };
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -115,7 +106,7 @@ export function VerifyMFAModal({
               className="w-full"
               size="lg"
             >
-              {isVerifying ? "Đang xác thực..." : "Xác nhận"}
+              {isVerifying ? 'Đang xác thực...' : 'Xác nhận'}
             </Button>
 
             {canClose && onClose && (
@@ -138,5 +129,5 @@ export function VerifyMFAModal({
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -51,16 +51,10 @@ export async function PUT(
     // Get old values for audit log
     const { data: oldData } = await supabaseAdmin
       .from("profiles")
-      .select("username, full_name, dob, gender, ethnicity, phone_number, enroll_status, sessions_per_week")
+      .select("username, full_name, dob, gender, ethnicity, phone_number")
       .eq('id', studentId)
       .single();
 
-    if (!oldData) {
-      return NextResponse.json(
-        { error: "Không tìm thấy học sinh" },
-        { status: 404 }
-      );
-    }
     // Update Auth Identity (if we need to update email, we use update user. For now, just metadata)
     const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(studentId, {
       user_metadata: {
@@ -99,28 +93,22 @@ export async function PUT(
     }
 
     // ✅ AUDIT LOG
-    try {
-      await createAuditLog(teacherId, {
-        action: 'user_updated',
-        resourceType: 'user',
-        resourceId: studentId,
-        description: `Cập nhật thông tin học sinh: ${full_name} (@${cleanUsername})`,
-        oldValues: oldData || undefined,
-        newValues: {
-          username: cleanUsername,
-          full_name,
-          dob,
-          gender,
-          ethnicity,
-          phone_number,
-          enroll_status,
-          sessions_per_week
-        }
-      }, request);
-    } catch (auditError) {
-      console.error("Audit log failed:", auditError);
-      // Continue - don't fail the request due to audit logging
-    }
+    await createAuditLog(teacherId, {
+      action: 'user_updated',
+      resourceType: 'user',
+      resourceId: studentId,
+      description: `Cập nhật thông tin học sinh: ${full_name} (@${cleanUsername})`,
+      oldValues: oldData || undefined,
+      newValues: {
+        username: cleanUsername,
+        full_name,
+        dob,
+        gender,
+        ethnicity,
+        phone_number
+      }
+    }, request);
+
     return NextResponse.json({
       success: true,
       message: "Cập nhật học sinh thành công",

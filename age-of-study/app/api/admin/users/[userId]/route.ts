@@ -64,28 +64,23 @@ export async function DELETE(
     }
 
     // ✅ AUDIT LOG
-    try {
-      await createAuditLog(adminUserId, {
-        action: 'user_deleted',
-        resourceType: 'user',
-        resourceId: userId,
-        description: `Xóa người dùng: ${user.full_name || user.username} (${user.role})`,
-        oldValues: {
-          username: user.username,
-          full_name: user.full_name,
-          email: user.email,
-          role: user.role,
-          total_xp: user.total_xp,
-          created_at: user.created_at
-        },
-        metadata: {
-          permanent_deletion: true
-        }
-      }, request);
-    } catch (auditError) {
-      console.error("Failed to create audit log for user deletion:", auditError);
-      // Continue - deletion was successful, audit failure shouldn't cause 500
-    }
+    await createAuditLog(adminUserId, {
+      action: 'user_deleted',
+      resourceType: 'user',
+      resourceId: userId,
+      description: `Xóa người dùng: ${user.full_name || user.username} (${user.role})`,
+      oldValues: {
+        username: user.username,
+        full_name: user.full_name,
+        email: user.email,
+        role: user.role,
+        total_xp: user.total_xp,
+        created_at: user.created_at
+      },
+      metadata: {
+        permanent_deletion: true
+      }
+    }, request);
 
     return NextResponse.json({
       success: true,

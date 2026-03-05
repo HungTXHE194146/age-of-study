@@ -51,15 +51,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prevent blocking other admins (adjust roles as needed for your hierarchy)
-    const protectedRoles = ['admin', 'super_admin'];
-    if (protectedRoles.includes(oldUser.role)) {
-      return NextResponse.json(
-        { error: "Không thể chặn tài khoản quản trị viên" },
-        { status: 403 }
-      );
-    }
-
     // Update block status
     const { error: updateError } = await supabaseAdmin
       .from("profiles")

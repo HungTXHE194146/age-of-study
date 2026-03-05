@@ -108,25 +108,23 @@ export async function POST(request: NextRequest) {
     }
 
     // ✅ AUDIT LOG
-    try {
-      await createAuditLog(teacherId, {
-        action: 'user_created',
-        resourceType: 'user',
-        resourceId: userId,
-        description: `Tạo tài khoản học sinh: ${full_name} (@${username})`,
-        newValues: {
-          username,
-          full_name,
-          role: 'student',
-          class_id
-        },
-        metadata: {
-          // PII removed for compliance
-        }
-      }, request);
-    } catch (auditError) {
-      console.error("Audit Log Creation Error:", { teacherId, userId, username, error: auditError });
-    }
+    await createAuditLog(teacherId, {
+      action: 'user_created',
+      resourceType: 'user',
+      resourceId: userId,
+      description: `Tạo tài khoản học sinh: ${full_name} (@${username})`,
+      newValues: {
+        username,
+        full_name,
+        role: 'student',
+        class_id
+      },
+      metadata: {
+        dob,
+        gender,
+        ethnicity
+      }
+    }, request);
 
     return NextResponse.json({
       success: true,

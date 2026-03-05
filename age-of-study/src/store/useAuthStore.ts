@@ -76,7 +76,8 @@ export const useAuthStore = create<AuthState>()(
           if (profile.mfa_enabled) {
             // Get MFA factors
             const { data: factors } = await mfaService.listFactors()
-            const verifiedFactor = factors?.find(f => f.status === 'verified')            
+            const verifiedFactor = factors.find(f => f.status === 'verified')
+            
             if (verifiedFactor) {
               // Create MFA challenge
               const { data: challenge, error: challengeError } = await mfaService.createChallenge(verifiedFactor.id)
