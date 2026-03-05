@@ -867,24 +867,28 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
             translateExtent={(() => {
 
               if (!nodes || nodes.length === 0) {
-                return [[-100, -Infinity], [400, Infinity]];
+                return [[-1000, -Infinity], [1000, Infinity]];
               }
 
               let minY = Infinity;
               let maxY = -Infinity;
+              let minX = Infinity;
+              let maxX = -Infinity;
 
               nodes.forEach(node => {
                 if (node.position.y < minY) minY = node.position.y;
                 if (node.position.y > maxY) maxY = node.position.y;
+                if (node.position.x < minX) minX = node.position.x;
+                if (node.position.x > maxX) maxX = node.position.x;
               });
 
               // Add tighter margins to prevent scrolling too far past the top/bottom nodes
               const headerMarginY = 150;
               const bottomMarginY = 250;
+              const marginX = 800; // Cho biên ngang rất rộng để không bị force dịch chuyển màn
 
-              // Lock X axis between a tight boundary on mobile to prevent horizontal scroll
               // Y axis is bounded strictly by the top and bottom nodes plus some padding
-              return [[-100, minY - headerMarginY], [400, maxY + bottomMarginY]] as any;
+              return [[minX - marginX, minY - headerMarginY], [maxX + marginX, maxY + bottomMarginY]] as any;
             })()}
             defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
             selectionMode={isTeacherMode ? SelectionMode.Partial : undefined}
