@@ -1,31 +1,44 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from "react";
 import {
-  Settings, School, Clock, Bot, Sparkles, Save,
-  RotateCcw, Loader2, CheckCircle2, AlertCircle, Info,
-} from 'lucide-react'
-import { updateSystemSettings } from '@/lib/settingsService'
-import { SETTINGS_CONSTRAINTS } from '@/types/settings'
-import type { SystemSettings, SystemSettingsUpdate } from '@/types/settings'
-import { getSupabaseBrowserClient } from '@/lib/supabase'
+  Settings,
+  School,
+  Clock,
+  Bot,
+  Sparkles,
+  Save,
+  RotateCcw,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Info,
+  Shield,
+} from "lucide-react";
+import { updateSystemSettings } from "@/lib/settingsService";
+import { SETTINGS_CONSTRAINTS } from "@/types/settings";
+import type { SystemSettings, SystemSettingsUpdate } from "@/types/settings";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { MFASettings } from "@/components/auth/MFASettings";
+import { useReauth } from "@/hooks/useReauth";
+import { useAuthStore } from "@/store/useAuthStore";
 
 // ============================================================================
 // Helper: format relative time in Vietnamese
 // ============================================================================
 function formatRelativeTime(dateStr: string): string {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
 
-  if (diffMin < 1) return 'Vừa xong'
-  if (diffMin < 60) return `${diffMin} phút trước`
-  const diffHour = Math.floor(diffMin / 60)
-  if (diffHour < 24) return `${diffHour} giờ trước`
-  const diffDay = Math.floor(diffHour / 24)
-  if (diffDay < 30) return `${diffDay} ngày trước`
-  return date.toLocaleDateString('vi-VN')
+  if (diffMin < 1) return "Vừa xong";
+  if (diffMin < 60) return `${diffMin} phút trước`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} giờ trước`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 30) return `${diffDay} ngày trước`;
+  return date.toLocaleDateString("vi-VN");
 }
 
 // ============================================================================
@@ -39,17 +52,19 @@ function SettingsSection({
   description,
   children,
 }: {
-  icon: React.ElementType
-  iconColor: string
-  iconBg: string
-  title: string
-  description: string
-  children: React.ReactNode
+  icon: React.ElementType;
+  iconColor: string;
+  iconBg: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
 }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-4">
-        <div className={`w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+        <div
+          className={`w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}
+        >
           <Icon className={`w-5 h-5 ${iconColor}`} />
         </div>
         <div>
@@ -59,7 +74,7 @@ function SettingsSection({
       </div>
       <div className="px-6 py-5 space-y-5">{children}</div>
     </div>
-  )
+  );
 }
 
 // ============================================================================
@@ -68,10 +83,12 @@ function SettingsSection({
 function FieldLabel({ label, hint }: { label: string; hint?: string }) {
   return (
     <div className="mb-1.5">
-      <label className="block text-sm font-semibold text-gray-700">{label}</label>
+      <label className="block text-sm font-semibold text-gray-700">
+        {label}
+      </label>
       {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
     </div>
-  )
+  );
 }
 
 function NumberField({
@@ -84,14 +101,14 @@ function NumberField({
   step = 1,
   unit,
 }: {
-  label: string
-  hint?: string
-  value: number
-  onChange: (v: number) => void
-  min: number
-  max: number
-  step?: number
-  unit?: string
+  label: string;
+  hint?: string;
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  step?: number;
+  unit?: string;
 }) {
   return (
     <div>
@@ -101,18 +118,19 @@ function NumberField({
           type="number"
           value={value}
           onChange={(e) => {
-            const parsed = parseFloat(e.target.value)
-            if (isNaN(parsed)) return
-            onChange(Math.min(max, Math.max(min, parsed)))
+            const parsed = parseFloat(e.target.value);
+            if (isNaN(parsed)) return;
+            onChange(Math.min(max, Math.max(min, parsed)));
           }}
           min={min}
           max={max}
           step={step}
           className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-        />        {unit && <span className="text-sm text-gray-500">{unit}</span>}
+        />{" "}
+        {unit && <span className="text-sm text-gray-500">{unit}</span>}
       </div>
     </div>
-  )
+  );
 }
 
 function SliderField({
@@ -125,14 +143,14 @@ function SliderField({
   step = 0.05,
   descriptions,
 }: {
-  label: string
-  hint?: string
-  value: number
-  onChange: (v: number) => void
-  min: number
-  max: number
-  step?: number
-  descriptions?: { low: string; high: string }
+  label: string;
+  hint?: string;
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  step?: number;
+  descriptions?: { low: string; high: string };
 }) {
   return (
     <div>
@@ -158,103 +176,124 @@ function SliderField({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // ============================================================================
 // Main page
 // ============================================================================
 export default function AdminSettingsPage() {
-  const [settings, setSettings] = useState<SystemSettings | null>(null)
-  const [formData, setFormData] = useState<SystemSettingsUpdate>({})
-  const [updatedByName, setUpdatedByName] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [errorMessage, setErrorMessage] = useState('')
-  const [hasChanges, setHasChanges] = useState(false)
+  const { user } = useAuthStore();
+  const { requireReauth, ReauthModal } = useReauth();
+  const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const [formData, setFormData] = useState<SystemSettingsUpdate>({});
+  const [updatedByName, setUpdatedByName] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">(
+    "idle",
+  );
+  const [errorMessage, setErrorMessage] = useState("");
+  const [hasChanges, setHasChanges] = useState(false);
 
   // Load settings on mount
   const loadSettings = useCallback(async () => {
     try {
-      setIsLoading(true)
-      const supabase = getSupabaseBrowserClient()
-      const { data: { session } } = await supabase.auth.getSession()
+      setIsLoading(true);
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (!session?.access_token) {
-        throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.')
+        throw new Error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
       }
 
-      const response = await fetch('/api/admin/settings', {
+      const response = await fetch("/api/admin/settings", {
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
-      })
-      if (!response.ok) throw new Error('Failed to load')
-      const result = await response.json()
+      });
+      if (!response.ok) throw new Error("Failed to load");
+      const result = await response.json();
 
-      setSettings(result.data)
-      setUpdatedByName(result.updatedByName)
+      setSettings(result.data);
+      setUpdatedByName(result.updatedByName);
       setFormData({
         school_name: result.data.school_name,
         school_year: result.data.school_year,
         default_daily_limit_minutes: result.data.default_daily_limit_minutes,
         ai_chat_temperature: parseFloat(result.data.ai_chat_temperature),
         ai_chat_max_tokens: result.data.ai_chat_max_tokens,
-        ai_chat_rate_limit_per_minute: result.data.ai_chat_rate_limit_per_minute,
-        ai_question_temperature: parseFloat(result.data.ai_question_temperature),
+        ai_chat_rate_limit_per_minute:
+          result.data.ai_chat_rate_limit_per_minute,
+        ai_question_temperature: parseFloat(
+          result.data.ai_question_temperature,
+        ),
         ai_question_max_tokens: result.data.ai_question_max_tokens,
-      })
-      setHasChanges(false)
-      setErrorMessage('')
+      });
+      setHasChanges(false);
+      setErrorMessage("");
     } catch {
-      setErrorMessage('Không thể tải cài đặt hệ thống. Vui lòng tải lại trang.')
+      setErrorMessage(
+        "Không thể tải cài đặt hệ thống. Vui lòng tải lại trang.",
+      );
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [])
+  }, []);
   useEffect(() => {
-    loadSettings()
-  }, [loadSettings])
+    loadSettings();
+  }, [loadSettings]);
 
   // Track changes
   const updateField = <K extends keyof SystemSettingsUpdate>(
     field: K,
-    value: SystemSettingsUpdate[K]
+    value: SystemSettingsUpdate[K],
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-    setHasChanges(true)
-    setSaveStatus('idle')
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+    setSaveStatus("idle");
+  };
 
   // Save
   const handleSave = async () => {
     try {
-      setIsSaving(true)
-      setSaveStatus('idle')
-      setErrorMessage('')
+      setIsSaving(true);
+      setSaveStatus("idle");
+      // Require re-authentication for sensitive action
+      const canProceed = await requireReauth("update_system_settings");
+      if (!canProceed) {
+        setErrorMessage("Cần xác thực để lưu cài đặt hệ thống");
+        setSaveStatus("error");
+        return;
+      }
 
-      await updateSystemSettings(formData)
-      setHasChanges(false)
-      setSaveStatus('success')
+      setErrorMessage("");
+
+      await updateSystemSettings(formData);
+      setHasChanges(false);
+      setSaveStatus("success");
 
       // Re-fetch to get fresh data + updatedByName
-      await loadSettings()
-      setSaveStatus('success')
+      await loadSettings();
+      setSaveStatus("success");
 
       // Auto-clear success after 3s
-      setTimeout(() => setSaveStatus('idle'), 3000)
+      setTimeout(() => setSaveStatus("idle"), 3000);
     } catch (err) {
-      setSaveStatus('error')
-      setErrorMessage(err instanceof Error ? err.message : 'Không thể lưu cài đặt')
+      setSaveStatus("error");
+      setErrorMessage(
+        err instanceof Error ? err.message : "Không thể lưu cài đặt",
+      );
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   // Reset form to saved values
   const handleReset = () => {
-    if (!settings) return
+    if (!settings) return;
     setFormData({
       school_name: settings.school_name,
       school_year: settings.school_year,
@@ -262,13 +301,15 @@ export default function AdminSettingsPage() {
       ai_chat_temperature: parseFloat(String(settings.ai_chat_temperature)),
       ai_chat_max_tokens: settings.ai_chat_max_tokens,
       ai_chat_rate_limit_per_minute: settings.ai_chat_rate_limit_per_minute,
-      ai_question_temperature: parseFloat(String(settings.ai_question_temperature)),
+      ai_question_temperature: parseFloat(
+        String(settings.ai_question_temperature),
+      ),
       ai_question_max_tokens: settings.ai_question_max_tokens,
-    })
-    setHasChanges(false)
-    setSaveStatus('idle')
-    setErrorMessage('')
-  }
+    });
+    setHasChanges(false);
+    setSaveStatus("idle");
+    setErrorMessage("");
+  };
 
   // --- Loading state ---
   if (isLoading) {
@@ -279,7 +320,7 @@ export default function AdminSettingsPage() {
           <span className="text-gray-500 text-sm">Đang tải cài đặt...</span>
         </div>
       </div>
-    )
+    );
   }
 
   // --- Error: could not load ---
@@ -288,7 +329,9 @@ export default function AdminSettingsPage() {
       <div className="p-8">
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
           <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-          <h2 className="text-lg font-bold text-red-800 mb-1">Lỗi tải cài đặt</h2>
+          <h2 className="text-lg font-bold text-red-800 mb-1">
+            Lỗi tải cài đặt
+          </h2>
           <p className="text-sm text-red-600 mb-4">{errorMessage}</p>
           <button
             onClick={loadSettings}
@@ -298,7 +341,7 @@ export default function AdminSettingsPage() {
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -315,13 +358,13 @@ export default function AdminSettingsPage() {
       </div>
 
       {/* Save status banner */}
-      {saveStatus === 'success' && (
+      {saveStatus === "success" && (
         <div className="mb-6 flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
           <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
           <span className="font-medium">Cài đặt đã được lưu thành công!</span>
         </div>
       )}
-      {saveStatus === 'error' && errorMessage && (
+      {saveStatus === "error" && errorMessage && (
         <div className="mb-6 flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
           <span className="font-medium">{errorMessage}</span>
@@ -343,19 +386,19 @@ export default function AdminSettingsPage() {
             <FieldLabel label="Tên trường" />
             <input
               type="text"
-              value={formData.school_name || ''}
-              onChange={(e) => updateField('school_name', e.target.value)}
+              value={formData.school_name || ""}
+              onChange={(e) => updateField("school_name", e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="Trường Tiểu học Ninh Lai"
             />
           </div>
 
           <div>
-            <FieldLabel label="Năm học" hint='Định dạng: 2025-2026' />
+            <FieldLabel label="Năm học" hint="Định dạng: 2025-2026" />
             <input
               type="text"
-              value={formData.school_year || ''}
-              onChange={(e) => updateField('school_year', e.target.value)}
+              value={formData.school_year || ""}
+              onChange={(e) => updateField("school_year", e.target.value)}
               className="w-64 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="2025-2026"
               pattern="\d{4}-\d{4}"
@@ -377,7 +420,7 @@ export default function AdminSettingsPage() {
             label="Giới hạn thời gian học mỗi ngày (mặc định)"
             hint={`Áp dụng cho học sinh mới tạo. Khoảng ${SETTINGS_CONSTRAINTS.default_daily_limit_minutes.min}–${SETTINGS_CONSTRAINTS.default_daily_limit_minutes.max} phút.`}
             value={formData.default_daily_limit_minutes || 30}
-            onChange={(v) => updateField('default_daily_limit_minutes', v)}
+            onChange={(v) => updateField("default_daily_limit_minutes", v)}
             min={SETTINGS_CONSTRAINTS.default_daily_limit_minutes.min}
             max={SETTINGS_CONSTRAINTS.default_daily_limit_minutes.max}
             unit="phút / ngày"
@@ -386,8 +429,8 @@ export default function AdminSettingsPage() {
           <div className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg p-3">
             <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span>
-              Đây là giá trị mặc định khi tạo học sinh mới. Giáo viên có thể điều chỉnh
-              riêng cho từng học sinh trong trang quản lý lớp học.
+              Đây là giá trị mặc định khi tạo học sinh mới. Giáo viên có thể
+              điều chỉnh riêng cho từng học sinh trong trang quản lý lớp học.
             </span>
           </div>
         </SettingsSection>
@@ -406,18 +449,18 @@ export default function AdminSettingsPage() {
             label="Temperature"
             hint="Độ sáng tạo của câu trả lời. Thấp = chính xác hơn, Cao = đa dạng hơn."
             value={formData.ai_chat_temperature ?? 0.7}
-            onChange={(v) => updateField('ai_chat_temperature', v)}
+            onChange={(v) => updateField("ai_chat_temperature", v)}
             min={SETTINGS_CONSTRAINTS.ai_chat_temperature.min}
             max={SETTINGS_CONSTRAINTS.ai_chat_temperature.max}
             step={SETTINGS_CONSTRAINTS.ai_chat_temperature.step}
-            descriptions={{ low: '🎯 Chính xác', high: '🎨 Sáng tạo' }}
+            descriptions={{ low: "🎯 Chính xác", high: "🎨 Sáng tạo" }}
           />
 
           <NumberField
             label="Max Output Tokens"
             hint={`Giới hạn độ dài câu trả lời. Khoảng ${SETTINGS_CONSTRAINTS.ai_chat_max_tokens.min}–${SETTINGS_CONSTRAINTS.ai_chat_max_tokens.max} tokens.`}
             value={formData.ai_chat_max_tokens || 1500}
-            onChange={(v) => updateField('ai_chat_max_tokens', v)}
+            onChange={(v) => updateField("ai_chat_max_tokens", v)}
             min={SETTINGS_CONSTRAINTS.ai_chat_max_tokens.min}
             max={SETTINGS_CONSTRAINTS.ai_chat_max_tokens.max}
             unit="tokens"
@@ -427,7 +470,7 @@ export default function AdminSettingsPage() {
             label="Rate Limit"
             hint={`Số tin nhắn tối đa mỗi phút cho mỗi học sinh. Khoảng ${SETTINGS_CONSTRAINTS.ai_chat_rate_limit_per_minute.min}–${SETTINGS_CONSTRAINTS.ai_chat_rate_limit_per_minute.max}.`}
             value={formData.ai_chat_rate_limit_per_minute || 10}
-            onChange={(v) => updateField('ai_chat_rate_limit_per_minute', v)}
+            onChange={(v) => updateField("ai_chat_rate_limit_per_minute", v)}
             min={SETTINGS_CONSTRAINTS.ai_chat_rate_limit_per_minute.min}
             max={SETTINGS_CONSTRAINTS.ai_chat_rate_limit_per_minute.max}
             unit="tin nhắn / phút"
@@ -448,25 +491,41 @@ export default function AdminSettingsPage() {
             label="Temperature"
             hint="Thấp = câu hỏi nhất quán, ít biến thể. Cao = đa dạng hơn nhưng có thể kém chính xác."
             value={formData.ai_question_temperature ?? 0.3}
-            onChange={(v) => updateField('ai_question_temperature', v)}
+            onChange={(v) => updateField("ai_question_temperature", v)}
             min={SETTINGS_CONSTRAINTS.ai_question_temperature.min}
             max={SETTINGS_CONSTRAINTS.ai_question_temperature.max}
             step={SETTINGS_CONSTRAINTS.ai_question_temperature.step}
-            descriptions={{ low: '🎯 Nhất quán', high: '🎨 Đa dạng' }}
+            descriptions={{ low: "🎯 Nhất quán", high: "🎨 Đa dạng" }}
           />
 
           <NumberField
             label="Max Output Tokens"
             hint={`Ảnh hưởng đến số lượng câu hỏi AI có thể tạo. Khoảng ${SETTINGS_CONSTRAINTS.ai_question_max_tokens.min}–${SETTINGS_CONSTRAINTS.ai_question_max_tokens.max} tokens.`}
             value={formData.ai_question_max_tokens || 8000}
-            onChange={(v) => updateField('ai_question_max_tokens', v)}
+            onChange={(v) => updateField("ai_question_max_tokens", v)}
             min={SETTINGS_CONSTRAINTS.ai_question_max_tokens.min}
             max={SETTINGS_CONSTRAINTS.ai_question_max_tokens.max}
             unit="tokens"
           />
         </SettingsSection>
+
+        {/* ============================================================ */}
+        {/* SECTION 5: MFA Security */}
+        {/* ============================================================ */}
+        {user && (
+          <SettingsSection
+            icon={Shield}
+            iconColor="text-green-600"
+            iconBg="bg-green-100"
+            title="Bảo mật tài khoản"
+            description="Xác thực 2 yếu tố để bảo vệ tài khoản quản trị"
+          >
+            <MFASettings userId={user.id} />
+          </SettingsSection>
+        )}
       </div>
 
+      {ReauthModal}
       {/* ============================================================ */}
       {/* Sticky save bar */}
       {/* ============================================================ */}
@@ -509,5 +568,5 @@ export default function AdminSettingsPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

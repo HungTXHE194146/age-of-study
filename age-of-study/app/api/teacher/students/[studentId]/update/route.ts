@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createAuditLog } from "@/lib/auditService";
+import { verifyTeacher } from "@/lib/adminAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,6 +19,13 @@ export async function PUT(
   { params }: { params: Promise<{ studentId: string }> }
 ) {
   try {
+    // Verify teacher authentication
+    const authResult = await verifyTeacher(request);
+    if (authResult instanceof NextResponse) {
+      return authResult; // Return error response
+    }
+    const teacherId = authResult.userId;
+
     const studentId = (await params).studentId;
     const body = await request.json();
     const { 
@@ -38,6 +47,13 @@ export async function PUT(
     }
 
     const cleanUsername = username.toString().toLowerCase().trim();
+
+    // Get old values for audit log
+    const { data: oldData } = await supabaseAdmin
+      .from("profiles")
+      .select("username, full_name, dob, gender, ethnicity, phone_number")
+      .eq('id', studentId)
+      .single();
 
     // Update Auth Identity (if we need to update email, we use update user. For now, just metadata)
     const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(studentId, {
@@ -75,6 +91,23 @@ export async function PUT(
         { status: 500 }
       );
     }
+
+    // ✅ AUDIT LOG
+    await createAuditLog(teacherId, {
+      action: 'user_updated',
+      resourceType: 'user',
+      resourceId: studentId,
+      description: `Cập nhật thông tin học sinh: ${full_name} (@${cleanUsername})`,
+      oldValues: oldData || undefined,
+      newValues: {
+        username: cleanUsername,
+        full_name,
+        dob,
+        gender,
+        ethnicity,
+        phone_number
+      }
+    }, request);
 
     return NextResponse.json({
       success: true,

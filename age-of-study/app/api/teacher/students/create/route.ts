@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createAuditLog } from "@/lib/auditService";
+import { verifyTeacher } from "@/lib/adminAuth";
 
 // Init Supabase Client with Service Role Key to bypass RLS and create users directly
 const supabaseAdmin = createClient(
@@ -15,6 +17,13 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify teacher authentication
+    const authResult = await verifyTeacher(request);
+    if (authResult instanceof NextResponse) {
+      return authResult; // Return error response
+    }
+    const teacherId = authResult.userId;
+
     const body = await request.json();
     const { full_name, username, class_id, dob, gender, ethnicity, phone_number, enroll_status, sessions_per_week } = body;
 
@@ -97,6 +106,25 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // ✅ AUDIT LOG
+    await createAuditLog(teacherId, {
+      action: 'user_created',
+      resourceType: 'user',
+      resourceId: userId,
+      description: `Tạo tài khoản học sinh: ${full_name} (@${username})`,
+      newValues: {
+        username,
+        full_name,
+        role: 'student',
+        class_id
+      },
+      metadata: {
+        dob,
+        gender,
+        ethnicity
+      }
+    }, request);
 
     return NextResponse.json({
       success: true,

@@ -5,6 +5,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu } from "lucide-react";
+import { useBlockedCheck } from "@/hooks/useBlockedCheck";
 
 export default function AdminLayout({
   children,
@@ -14,6 +15,9 @@ export default function AdminLayout({
   const { user, checkAuth, isAuthenticated, isLoading } = useAuthStore();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Periodic check for blocked users
+  useBlockedCheck();
 
   // Run checkAuth only once on mount
   useEffect(() => {

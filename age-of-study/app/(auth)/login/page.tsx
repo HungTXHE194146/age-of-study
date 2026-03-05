@@ -9,10 +9,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { QrCode } from "lucide-react";
 import { QRScanner } from "@/components/qr-scanner";
+import { VerifyMFAModal } from "@/components/auth/VerifyMFAModal";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading, error, clearError, user } = useAuthStore();
+  const { 
+    login, 
+    verifyMFA, 
+    isLoading, 
+    error, 
+    clearError, 
+    clearMFAChallenge,
+    user, 
+    requiresMFA 
+  } = useAuthStore();
 
 
   const [username, setUsername] = useState("");
@@ -71,6 +81,16 @@ export default function LoginPage() {
       console.error(err);
       setScanError("Đây không phải là thẻ lớp học do Giáo viên cung cấp.");
     }
+  };
+
+  // Handle MFA verification
+  const handleMFAVerify = async (code: string) => {
+    const success = await verifyMFA(code)
+    return { success, error: error || undefined }
+  };
+
+  const handleMFAClose = () => {
+    clearMFAChallenge()
   };
 
   return (
@@ -345,6 +365,17 @@ export default function LoginPage() {
 
       {/* Footer */}
       <div className="text-center text-xs text-gray-600 mt-6 pb-6">
+
+      {/* MFA Verification Modal */}
+      {requiresMFA && (
+        <VerifyMFAModal
+          title="Xác thực 2 yếu tố"
+          description="Nhập mã 6 số từ app xác thực của bạn"
+          onVerify={handleMFAVerify}
+          onClose={handleMFAClose}
+          canClose={true}
+        />
+      )}
         © {new Date().getFullYear()} Age Of Study. Cùng bé khôn lớn mỗi ngày.
       </div>
 

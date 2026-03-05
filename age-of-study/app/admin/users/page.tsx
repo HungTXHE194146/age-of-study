@@ -18,6 +18,8 @@ import UserDetailModal from "@/components/admin/UserDetailModal";
 import UserEditModal from "@/components/admin/UserEditModal";
 import AddUserModal from "@/components/admin/AddUserModal";
 import Loading from "@/components/ui/loading";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import Toast from "@/components/ui/Toast";
 
 interface User {
   id: string;
@@ -67,6 +69,21 @@ export default function UsersManagementPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Block confirmation dialog
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [userToBlock, setUserToBlock] = useState<{ id: string; isBlocked: boolean } | null>(null);
+
+  // Toast notification
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "warning" | "info"; visible: boolean }>({
+    message: "",
+    type: "info",
+    visible: false,
+  });
+
+  const showToast = (message: string, type: "success" | "error" | "warning" | "info" = "info") => {
+    setToast({ message, type, visible: true });
+  };
 
   useEffect(() => {
     loadUsers();
@@ -184,22 +201,55 @@ export default function UsersManagementPage() {
     userId: string,
     currentBlockStatus: boolean,
   ) => {
+    // Show confirmation dialog
+    setUserToBlock({ id: userId, isBlocked: currentBlockStatus });
+    setShowBlockConfirm(true);
+  };
+
+  const confirmBlockUser = async () => {
+    if (!userToBlock) return;
+
+    const { id: userId, isBlocked: currentBlockStatus } = userToBlock;
+    
     try {
+      // Get session token for authorization
       const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        showToast("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", "error");
+        return;
+      }
 
-      // Toggle block status
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_blocked: !currentBlockStatus })
-        .eq("id", userId);
+      const response = await fetch("/api/admin/users/block", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          userId,
+          block: !currentBlockStatus,
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Có lỗi xảy ra");
+      }
+
+      const result = await response.json();
+      const action = currentBlockStatus ? "bỏ chặn" : "chặn";
+      showToast(result.message || `Đã ${action} người dùng thành công`, "success");
 
       // Reload users
       await loadUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error blocking/unblocking user:", error);
-      alert("Có lỗi xảy ra khi thực hiện thao tác");
+      showToast(error.message || "Có lỗi xảy ra khi thực hiện thao tác", "error");
+    } finally {
+      setShowBlockConfirm(false);
+      setUserToBlock(null);
     }
   };
 
@@ -591,6 +641,33 @@ export default function UsersManagementPage() {
           </table>
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showBlockConfirm}
+        title={userToBlock?.isBlocked ? "Bỏ chặn người dùng" : "Chặn người dùng"}
+        message={
+          userToBlock?.isBlocked
+            ? "Người dùng này sẽ có thể đăng nhập và sử dụng hệ thống trở lại. Bạn có chắc chắn muốn bỏ chặn?"
+            : "Người dùng này sẽ bị đăng xuất ngay lập tức và không thể đăng nhập lại cho đến khi được bỏ chặn. Bạn có chắc chắn muốn chặn?"
+        }
+        confirmText={userToBlock?.isBlocked ? "Bỏ chặn" : "Chặn"}
+        cancelText="Hủy"
+        variant={userToBlock?.isBlocked ? "success" : "danger"}
+        onConfirm={confirmBlockUser}
+        onCancel={() => {
+          setShowBlockConfirm(false);
+          setUserToBlock(null);
+        }}
+      />
+
+      {/* Toast Notification */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.visible}
+        onClose={() => setToast({ ...toast, visible: false })}
+      />
 
       {/* Modals */}
       {showDetailModal && selectedUser && (
