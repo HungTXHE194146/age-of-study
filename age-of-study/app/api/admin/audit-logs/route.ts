@@ -63,16 +63,11 @@ async function verifyAdmin(): Promise<{ userId: string } | NextResponse> {
 
   // Check role with service client
   const supabase = getServerSupabase();
-  const { data: profile, error } = await supabase
+  const { data: profile } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single();
-
-  if (error) {
-    console.error('Error fetching user profile:', error);
-    return NextResponse.json({ error: 'Lỗi hệ thống' }, { status: 500 });
-  }
 
   if (!profile || profile.role !== 'system_admin') {
     return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
@@ -101,10 +96,8 @@ export async function GET(request: NextRequest) {
     const resourceId = searchParams.get('resourceId');
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
-    const limitParam = parseInt(searchParams.get('limit') || '50', 10);
-    const offsetParam = parseInt(searchParams.get('offset') || '0', 10);
-    const limit = Number.isNaN(limitParam) || limitParam < 1 ? 50 : Math.min(limitParam, 1000);
-    const offset = Number.isNaN(offsetParam) || offsetParam < 0 ? 0 : offsetParam;
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const offset = parseInt(searchParams.get('offset') || '0');
 
     // Build query
     let query = supabase

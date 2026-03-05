@@ -5,14 +5,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import {
   Shield,
   CheckCircle,
   XCircle,
   Loader2,
   AlertTriangle,
-  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EnrollMFAModal } from "./EnrollMFAModal";
@@ -139,20 +137,10 @@ export function MFASettings({ userId }: MFASettingsProps) {
                 )}
               </div>
 
-              <p className="text-base font-medium text-gray-700 mb-3 block">
+              <p className="text-base font-medium text-gray-700 mb-3">
                 Thêm lớp bảo mật cho tài khoản của bạn bằng cách yêu cầu mã xác
                 thực từ điện thoại khi đăng nhập.
               </p>
-
-              <Link
-                href="/help/security/2fa"
-                target="_blank"
-                className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-800 hover:underline mb-4 transition-colors"
-                title="Hướng dẫn chi tiết cách bật 2FA"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Hướng dẫn cài đặt chi tiết
-              </Link>
 
               {mfaStatus?.enabled && mfaStatus.enrolled_at && (
                 <p className="text-xs text-gray-500">

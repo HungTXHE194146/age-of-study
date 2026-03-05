@@ -33,26 +33,23 @@ export default function TeacherLayout({
   useEffect(() => {
     // Avoid multiple redirects
     if (hasRedirected.current) return;
-
+    
     if (!isLoading) {
       if (!isAuthenticated) {
         hasRedirected.current = true;
         router.replace("/staff/login");
         return;
       }
-
-      if (!user) {
-        // User object not loaded despite being authenticated - re-check auth
-        return;
-      }
-
-      if (user.role !== "teacher") {
-        hasRedirected.current = true;
-        // Redirect non-teacher users
-        if (user.role === "system_admin") {
-          router.replace("/admin/dashboard");
-        } else {
-          router.replace("/student");
+      
+      if (user) {
+        if (user.role !== "teacher") {
+          hasRedirected.current = true;
+          // Redirect non-teacher users
+          if (user.role === "system_admin") {
+            router.replace("/admin/dashboard");
+          } else {
+            router.replace("/student");
+          }
         }
       }
     }

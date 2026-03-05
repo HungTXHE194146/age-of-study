@@ -62,7 +62,7 @@ const navItems: NavItem[] = [
     icon: FileText,
   },
   {
-    name: "Nhật ký kiểm tra",
+    name: "Audit Logs",
     href: "/admin/audit-logs",
     icon: Shield,
   },

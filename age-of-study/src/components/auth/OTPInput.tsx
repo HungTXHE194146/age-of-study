@@ -29,7 +29,7 @@ export function OTPInput({
     // Chỉ cho phép số
     if (digit && !/^\d$/.test(digit)) return;
 
-    const newValue = Array.from({ length }, (_, i) => value[i] || "");
+    const newValue = value.split("");
     newValue[index] = digit;
     onChange(newValue.join(""));
 
@@ -46,9 +46,9 @@ export function OTPInput({
         inputRefs.current[index - 1]?.focus();
       } else {
         // Clear current
-        const newValue = value.padEnd(length, " ").split("");
+        const newValue = value.split("");
         newValue[index] = "";
-        onChange(newValue.join("").trimEnd());
+        onChange(newValue.join(""));
       }
     } else if (e.key === "ArrowLeft" && index > 0) {
       inputRefs.current[index - 1]?.focus();

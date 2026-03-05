@@ -3,99 +3,83 @@
  * Yêu cầu MFA verification trước khi thực hiện sensitive actions
  */
 
-"use client";
+'use client'
 
-import { useState } from "react";
-import { VerifyMFAModal } from "@/components/auth/VerifyMFAModal";
-import { mfaService } from "@/lib/mfaService";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useState } from 'react'
+import { VerifyMFAModal } from '@/components/auth/VerifyMFAModal'
+import { mfaService } from '@/lib/mfaService'
+import { useAuthStore } from '@/store/useAuthStore'
 
 export function useReauth() {
-  const [showReauthModal, setShowReauthModal] = useState(false);
-  const [reauthResolver, setReauthResolver] = useState<
-    ((value: boolean) => void) | null
-  >(null);
-  const { user } = useAuthStore();
+  const [showReauthModal, setShowReauthModal] = useState(false)
+  const [reauthResolver, setReauthResolver] = useState<((value: boolean) => void) | null>(null)
+  const { user } = useAuthStore()
 
   /**
    * Require re-authentication before sensitive action
    * Returns true if verified, false if cancelled/failed
    */
-  const requireReauth = async (_action?: string): Promise<boolean> => {
-    if (!user) return false;
+  const requireReauth = async (action: string): Promise<boolean> => {
+    if (!user) return false
 
     // Check MFA status
-    const { data: mfaStatus, error } = await mfaService.getMFAStatus(user.id);
-
-    // If we can't verify MFA status, fail safely
-    if (error) {
-      return false;
-    }
-
+    const { data: mfaStatus } = await mfaService.getMFAStatus(user.id)
+    
     // If MFA not enabled, allow action (no extra security needed)
     if (!mfaStatus?.enabled) {
-      return true;
+      return true
     }
 
     // Check if recently re-authenticated (5 minute grace period)
     if (!mfaService.checkReauthRequired()) {
-      return true;
+      return true
     }
 
     // Show MFA modal and wait for verification
     return new Promise<boolean>((resolve) => {
-      setReauthResolver(() => resolve);
-      setShowReauthModal(true);
-    });
-  };
+      setReauthResolver(() => resolve)
+      setShowReauthModal(true)
+    })
+  }
 
-  const handleVerify = async (
-    code: string,
-  ): Promise<{ success: boolean; error?: string }> => {
-    if (!user) return { success: false, error: "Không tìm thấy người dùng" };
+  const handleVerify = async (code: string): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: 'Không tìm thấy người dùng' }
 
-    const { data: mfaStatus } = await mfaService.getMFAStatus(user.id);
-    const verifiedFactor = mfaStatus?.factors.find(
-      (f) => f.status === "verified",
-    );
-
+    const { data: mfaStatus } = await mfaService.getMFAStatus(user.id)
+    const verifiedFactor = mfaStatus?.factors.find(f => f.status === 'verified')
+    
     if (!verifiedFactor) {
-      return { success: false, error: "Không tìm thấy 2FA" };
+      return { success: false, error: 'Không tìm thấy 2FA' }
     }
 
     // Create challenge
-    const { data: challenge, error: challengeError } =
-      await mfaService.createChallenge(verifiedFactor.id);
-
+    const { data: challenge, error: challengeError } = await mfaService.createChallenge(verifiedFactor.id)
+    
     if (challengeError || !challenge) {
-      return {
-        success: false,
-        error: challengeError || "Lỗi tạo challenge MFA",
-      };
+      return { success: false, error: challengeError || 'Không thể tạo challenge' }
     }
 
+    // Verify code
     const { success, error } = await mfaService.verifyChallenge(
       verifiedFactor.id,
       challenge.id,
-      code,
-    );
+      code
+    )
 
     if (success) {
       // Record successful re-auth
-      mfaService.recordReauth(user.id, "sensitive_action");
-      setShowReauthModal(false);
-      reauthResolver?.(true);
-      setReauthResolver(null);
+      mfaService.recordReauth(user.id, 'sensitive_action')
+      setShowReauthModal(false)
+      reauthResolver?.(true)
     }
 
-    return { success, error: error ?? undefined };
-  };
+    return { success, error: error ?? undefined }
+  }
 
   const handleClose = () => {
-    setShowReauthModal(false);
-    reauthResolver?.(false);
-    setReauthResolver(null);
-  };
+    setShowReauthModal(false)
+    reauthResolver?.(false)
+  }
 
   const ReauthModal = showReauthModal ? (
     <VerifyMFAModal
@@ -105,10 +89,10 @@ export function useReauth() {
       onClose={handleClose}
       canClose={true}
     />
-  ) : null;
+  ) : null
 
   return {
     requireReauth,
     ReauthModal,
-  };
+  }
 }

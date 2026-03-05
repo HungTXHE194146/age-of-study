@@ -15,15 +15,13 @@ export default function BlockedPage() {
   useEffect(() => {
     const checkAndLogout = async () => {
       const supabase = getSupabaseBrowserClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
+      const { data: { session } } = await supabase.auth.getSession();
+      
       if (session) {
         await supabase.auth.signOut();
       }
     };
-
+    
     checkAndLogout();
   }, []);
 
@@ -62,7 +60,9 @@ export default function BlockedPage() {
             <h1 className="text-3xl font-bold text-white mb-2">
               Tài khoản đã bị khóa
             </h1>
-            <p className="text-red-50 text-lg">Your account has been blocked</p>
+            <p className="text-red-50 text-lg">
+              Your account has been blocked
+            </p>
           </div>
 
           {/* Content */}
@@ -71,12 +71,9 @@ export default function BlockedPage() {
               {/* Main message */}
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
                 <p className="text-gray-800 leading-relaxed">
-                  <strong className="text-red-600">
-                    Tài khoản của bạn đã bị khóa tạm thời.
-                  </strong>
+                  <strong className="text-red-600">Tài khoản của bạn đã bị khóa tạm thời.</strong>
                   <br />
-                  Điều này có thể xảy ra do vi phạm quy tắc sử dụng hoặc yêu cầu
-                  từ giáo viên/quản trị viên.
+                  Điều này có thể xảy ra do vi phạm quy tắc sử dụng hoặc yêu cầu từ giáo viên/quản trị viên.
                 </p>
               </div>
 
@@ -90,22 +87,19 @@ export default function BlockedPage() {
                   <li className="flex items-start gap-3">
                     <span className="text-xl mt-0.5">📞</span>
                     <span>
-                      <strong>Liên hệ giáo viên hoặc phụ huynh:</strong> Họ sẽ
-                      giúp bạn hiểu lý do và hướng dẫn các bước tiếp theo.
+                      <strong>Liên hệ giáo viên hoặc phụ huynh:</strong> Họ sẽ giúp bạn hiểu lý do và hướng dẫn các bước tiếp theo.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-xl mt-0.5">📧</span>
                     <span>
-                      <strong>Gửi email cho quản trị viên:</strong> Nếu bạn nghĩ
-                      đây là nhầm lẫn, hãy yêu cầu xem xét lại.
+                      <strong>Gửi email cho quản trị viên:</strong> Nếu bạn nghĩ đây là nhầm lẫn, hãy yêu cầu xem xét lại.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-xl mt-0.5">⏰</span>
                     <span>
-                      <strong>Chờ đợi:</strong> Trong một số trường hợp, khóa
-                      tài khoản có thể chỉ là tạm thời.
+                      <strong>Chờ đợi:</strong> Trong một số trường hợp, khóa tài khoản có thể chỉ là tạm thời.
                     </span>
                   </li>
                 </ul>
@@ -121,12 +115,8 @@ export default function BlockedPage() {
                     <Mail className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600 font-medium">
-                      Email hỗ trợ
-                    </p>
-                    <p className="text-sm font-bold text-gray-800">
-                      support@ageofstudy.edu.vn
-                    </p>
+                    <p className="text-xs text-gray-600 font-medium">Email hỗ trợ</p>
+                    <p className="text-sm font-bold text-gray-800">support@ageofstudy.edu.vn</p>
                   </div>
                 </motion.div>
 
@@ -147,9 +137,7 @@ export default function BlockedPage() {
               {/* Important note */}
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                 <p className="text-sm text-gray-600 leading-relaxed">
-                  <strong className="text-gray-800">⚠️ Lưu ý:</strong> Không
-                  chia sẻ mật khẩu với người khác và luôn tuân thủ quy tắc cộng
-                  đồng để tránh bị khóa tài khoản trong tương lai.
+                  <strong className="text-gray-800">⚠️ Lưu ý:</strong> Không chia sẻ mật khẩu với người khác và luôn tuân thủ quy tắc cộng đồng để tránh bị khóa tài khoản trong tương lai.
                 </p>
               </div>
 
@@ -166,19 +154,16 @@ export default function BlockedPage() {
                   {isLoggingOut ? "Đang đăng xuất..." : "Đăng xuất"}
                 </motion.button>
 
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex-1"
-                >
-                  <Link
-                    href="/"
+                <Link href="/" className="flex-1">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
                   >
                     <span className="text-xl">🏠</span>
                     Về trang chủ
-                  </Link>
-                </motion.div>
+                  </motion.button>
+                </Link>
               </div>
             </div>
           </div>

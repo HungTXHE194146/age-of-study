@@ -1,6 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, CheckCircle } from "lucide-react";
-import { useEffect, useRef } from "react";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -23,69 +22,23 @@ export default function ConfirmDialog({
   onCancel,
   variant = "warning",
 }: ConfirmDialogProps) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
-      if (e.key === "Escape") {
-        onCancel();
-      } else if (e.key === "Tab") {
-        const focusableElements =
-          dialogRef.current?.querySelectorAll<HTMLElement>(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-          );
-        if (focusableElements && focusableElements.length > 0) {
-          const firstElement = focusableElements[0];
-          const lastElement = focusableElements[focusableElements.length - 1];
-
-          if (e.shiftKey && document.activeElement === firstElement) {
-            lastElement.focus();
-            e.preventDefault();
-          } else if (!e.shiftKey && document.activeElement === lastElement) {
-            firstElement.focus();
-            e.preventDefault();
-          }
-        }
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
-      // Auto focus first button
-      setTimeout(() => {
-        const focusableElements =
-          dialogRef.current?.querySelectorAll<HTMLElement>(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-          );
-        if (focusableElements && focusableElements.length > 0) {
-          focusableElements[0].focus();
-        }
-      }, 50);
-    }
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onCancel]);
+  if (!isOpen) return null;
 
   const variantStyles = {
     danger: {
       bg: "from-red-500 to-orange-500",
       icon: <AlertTriangle className="w-12 h-12 text-white" />,
-      confirmBtn:
-        "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800",
+      confirmBtn: "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800",
     },
     warning: {
       bg: "from-amber-500 to-orange-500",
       icon: <AlertTriangle className="w-12 h-12 text-white" />,
-      confirmBtn:
-        "bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800",
+      confirmBtn: "bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800",
     },
     success: {
       bg: "from-green-500 to-emerald-500",
       icon: <CheckCircle className="w-12 h-12 text-white" />,
-      confirmBtn:
-        "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800",
+      confirmBtn: "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800",
     },
   };
 
@@ -105,14 +58,8 @@ export default function ConfirmDialog({
           />
 
           {/* Dialog */}
-          <div
-            className="fixed inset-0 z-[101] flex items-center justify-center p-4"
-            ref={dialogRef}
-          >
+          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4">
             <motion.div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="confirm-dialog-title"
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -120,9 +67,7 @@ export default function ConfirmDialog({
               className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
             >
               {/* Header with Icon */}
-              <div
-                className={`bg-gradient-to-r ${currentStyle.bg} p-6 text-center`}
-              >
+              <div className={`bg-gradient-to-r ${currentStyle.bg} p-6 text-center`}>
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -131,12 +76,7 @@ export default function ConfirmDialog({
                 >
                   {currentStyle.icon}
                 </motion.div>
-                <h3
-                  id="confirm-dialog-title"
-                  className="text-2xl font-bold text-white"
-                >
-                  {title}
-                </h3>
+                <h3 className="text-2xl font-bold text-white">{title}</h3>
               </div>
 
               {/* Content */}
