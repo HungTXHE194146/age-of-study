@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuthStore } from "@/store/useAuthStore";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { QrCode } from "lucide-react";
 import { QRScanner } from "@/components/qr-scanner";
@@ -75,7 +75,7 @@ export default function LoginPage() {
         setIsScanningQR(false);
         await login(parsed.username, parsed.password);
       } else {
-         setScanError("Mã QR không hợp lệ hoặc đã cũ. Hãy xin thầy cô thẻ mới nhé!");
+        setScanError("Mã QR không hợp lệ hoặc đã cũ. Hãy xin thầy cô thẻ mới nhé!");
       }
     } catch (err: any) {
       console.error(err);
@@ -169,21 +169,21 @@ export default function LoginPage() {
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
           {scanError && (
-             <div className="bg-orange-50 border border-orange-200 text-orange-700 px-4 py-3 text-center rounded-xl mb-4 text-sm font-medium">
-               {scanError}
-             </div>
+            <div className="bg-orange-50 border border-orange-200 text-orange-700 px-4 py-3 text-center rounded-xl mb-4 text-sm font-medium">
+              {scanError}
+            </div>
           )}
 
           {/* Nút Quét QR to rõ */}
           <button
-             type="button"
-             onClick={() => setIsScanningQR(true)}
-             className="w-full bg-blue-100 hover:bg-blue-200 border-2 border-blue-500 text-blue-700 font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 shadow-sm text-lg"
+            type="button"
+            onClick={() => setIsScanningQR(true)}
+            className="w-full bg-blue-100 hover:bg-blue-200 border-2 border-blue-500 text-blue-700 font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 shadow-sm text-lg"
           >
-             <QrCode className="w-6 h-6" />
-             Quét thẻ QR
+            <QrCode className="w-6 h-6" />
+            Quét thẻ QR
           </button>
-          
+
           {/* Divider */}
           <div className="relative pt-2 pb-2">
             <div className="absolute inset-0 flex items-center">
@@ -378,14 +378,16 @@ export default function LoginPage() {
       )}
         © {new Date().getFullYear()} Age Of Study. Cùng bé khôn lớn mỗi ngày.
       </div>
-      
+
       {/* Scanner Modal overlay */}
-      {isScanningQR && (
-        <QRScanner 
-          onScanSuccess={handleQRScanSuccess} 
-          onClose={() => setIsScanningQR(false)} 
-        />
-      )}
+      <AnimatePresence>
+        {isScanningQR && (
+          <QRScanner
+            onScanSuccess={handleQRScanSuccess}
+            onClose={() => setIsScanningQR(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
