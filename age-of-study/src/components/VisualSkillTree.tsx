@@ -46,6 +46,18 @@ import { getLayoutedElements } from "@/utils/layoutUtils";
 import { Panel } from "@xyflow/react";
 import Loading from "@/components/ui/loading";
 
+// Create a context for node-specific callbacks to avoid passing them through node data
+// which causes infinite loops when callbacks change.
+interface NodeCallbacksContextType {
+  onEditNode?: (nodeId: number) => void;
+  onDeleteNode?: (nodeId: number) => void;
+  isTeacherMode: boolean;
+}
+
+const NodeCallbacksContext = React.createContext<NodeCallbacksContextType>({
+  isTeacherMode: false,
+});
+
 export interface CustomNodeData extends Record<string, unknown> {
   id: number | string;
   title: string;
@@ -53,9 +65,6 @@ export interface CustomNodeData extends Record<string, unknown> {
   color: string;
   isLocked: boolean;
   isCompleted?: boolean; // Mới: Đã hoàn thành hay chưa
-  isTeacherMode?: boolean;
-  onEditNode?: (nodeId: number) => void;
-  onDeleteNode?: (nodeId: number) => void;
 }
 
 export type CustomNodeType = Node<CustomNodeData, "custom">;
@@ -75,7 +84,8 @@ const CustomNode = React.memo(({
   data,
   selected,
 }: NodeProps<CustomNodeType>) => {
-  const isTeacher = data.isTeacherMode || false;
+  const { onEditNode, onDeleteNode, isTeacherMode } = React.useContext(NodeCallbacksContext);
+  const isTeacher = isTeacherMode;
   const isLocked = isTeacher ? false : data.isLocked || false;
   const isCompleted = data.isCompleted || false;
   const baseColor = isLocked ? "#9ca3af" : data.color || "#fbbf24";
@@ -197,11 +207,11 @@ const CustomNode = React.memo(({
         }}
         className={
           isTeacher
-            ? `relative w-36 h-36 border-2 flex flex-col items-center justify-center p-2 transition-transform duration-200 will-change-transform
+            ? `relative w-36 h-36 border-2 flex flex-col items-center justify-center p-2 transition-transform duration-200
                ${!isLocked ? "hover:-translate-y-1" : ""}
                ${selected ? "scale-105 -rotate-2" : "rotate-1"}
               `
-            : `relative w-32 h-32 rounded-[2rem] border-[3px] border-slate-800 flex flex-col items-center justify-center p-2 transition-all duration-300 ease-out notebook-lines will-change-transform
+            : `relative w-32 h-32 rounded-[2rem] border-[3px] border-slate-800 flex flex-col items-center justify-center p-2 transition-all duration-300 ease-out notebook-lines
                ${!isLocked ? "hover:scale-105 hover:-translate-y-1 cursor-pointer" : "opacity-80 cursor-not-allowed"}
                ${selected ? "scale-105 -rotate-2 ring-4 ring-offset-2 ring-blue-500" : "rotate-1"}
               `
@@ -263,7 +273,7 @@ const CustomNode = React.memo(({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (data.onEditNode) data.onEditNode(Number(data.id));
+                if (onEditNode) onEditNode(Number(data.id));
               }}
               className="w-8 h-8 bg-white border-2 border-black text-black rounded-none flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform"
               title="Chỉnh sửa"
@@ -273,7 +283,7 @@ const CustomNode = React.memo(({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (data.onDeleteNode) data.onDeleteNode(Number(data.id));
+                if (onDeleteNode) onDeleteNode(Number(data.id));
               }}
               className="w-8 h-8 bg-red-100 border-2 border-black text-red-600 rounded-none flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform"
               title="Xóa"
@@ -314,6 +324,25 @@ const CustomEdge = React.memo(({
 
   return (
     <>
+      <svg
+        style={{ position: "absolute", top: 0, left: 0, height: 0, width: 0 }}
+      >
+        <defs>
+          <filter
+            id={`glow-${id}`}
+            x="-50%"
+            y="-50%"
+            width="200%"
+            height="200%"
+          >
+            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+      </svg>
       {/* Nét chính của line */}
       <BaseEdge
         path={edgePath}
@@ -352,7 +381,7 @@ const CustomEdge = React.memo(({
         />
       )}
       {!data?.isTeacherMode && (
-        <circle r="6" fill="#fff" filter={!data?.isLowData ? `url(#global-glow)` : "none"}>
+        <circle r="6" fill="#fff" filter={!data?.isLowData ? `url(#glow-${id})` : "none"}>
           {!data?.isLowData && (
             <animateMotion
               dur="3s"
@@ -403,11 +432,13 @@ const CustomEdge = React.memo(({
 });
 
 // --- MAIN COMPONENT ---
+const EMPTY_NODE_IDS: number[] = [];
+
 const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   gradeCode,
   isTeacherMode = false,
   subjectNodes,
-  completedNodeIds = [], // Mới
+  completedNodeIds = EMPTY_NODE_IDS, // Fix: Use stable reference for default array
   onNodeSelected,
   onEditNode,
   onDeleteNode,
@@ -418,6 +449,10 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLowData, setIsLowData] = useState(false);
+
+  // MUST BE CALLED TOP LEVEL TO AVOID REACT HOOK ORDER VIOLATION
+  const contextValue = useMemo(() => ({ onEditNode, onDeleteNode, isTeacherMode }), [onEditNode, onDeleteNode, isTeacherMode]);
 
   // Lọc kết quả tìm kiếm dựa trên query
   const searchResults = useMemo(() => {
@@ -425,8 +460,6 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     const query = searchQuery.toLowerCase();
     return nodes.filter(n => (n.data.title as string).toLowerCase().includes(query));
   }, [searchQuery, nodes]);
-
-  const [isLowData, setIsLowData] = useState(false);
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -481,77 +514,63 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     }
   };
 
-  // DÙNG USEEFFECT ĐỂ LOAD DỮ LIỆU ĐỘNG THEO KHỐI (GRADE)
+  // 1. Memoize mapped data
+  const mappedData = useMemo(() => {
+    if (!subjectNodes) return null;
+    return transformDBNodesToFlow(
+      subjectNodes,
+      isTeacherMode || false,
+      completedNodeIds
+    );
+  }, [subjectNodes, isTeacherMode, completedNodeIds]);
+
+  // 2. Load basic nodes and edges data when mappedData changes
   useEffect(() => {
-    // Nếu có subjectNodes (dữ liệu thật), dùng mapper để chuyển đổi
-    if (subjectNodes) {
-      const { nodes: mappedNodes, edges: mappedEdges } = transformDBNodesToFlow(
-        subjectNodes,
-        isTeacherMode || false,
-        completedNodeIds
-      );
-      setNodes(mappedNodes);
+    if (mappedData) {
+      setNodes(mappedData.nodes);
       // Inject isLowData and isTeacherMode into edge data
-      setEdges(mappedEdges.map(e => ({ ...e, data: { ...e.data, isLowData, isTeacherMode } })));
-
-      // Auto-focus logic: Find the first locked node or the last completed node
-      if (!isTeacherMode && rfInstance && mappedNodes.length > 0) {
-        let activeNode;
-        if (completedNodeIds.length === 0) {
-          activeNode = mappedNodes.sort((a, b) => (a.data.id as number) - (b.data.id as number))[0];
-        } else {
-          activeNode = mappedNodes.find(n => !n.data.isCompleted && !n.data.isLocked)
-            || mappedNodes.filter(n => n.data.isCompleted).pop()
-            || mappedNodes[0];
-        }
-
-        if (activeNode) {
-          // IMMEDIATE focus without animation to prevent flash of wrong area
-          if (rfInstance) {
-            rfInstance.setCenter(activeNode.position.x + 75, activeNode.position.y + 75, { zoom: 0.8, duration: 0 });
-          }
-        }
-      }
+      setEdges(mappedData.edges.map(e => ({ ...e, data: { ...e.data, isLowData, isTeacherMode } })));
     } else {
       setNodes([]);
       setEdges([]);
     }
-  }, [isTeacherMode, subjectNodes, setNodes, setEdges, isLowData, completedNodeIds, rfInstance]);
+  }, [mappedData, setNodes, setEdges, isLowData, isTeacherMode]);
 
-  // Memoize translateExtent to avoid expensive recalculations during flow movement
-  const translateExtent = useMemo<[[number, number], [number, number]]>(() => {
-    if (!nodes || nodes.length === 0) {
-      return [[-100, -Infinity], [400, Infinity]];
+  // 3. Auto-focus logic separated
+  const hasAutoFocused = React.useRef(false);
+  useEffect(() => {
+    if (rfInstance && mappedData && mappedData.nodes.length > 0 && !hasAutoFocused.current) {
+      if (!isTeacherMode) {
+        let activeNode;
+        if (completedNodeIds.length === 0) {
+          activeNode = [...mappedData.nodes].sort((a, b) => (a.data.id as number) - (b.data.id as number))[0];
+        } else {
+          activeNode = mappedData.nodes.find(n => !n.data.isCompleted && !n.data.isLocked)
+            || [...mappedData.nodes].filter(n => n.data.isCompleted).pop()
+            || mappedData.nodes[0];
+        }
+
+        if (activeNode) {
+          setTimeout(() => {
+            rfInstance.setCenter(activeNode.position.x + 75, activeNode.position.y + 75, { zoom: 0.8, duration: 0 });
+          }, 0);
+          hasAutoFocused.current = true;
+        }
+      } else {
+        // Option to just fit view once for teacher
+        hasAutoFocused.current = true;
+      }
     }
 
-    let minY = Infinity;
-    let maxY = -Infinity;
-
-    nodes.forEach(node => {
-      if (node.position.y < minY) minY = node.position.y;
-      if (node.position.y > maxY) maxY = node.position.y;
-    });
-
-    const headerMarginY = 150;
-    const bottomMarginY = 250;
-    return [[-100, minY - headerMarginY], [400, maxY + bottomMarginY]] as [[number, number], [number, number]];
-  }, [nodes]);
+    // Reset autofocused flag when the source data changes entirely
+    if (!subjectNodes) {
+      hasAutoFocused.current = false;
+    }
+  }, [rfInstance, mappedData, isTeacherMode, completedNodeIds, subjectNodes]);
 
 
 
   const nodeTypes = useMemo(() => ({ custom: CustomNode }), []);
-
-  // Inject props into nodes for CustomNode access
-  const processedNodes = useMemo(() => {
-    return nodes.map(node => ({
-      ...node,
-      data: {
-        ...node.data,
-        onEditNode,
-        onDeleteNode
-      }
-    }));
-  }, [nodes, onEditNode, onDeleteNode]);
   const edgeTypes = useMemo(() => ({ custom: (props: EdgeProps) => <CustomEdge {...props} setEdges={setEdges} /> }), [setEdges]);
 
   // Xử lý sự kiện kéo nối dây (onConnect)
@@ -700,221 +719,230 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   }
 
   return (
-    <div className={`w-full h-full relative overflow-hidden flex flex-col ${isTeacherMode ? 'max-w-[400px] mx-auto border-x-4 border-black shadow-[4px_0_0_0_rgba(0,0,0,1),-4px_0_0_0_rgba(0,0,0,1)] bg-[#fffdf8]' : 'bg-transparent'}`}>
+    <NodeCallbacksContext.Provider value={contextValue}>
+      <div className={`w-full h-full relative overflow-hidden flex flex-col ${isTeacherMode ? 'max-w-[400px] mx-auto border-x-4 border-black shadow-[4px_0_0_0_rgba(0,0,0,1),-4px_0_0_0_rgba(0,0,0,1)] bg-[#fffdf8]' : 'bg-transparent'}`}>
 
-      {/* Cảnh vật trang trí cho Notebook */}
-      {isTeacherMode && (
-        <>
-          {/* Lưới gáy sổ bên trái */}
-          <div className="absolute left-0 top-0 bottom-0 w-8 border-r-2 border-dashed border-gray-300 z-0 pointer-events-none flex flex-col justify-around py-10 opacity-60">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="w-4 h-4 rounded-full bg-gray-200 border-2 border-gray-300 ml-1 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]"></div>
-            ))}
-          </div>
+        {/* Cảnh vật trang trí cho Notebook */}
+        {isTeacherMode && (
+          <>
+            {/* Lưới gáy sổ bên trái */}
+            <div className="absolute left-0 top-0 bottom-0 w-8 border-r-2 border-dashed border-gray-300 z-0 pointer-events-none flex flex-col justify-around py-10 opacity-60">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="w-4 h-4 rounded-full bg-gray-200 border-2 border-gray-300 ml-1 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]"></div>
+              ))}
+            </div>
 
-          {/* Doodle hành tinh/ngôi sao */}
-          <div className="absolute bottom-16 right-4 opacity-[0.15] pointer-events-none z-0 rotate-12">
-            <svg width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <path d="M10,90 Q50,10 90,90 Q50,50 10,90 Z" fill="none" stroke="#000" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx="50" cy="50" r="10" fill="none" stroke="#000" strokeWidth="4" />
-            </svg>
-          </div>
+            {/* Doodle hành tinh/ngôi sao */}
+            <div className="absolute bottom-16 right-4 opacity-[0.15] pointer-events-none z-0 rotate-12">
+              <svg width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10,90 Q50,10 90,90 Q50,50 10,90 Z" fill="none" stroke="#000" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="50" cy="50" r="10" fill="none" stroke="#000" strokeWidth="4" />
+              </svg>
+            </div>
 
-          {/* Doodle mũi tên vẽ tay */}
-          <div className="absolute top-40 right-6 opacity-20 pointer-events-none z-0 rotate-[15deg] scale-100">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </div>
+            {/* Doodle mũi tên vẽ tay */}
+            <div className="absolute top-40 right-6 opacity-20 pointer-events-none z-0 rotate-[15deg] scale-100">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </div>
 
-          {/* Doodle chữ thập */}
-          <div className="absolute bottom-40 left-12 opacity-15 pointer-events-none z-0 -rotate-12 scale-75">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </div>
+            {/* Doodle chữ thập */}
+            <div className="absolute bottom-40 left-12 opacity-15 pointer-events-none z-0 -rotate-12 scale-75">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </div>
 
-          {/* Decal Text nhỏ chìm dưới nền dọc theo viền phải */}
-          <div className="absolute top-[60%] -right-16 opacity-[0.05] pointer-events-none z-0 rotate-90 font-handwritten text-5xl tracking-[0.5em] text-black font-black whitespace-nowrap">
-            SKILL TREE
-          </div>
+            {/* Decal Text nhỏ chìm dưới nền dọc theo viền phải */}
+            <div className="absolute top-[60%] -right-16 opacity-[0.05] pointer-events-none z-0 rotate-90 font-handwritten text-5xl tracking-[0.5em] text-black font-black whitespace-nowrap">
+              SKILL TREE
+            </div>
 
-          {/* Doodle đám mây */}
-          <div className="absolute top-16 left-12 opacity-[0.15] pointer-events-none z-0 -rotate-6 scale-90">
-            <svg width="60" height="40" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17.5 19c2.485 0 4.5-2.015 4.5-4.5S19.985 10 17.5 10c-.394 0-.776.05-1.144.148C15.422 7.025 12.518 5 9 5c-3.866 0-7 3.134-7 7 0 .195.008.388.024.579A4.5 4.5 0 0 0 3.5 19h14z" />
-            </svg>
-          </div>
-        </>
-      )}
-
-      {/* Global SVG Filters defined once to save rendering performance */}
-      <svg style={{ position: "absolute", width: 0, height: 0, pointerEvents: "none" }}>
-        <defs>
-          <filter id="global-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-      </svg>
-
-      {/* Thanh Search Nổi */}
-      <div className="absolute top-4 left-4 right-4 z-50">
-        <form onSubmit={handleSearch} className="relative flex items-center">
-          <input
-            type="text"
-            placeholder="Tìm kiếm bài học..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setShowSuggestions(true);
-            }}
-            onFocus={() => setShowSuggestions(true)}
-            onBlur={() => {
-              // Delay nhỏ để kịp click vào gợi ý
-              setTimeout(() => setShowSuggestions(false), 200);
-            }}
-            className={
-              isTeacherMode
-                ? "w-full bg-white/80 text-gray-900 placeholder-gray-500 border-2 border-black rounded-lg pl-12 pr-4 py-3 shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus:outline-none focus:border-blue-600 transition-all font-bold text-lg"
-                : "w-full bg-slate-800/90 text-slate-100 placeholder-slate-400 border border-indigo-500/50 rounded-full pl-10 pr-4 py-3 shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all backdrop-blur-md text-sm"
-            }
-          />
-          <Search className={isTeacherMode ? "w-6 h-6 text-gray-600 absolute left-3" : "w-5 h-5 text-indigo-400 absolute left-3"} />
-          <button type="submit" className="hidden">Search</button>
-        </form>
-
-        {/* Dropdown Gợi ý */}
-        {showSuggestions && searchResults.length > 0 && (
-          <div className={
-            isTeacherMode
-              ? "absolute mt-2 w-full bg-orange-50/95 border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] max-h-60 overflow-y-auto z-50 font-bold"
-              : "absolute mt-2 w-full bg-slate-800/95 border border-slate-700 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden max-h-60 overflow-y-auto z-50"
-          }>
-            {searchResults.map((node) => (
-              <div
-                key={node.id}
-                onMouseDown={() => handleSelectNode(node.id)}
-                className={
-                  isTeacherMode
-                    ? "px-4 py-3 hover:bg-yellow-200 cursor-pointer transition-colors border-b-2 border-dashed border-gray-400 last:border-0 flex items-center gap-3 text-gray-800 font-bold"
-                    : "px-4 py-3 hover:bg-slate-700/50 cursor-pointer transition-colors border-b border-slate-700/50 last:border-0 flex items-center gap-3"
-                }
-              >
-                <div className={
-                  isTeacherMode
-                    ? "w-8 h-8 rounded-full border-2 border-black flex items-center justify-center shrink-0 bg-white"
-                    : "w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0"
-                }>
-                  <Star size={14} className={isTeacherMode ? "text-black" : "text-indigo-400"} />
-                </div>
-                <div>
-                  <div className={
-                    isTeacherMode
-                      ? "text-base font-black text-black line-clamp-1"
-                      : "text-sm font-medium text-slate-200 line-clamp-1"
-                  }>{node.data.title as string}</div>
-                  <div className={
-                    isTeacherMode
-                      ? "text-xs text-gray-600 mt-0.5 capitalize font-bold"
-                      : "text-xs text-slate-500 mt-0.5 capitalize"
-                  }>{node.data.nodeType as string}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+            {/* Doodle đám mây */}
+            <div className="absolute top-16 left-12 opacity-[0.15] pointer-events-none z-0 -rotate-6 scale-90">
+              <svg width="60" height="40" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.5 19c2.485 0 4.5-2.015 4.5-4.5S19.985 10 17.5 10c-.394 0-.776.05-1.144.148C15.422 7.025 12.518 5 9 5c-3.866 0-7 3.134-7 7 0 .195.008.388.024.579A4.5 4.5 0 0 0 3.5 19h14z" />
+              </svg>
+            </div>
+          </>
         )}
-      </div>
 
-      <div className={`flex-1 w-full h-full relative ${isTeacherMode ? 'pl-8' : ''}`}>
-        <ReactFlow
-          nodes={processedNodes}
-          edges={edges}
-          onNodesChange={onNodesChange as any}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onEdgesDelete={onEdgesDelete}
-          onNodeDragStop={onNodeDragStop as any}
-          onNodeClick={onNodeClick as any}
-          onInit={setRfInstance}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          fitView={isTeacherMode} // ONLY fitView for teacher to see overview, students jump to active node
-          onlyRenderVisibleElements={true}
-          attributionPosition="bottom-right"
-          connectionMode={ConnectionMode.Strict}
-          connectionLineType={ConnectionLineType.Bezier}
-          minZoom={0.5}
-          maxZoom={1.5}
-          zoomOnScroll={false}
-          zoomOnPinch={false}
-          zoomOnDoubleClick={false}
-          panOnDrag={true} // Cho phép vuốt/kéo màn hình
-          panOnScroll={true} // Cho phép cuộn màn hình
-          nodesDraggable={isTeacherMode} // Khóa kéo thả node với học sinh
-          nodesConnectable={isTeacherMode}
-          elementsSelectable={true}
-          translateExtent={translateExtent}
-          defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
-          selectionMode={isTeacherMode ? SelectionMode.Partial : undefined}
-        >
-          <Background
-            color={isTeacherMode ? "#94a3b8" : "#818cf8"}
-            gap={isTeacherMode ? 24 : 32}
-            size={isTeacherMode ? 1.5 : 1}
-            variant={BackgroundVariant.Dots}
-            className={isTeacherMode ? "opacity-40" : "opacity-20"}
-          />
+        {/* Thanh Search Nổi */}
+        <div className="absolute top-4 left-4 right-4 z-50">
+          <form onSubmit={handleSearch} className="relative flex items-center">
+            <input
+              type="text"
+              placeholder="Tìm kiếm bài học..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => {
+                // Delay nhỏ để kịp click vào gợi ý
+                setTimeout(() => setShowSuggestions(false), 200);
+              }}
+              className={
+                isTeacherMode
+                  ? "w-full bg-white/80 text-gray-900 placeholder-gray-500 border-2 border-black rounded-lg pl-12 pr-4 py-3 shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus:outline-none focus:border-blue-600 transition-all font-bold text-lg"
+                  : "w-full bg-slate-800/90 text-slate-100 placeholder-slate-400 border border-indigo-500/50 rounded-full pl-10 pr-4 py-3 shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all backdrop-blur-md text-sm"
+              }
+            />
+            <Search className={isTeacherMode ? "w-6 h-6 text-gray-600 absolute left-3" : "w-5 h-5 text-indigo-400 absolute left-3"} />
+            <button type="submit" className="hidden">Search</button>
+          </form>
 
-          {isTeacherMode && (
-            <Panel position="bottom-center" className="flex gap-2 mb-4 w-full justify-center">
-              <button
-                onClick={onLayout}
-                className={
-                  isTeacherMode
-                    ? "bg-white border-2 border-black text-black font-black py-2 px-6 shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:bg-yellow-100 flex items-center gap-2 transition-all text-lg"
-                    : "bg-indigo-600/90 backdrop-blur hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-full shadow-lg flex items-center gap-2 transition-all border border-indigo-500/50"
-                }
-              >
-                <Star size={isTeacherMode ? 20 : 16} />
-                Căn Chỉnh Tự Động
-              </button>
-            </Panel>
-          )}
-
-          {!isTeacherMode && (
-            <Panel position="bottom-center" className="flex gap-2 mb-6 w-full justify-center z-50">
-              <button
-                onClick={() => {
-                  if (rfInstance && nodes.length > 0) {
-                    let activeNode;
-                    if (completedNodeIds.length === 0) {
-                      activeNode = [...nodes].sort((a, b) => (a.data.id as number) - (b.data.id as number))[0];
-                    } else {
-                      activeNode = nodes.find(n => !n.data.isCompleted && !n.data.isLocked)
-                        || [...nodes].filter(n => n.data.isCompleted).pop()
-                        || nodes[0];
-                    }
-
-                    if (activeNode) {
-                      rfInstance.setCenter(activeNode.position.x + 75, activeNode.position.y + 75, { zoom: 0.8, duration: 800 });
-                    }
+          {/* Dropdown Gợi ý */}
+          {showSuggestions && searchResults.length > 0 && (
+            <div className={
+              isTeacherMode
+                ? "absolute mt-2 w-full bg-orange-50/95 border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] max-h-60 overflow-y-auto z-50 font-bold"
+                : "absolute mt-2 w-full bg-slate-800/95 border border-slate-700 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden max-h-60 overflow-y-auto z-50"
+            }>
+              {searchResults.map((node) => (
+                <div
+                  key={node.id}
+                  onMouseDown={() => handleSelectNode(node.id)}
+                  className={
+                    isTeacherMode
+                      ? "px-4 py-3 hover:bg-yellow-200 cursor-pointer transition-colors border-b-2 border-dashed border-gray-400 last:border-0 flex items-center gap-3 text-gray-800 font-bold"
+                      : "px-4 py-3 hover:bg-slate-700/50 cursor-pointer transition-colors border-b border-slate-700/50 last:border-0 flex items-center gap-3"
                   }
-                }}
-                className="bg-white hover:bg-yellow-50 text-black border-2 border-black font-black py-3 px-6 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] flex items-center gap-2 transition-all text-sm uppercase"
-              >
-                <Target size={20} className="text-blue-500" />
-                Về Bài Hiện Tại
-              </button>
-            </Panel>
+                >
+                  <div className={
+                    isTeacherMode
+                      ? "w-8 h-8 rounded-full border-2 border-black flex items-center justify-center shrink-0 bg-white"
+                      : "w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0"
+                  }>
+                    <Star size={14} className={isTeacherMode ? "text-black" : "text-indigo-400"} />
+                  </div>
+                  <div>
+                    <div className={
+                      isTeacherMode
+                        ? "text-base font-black text-black line-clamp-1"
+                        : "text-sm font-medium text-slate-200 line-clamp-1"
+                    }>{node.data.title as string}</div>
+                    <div className={
+                      isTeacherMode
+                        ? "text-xs text-gray-600 mt-0.5 capitalize font-bold"
+                        : "text-xs text-slate-500 mt-0.5 capitalize"
+                    }>{node.data.nodeType as string}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
-        </ReactFlow>
+        </div>
+
+        <div className={`flex-1 w-full h-full relative ${isTeacherMode ? 'pl-8' : ''}`}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange as any}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onEdgesDelete={onEdgesDelete}
+            onNodeDragStop={onNodeDragStop as any}
+            onNodeClick={onNodeClick as any}
+            onInit={setRfInstance}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            fitView
+            attributionPosition="bottom-right"
+            connectionMode={ConnectionMode.Strict}
+            connectionLineType={ConnectionLineType.Bezier}
+            minZoom={0.5}
+            maxZoom={1.5}
+            zoomOnScroll={false}
+            zoomOnPinch={false}
+            zoomOnDoubleClick={false}
+            panOnDrag={true} // Cho phép vuốt/kéo màn hình
+            panOnScroll={true} // Cho phép cuộn màn hình
+            nodesDraggable={isTeacherMode} // Khóa kéo thả node với học sinh
+            nodesConnectable={isTeacherMode}
+            elementsSelectable={true}
+            translateExtent={(() => {
+
+              if (!nodes || nodes.length === 0) {
+                return [[-100, -Infinity], [400, Infinity]];
+              }
+
+              let minY = Infinity;
+              let maxY = -Infinity;
+
+              nodes.forEach(node => {
+                if (node.position.y < minY) minY = node.position.y;
+                if (node.position.y > maxY) maxY = node.position.y;
+              });
+
+              // Add tighter margins to prevent scrolling too far past the top/bottom nodes
+              const headerMarginY = 150;
+              const bottomMarginY = 250;
+
+              // Lock X axis between a tight boundary on mobile to prevent horizontal scroll
+              // Y axis is bounded strictly by the top and bottom nodes plus some padding
+              return [[-100, minY - headerMarginY], [400, maxY + bottomMarginY]] as any;
+            })()}
+            defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+            selectionMode={isTeacherMode ? SelectionMode.Partial : undefined}
+          >
+            <Background
+              color={isTeacherMode ? "#94a3b8" : "#818cf8"}
+              gap={isTeacherMode ? 24 : 32}
+              size={isTeacherMode ? 1.5 : 1}
+              variant={BackgroundVariant.Dots}
+              className={isTeacherMode ? "opacity-40" : "opacity-20"}
+            />
+
+            {isTeacherMode && (
+              <Panel position="bottom-center" className="flex gap-2 mb-4 w-full justify-center">
+                <button
+                  onClick={onLayout}
+                  className={
+                    isTeacherMode
+                      ? "bg-white border-2 border-black text-black font-black py-2 px-6 shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:bg-yellow-100 flex items-center gap-2 transition-all text-lg"
+                      : "bg-indigo-600/90 backdrop-blur hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-full shadow-lg flex items-center gap-2 transition-all border border-indigo-500/50"
+                  }
+                >
+                  <Star size={isTeacherMode ? 20 : 16} />
+                  Căn Chỉnh Tự Động
+                </button>
+              </Panel>
+            )}
+
+            {!isTeacherMode && (
+              <Panel position="bottom-center" className="flex gap-2 mb-6 w-full justify-center z-50">
+                <button
+                  onClick={() => {
+                    if (rfInstance && nodes.length > 0) {
+                      let activeNode;
+                      if (completedNodeIds.length === 0) {
+                        activeNode = [...nodes].sort((a, b) => (a.data.id as number) - (b.data.id as number))[0];
+                      } else {
+                        activeNode = nodes.find(n => !n.data.isCompleted && !n.data.isLocked)
+                          || [...nodes].filter(n => n.data.isCompleted).pop()
+                          || nodes[0];
+                      }
+
+                      if (activeNode) {
+                        rfInstance.setCenter(activeNode.position.x + 75, activeNode.position.y + 75, { zoom: 0.8, duration: 800 });
+                      }
+                    }
+                  }}
+                  className="bg-white hover:bg-yellow-50 text-black border-2 border-black font-black py-3 px-6 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] flex items-center gap-2 transition-all text-sm uppercase"
+                >
+                  <Target size={20} className="text-blue-500" />
+                  Về Bài Hiện Tại
+                </button>
+              </Panel>
+            )}
+          </ReactFlow>
+        </div>
       </div>
-    </div>
+    </NodeCallbacksContext.Provider>
   );
 };
 
