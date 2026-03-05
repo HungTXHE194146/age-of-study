@@ -444,6 +444,12 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   onDeleteNode,
 }) => {
 
+  // Create refs for values used in focus logic to avoid dependency loop re-renders
+  const completedNodeIdsRef = React.useRef(completedNodeIds);
+  useEffect(() => {
+    completedNodeIdsRef.current = completedNodeIds;
+  }, [completedNodeIds]);
+
   const [nodes, setNodes, onNodesChange] = useNodesState<CustomNodeType>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
@@ -539,34 +545,50 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   // 3. Auto-focus logic separated
   const hasAutoFocused = React.useRef(false);
   useEffect(() => {
-    if (rfInstance && mappedData && mappedData.nodes.length > 0 && !hasAutoFocused.current) {
+    if (rfInstance && !hasAutoFocused.current && subjectNodes && subjectNodes.length > 0) {
       if (!isTeacherMode) {
-        let activeNode;
-        if (completedNodeIds.length === 0) {
-          activeNode = [...mappedData.nodes].sort((a, b) => (a.data.id as number) - (b.data.id as number))[0];
+        // Logic: Lấy node ID đã học cao nhất + 1 để xác định node mục tiêu
+        const currentCompletedIds = completedNodeIdsRef.current || [];
+        let targetNode;
+
+        if (currentCompletedIds.length === 0) {
+          // Chưa có bài nào hoàn thành -> Target là node có ID nhỏ nhất (thường là node 1)
+          targetNode = [...subjectNodes].sort((a, b) => a.id - b.id)[0];
         } else {
-          activeNode = mappedData.nodes.find(n => !n.data.isCompleted && !n.data.isLocked)
-            || [...mappedData.nodes].filter(n => n.data.isCompleted).pop()
-            || mappedData.nodes[0];
+          const maxCompletedId = Math.max(...currentCompletedIds);
+          const nextNodeId = maxCompletedId + 1;
+
+          // Tìm node tiếp theo hoặc fallback về node cao nhất đã học
+          targetNode = subjectNodes.find(n => n.id === nextNodeId)
+            || subjectNodes.find(n => n.id === maxCompletedId)
+            || subjectNodes[0];
         }
 
-        if (activeNode) {
-          setTimeout(() => {
-            rfInstance.setCenter(activeNode.position.x + 75, activeNode.position.y + 75, { zoom: 0.8, duration: 0 });
-          }, 0);
+        if (targetNode) {
+          // Tính toán centerX từ toàn bộ subjectNodes để căn giữa trục dọc
+          let minX = Infinity;
+          let maxX = -Infinity;
+          subjectNodes.forEach(n => {
+            const x = n.position_x ?? 0;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+          });
+          const centerX = (minX + maxX) / 2 + 75;
+          const targetY = targetNode.position_y ?? 0;
+
+          // Focus TỨC THÌ ngay khi có rfInstance, không đợi ReactFlow render nodes
+          rfInstance.setCenter(centerX, targetY + 75, { zoom: 0.8, duration: 0 });
           hasAutoFocused.current = true;
         }
       } else {
-        // Option to just fit view once for teacher
         hasAutoFocused.current = true;
       }
     }
 
-    // Reset autofocused flag when the source data changes entirely
-    if (!subjectNodes) {
+    if (!subjectNodes || subjectNodes.length === 0) {
       hasAutoFocused.current = false;
     }
-  }, [rfInstance, mappedData, isTeacherMode, completedNodeIds, subjectNodes]);
+  }, [rfInstance, isTeacherMode, subjectNodes]);
 
 
 
@@ -859,13 +881,12 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
             zoomOnScroll={false}
             zoomOnPinch={false}
             zoomOnDoubleClick={false}
-            panOnDrag={true} // Cho phép vuốt/kéo màn hình
-            panOnScroll={true} // Cho phép cuộn màn hình
-            nodesDraggable={isTeacherMode} // Khóa kéo thả node với học sinh
+            panOnDrag={true}
+            panOnScroll={true}
+            nodesDraggable={isTeacherMode}
             nodesConnectable={isTeacherMode}
             elementsSelectable={true}
             translateExtent={(() => {
-
               if (!nodes || nodes.length === 0) {
                 return [[-1000, -Infinity], [1000, Infinity]];
               }
@@ -876,22 +897,32 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
               let maxX = -Infinity;
 
               nodes.forEach(node => {
-                if (node.position.y < minY) minY = node.position.y;
-                if (node.position.y > maxY) maxY = node.position.y;
-                if (node.position.x < minX) minX = node.position.x;
-                if (node.position.x > maxX) maxX = node.position.x;
+                const x = node.position.x;
+                const y = node.position.y;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
               });
 
-              // Add tighter margins to prevent scrolling too far past the top/bottom nodes
+              const centerX = (minX + maxX) / 2 + 75; // 75 is half node width
+
+              // For students, we want to lock horizontal scroll.
+              // To prevent the 'snapping' issue, the X range should be centered around the nodes.
+              // We use a safe margin that prevents significant horizontal movement but avoids snapping.
+              const horizontalRange =  1;
+
               const headerMarginY = 150;
               const bottomMarginY = 250;
-              const marginX = 800; // Cho biên ngang rất rộng để không bị force dịch chuyển màn
 
-              // Y axis is bounded strictly by the top and bottom nodes plus some padding
-              return [[minX - marginX, minY - headerMarginY], [maxX + marginX, maxY + bottomMarginY]] as any;
+              return [
+                [centerX - horizontalRange, minY - headerMarginY],
+                [centerX + horizontalRange, maxY + bottomMarginY]
+              ] as any;
             })()}
             defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
             selectionMode={isTeacherMode ? SelectionMode.Partial : undefined}
+            onlyRenderVisibleElements={true}
           >
             <Background
               color={isTeacherMode ? "#94a3b8" : "#818cf8"}
@@ -926,13 +957,25 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
                       if (completedNodeIds.length === 0) {
                         activeNode = [...nodes].sort((a, b) => (a.data.id as number) - (b.data.id as number))[0];
                       } else {
-                        activeNode = nodes.find(n => !n.data.isCompleted && !n.data.isLocked)
-                          || [...nodes].filter(n => n.data.isCompleted).pop()
+                        // Logic: Lấy node ID đã hoàn thành cao nhất + 1
+                        const maxCompletedId = Math.max(...completedNodeIds);
+                        const nextNodeId = maxCompletedId + 1;
+                        activeNode = nodes.find(n => (n.data.id as number) === nextNodeId)
+                          || nodes.find(n => (n.data.id as number) === maxCompletedId)
                           || nodes[0];
                       }
 
                       if (activeNode) {
-                        rfInstance.setCenter(activeNode.position.x + 75, activeNode.position.y + 75, { zoom: 0.8, duration: 800 });
+                        // Tính toán centerX động để đảm bảo viewport không bị lệch khi bấm nút
+                        let minX = Infinity;
+                        let maxX = -Infinity;
+                        nodes.forEach(n => {
+                          if (n.position.x < minX) minX = n.position.x;
+                          if (n.position.x > maxX) maxX = n.position.x;
+                        });
+                        const centerX = (minX + maxX) / 2 + 75;
+
+                        rfInstance.setCenter(centerX, activeNode.position.y + 75, { zoom: 0.8, duration: 800 });
                       }
                     }
                   }}
