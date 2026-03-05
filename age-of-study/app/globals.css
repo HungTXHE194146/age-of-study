@@ -14,7 +14,7 @@
   --color-xp-gold: #fef9c3;
 }
 
-@theme inline {
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary-500: var(--color-primary);
