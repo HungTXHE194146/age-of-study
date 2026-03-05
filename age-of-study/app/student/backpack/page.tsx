@@ -1,30 +1,26 @@
 /**
  * Achievement Backpack Page (Balo Thành Tích)
- * 
- * Main page that brings together:
- * - Badge Collection (Bộ sưu tập huy hiệu)
- * - Avatar Wardrobe (Tủ đồ nhân vật)
- * - Digital Certificates (Bảng khen thưởng số)
- * 
- * Clean architecture:
- * - Uses tab navigation for easy switching between sections
- * - Proper authentication check
- * - Responsive design
- * - Loading and error states handled properly
+ *
+ * Shows only what the student OWNS:
+ * - Badges (Huy Hiệu)
+ * - Owned Avatars (Avatar đã sở hữu — no shopping, just display)
+ * - Certificates (Bằng Khen)
+ *
+ * Avatar purchasing has moved to /student/shop.
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Backpack, Trophy, Crown, Award, ChevronLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/useAuthStore';
-import BadgeCollection from '@/components/student/BadgeCollection';
-import AvatarWardrobe from '@/components/student/AvatarWardrobe';
-import DigitalCertificates from '@/components/student/DigitalCertificates';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Backpack, Trophy, Smile, Award, ChevronLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/useAuthStore";
+import BadgeCollection from "@/components/student/BadgeCollection";
+import DigitalCertificates from "@/components/student/DigitalCertificates";
+import OwnedAvatarGrid from "@/components/student/OwnedAvatarGrid";
 
-type TabType = 'badges' | 'avatars' | 'certificates';
+type TabType = "badges" | "avatars" | "certificates";
 
 interface Tab {
   id: TabType;
@@ -36,40 +32,37 @@ interface Tab {
 
 const TABS: Tab[] = [
   {
-    id: 'badges',
-    label: 'Huy Hiệu',
+    id: "badges",
+    label: "Huy Hiệu",
     icon: Trophy,
-    color: 'from-yellow-500 to-orange-500',
-    description: 'Bộ sưu tập huy hiệu',
+    color: "from-yellow-500 to-orange-500",
+    description: "Bộ sưu tập huy hiệu",
   },
   {
-    id: 'avatars',
-    label: 'Tủ Đồ',
-    icon: Crown,
-    color: 'from-purple-500 to-pink-500',
-    description: 'Avatar của bạn',
+    id: "avatars",
+    label: "Avatar",
+    icon: Smile,
+    color: "from-sky-500 to-blue-500",
+    description: "Avatar đã sở hữu",
   },
   {
-    id: 'certificates',
-    label: 'Bằng Khen',
+    id: "certificates",
+    label: "Bằng Khen",
     icon: Award,
-    color: 'from-blue-500 to-cyan-500',
-    description: 'Bằng khen từ giáo viên',
+    color: "from-blue-500 to-cyan-500",
+    description: "Bằng khen từ giáo viên",
   },
 ];
 
 export default function BackpackPage() {
   const router = useRouter();
   const { user, checkAuth } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<TabType>('badges');
+  const [activeTab, setActiveTab] = useState<TabType>("badges");
 
   const handleAvatarChanged = async () => {
-    // Refresh user data after avatar change
     await checkAuth();
   };
 
-  // DashboardLayout already handles auth and permission check
-  // Just return null if no user yet (waiting for auth)
   if (!user) {
     return null;
   }
@@ -77,7 +70,7 @@ export default function BackpackPage() {
   const activeTabData = TABS.find((tab) => tab.id === activeTab)!;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-50">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -96,14 +89,14 @@ export default function BackpackPage() {
                   animate={{ rotate: [0, -10, 10, -10, 0] }}
                   transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
                 >
-                  <Backpack className="w-8 h-8 text-purple-600" />
+                  <Backpack className="w-8 h-8 text-sky-600" />
                 </motion.div>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">
                     Balo Thành Tích
                   </h1>
                   <p className="text-sm text-gray-600">
-                    Kho báu của {user.full_name || 'bạn'}
+                    Kho tàng của {user.full_name || "bạn"}
                   </p>
                 </div>
               </div>
@@ -135,8 +128,8 @@ export default function BackpackPage() {
                     relative flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-sm whitespace-nowrap transition-all
                     ${
                       isActive
-                        ? 'bg-white shadow-lg scale-105'
-                        : 'bg-white/60 hover:bg-white/80'
+                        ? "bg-white shadow-lg scale-105"
+                        : "bg-white/60 hover:bg-white/80"
                     }
                   `}
                 >
@@ -144,15 +137,21 @@ export default function BackpackPage() {
                     <motion.div
                       layoutId="activeTab"
                       className={`absolute inset-0 bg-gradient-to-r ${tab.color} opacity-10 rounded-lg`}
-                      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                      transition={{
+                        type: "spring",
+                        bounce: 0.2,
+                        duration: 0.6,
+                      }}
                     />
                   )}
 
                   <Icon
-                    className={`w-5 h-5 relative z-10 ${isActive ? 'text-purple-600' : 'text-gray-600'}`}
+                    className={`w-5 h-5 relative z-10 ${isActive ? "text-sky-600" : "text-gray-600"}`}
                   />
 
-                  <span className={isActive ? 'text-gray-900' : 'text-gray-600'}>
+                  <span
+                    className={isActive ? "text-gray-900" : "text-gray-600"}
+                  >
                     {tab.label}
                   </span>
 
@@ -160,7 +159,11 @@ export default function BackpackPage() {
                     <motion.div
                       layoutId="activeIndicator"
                       className={`absolute -bottom-2 left-1/2 -translate-x-1/2 w-12 h-1 bg-gradient-to-r ${tab.color} rounded-full`}
-                      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                      transition={{
+                        type: "spring",
+                        bounce: 0.2,
+                        duration: 0.6,
+                      }}
                     />
                   )}
                 </button>
@@ -200,26 +203,25 @@ export default function BackpackPage() {
           transition={{ duration: 0.3 }}
           className="bg-white rounded-2xl shadow-xl p-6 md:p-8"
         >
-          {activeTab === 'badges' && <BadgeCollection userId={user.id} />}
+          {activeTab === "badges" && <BadgeCollection userId={user.id} />}
 
-          {activeTab === 'avatars' && (
-            <AvatarWardrobe
+          {activeTab === "avatars" && (
+            <OwnedAvatarGrid
               userId={user.id}
               currentAvatar={user.avatar_url}
-              userXP={user.total_xp}
               onAvatarChanged={handleAvatarChanged}
             />
           )}
 
-          {activeTab === 'certificates' && (
+          {activeTab === "certificates" && (
             <DigitalCertificates
               studentId={user.id}
-              studentName={user.full_name || user.username || 'Học sinh'}
+              studentName={user.full_name || user.username || "Học sinh"}
             />
           )}
         </motion.div>
 
-        {/* Fun Stats Footer */}
+        {/* Stats Footer */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -242,7 +244,7 @@ export default function BackpackPage() {
             icon="🌟"
             label="XP tháng này"
             value={user.monthly_xp.toLocaleString()}
-            color="from-purple-400 to-pink-400"
+            color="from-sky-400 to-blue-400"
           />
         </motion.div>
       </div>
@@ -250,9 +252,7 @@ export default function BackpackPage() {
   );
 }
 
-// ============================================================================
-// Stats Card Component
-// ============================================================================
+// ─── Stats Card ───────────────────────────────────────────────────────────────
 
 interface StatsCardProps {
   icon: string;
@@ -268,11 +268,15 @@ function StatsCard({ icon, label, value, color }: StatsCardProps) {
       className="bg-white rounded-xl p-4 shadow-md border border-gray-200"
     >
       <div className="flex items-center gap-3">
-        <div className={`text-3xl bg-gradient-to-br ${color} w-12 h-12 rounded-lg flex items-center justify-center shadow-lg`}>
+        <div
+          className={`text-3xl bg-gradient-to-br ${color} w-12 h-12 rounded-lg flex items-center justify-center shadow-lg`}
+        >
           {icon}
         </div>
         <div>
-          <div className="text-xs text-gray-500 uppercase tracking-wide">{label}</div>
+          <div className="text-xs text-gray-500 uppercase tracking-wide">
+            {label}
+          </div>
           <div className="text-xl font-bold text-gray-900">{value}</div>
         </div>
       </div>

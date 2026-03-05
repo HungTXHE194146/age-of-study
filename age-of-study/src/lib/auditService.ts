@@ -23,7 +23,7 @@ export async function createAuditLog(
     const profile = profileData as any;
 
     if (!profile) {
-      console.warn('Audit log: Profile not found for actor');
+      console.warn('Audit log: Profile not found for user', userId);
       return;
     }
 
@@ -158,12 +158,11 @@ export async function getAuditStats(days: number = 7): Promise<{
   dateFrom.setDate(dateFrom.getDate() - days);
 
   // Get all logs from date range
-  const { data: logs, count } = await supabase
+  const { data: logs } = await supabase
     .from('audit_logs')
-    .select('action, actor_id, created_at', { count: 'exact' })
+    .select('*')
     .gte('created_at', dateFrom.toISOString())
-    .order('created_at', { ascending: false })
-    .limit(10000); // Add reasonable upper bound
+    .order('created_at', { ascending: false });
 
   if (!logs) {
     return {

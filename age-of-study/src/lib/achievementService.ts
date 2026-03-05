@@ -62,11 +62,12 @@ export async function getBadgeCollection(
       return { data: [], error: null };
     }
 
-    // Fetch user's earned badges
+    // Fetch user's earned badges (include xp_claimed_at)
     const { data: earnedBadges, error: earnedError } = await supabase
       .from('user_badges')
-      .select('*')
+      .select('badge_id, earned_at, xp_claimed_at')
       .eq('user_id', userId);
+
 
     if (earnedError) {
       console.error('Error fetching earned badges:', earnedError);
@@ -125,9 +126,11 @@ export async function getBadgeCollection(
         ...badge,
         is_earned: isEarned,
         earned_at: earnedBadge?.earned_at ?? null,
+        xp_claimed: !!earnedBadge?.xp_claimed_at,
         progress,
         progress_max,
       };
+
     });
 
     return { data: badgesWithStatus, error: null };
@@ -682,6 +685,137 @@ export async function getAchievementSummary(
     return {
       data: null,
       error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+// ============================================================================
+// SHOP FUNCTIONS
+// ============================================================================
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  xpCostPer: number;
+  maxQuantity: number;
+  category: 'streak' | 'boost' | 'cosmetic';
+}
+
+export interface PurchaseResult {
+  newXP: number;
+  newFreezeCount: number;
+}
+
+/** Static shop catalogue – extend here to add more items in the future. */
+export function getShopItems(): ShopItem[] {
+  return [
+    {
+      id: 'streak_freezer',
+      name: 'Streak Freezer',
+      description:
+        'Bảo vệ chuỗi học tập của bạn trong 1 ngày khi bạn bị gián đoạn. Freezer được dùng tự động khi bạn bỏ lỡ một ngày.',
+      icon: '🧊',
+      xpCostPer: 800,
+      maxQuantity: 3,
+      category: 'streak',
+    },
+  ];
+}
+
+/**
+ * Purchase one or more Streak Freezers.
+ * Price is fetched server-side from the catalogue — the xpCostPer param is ignored.
+ * Deducts XP and increments freeze_count atomically with an optimistic-lock update.
+ */
+export async function purchaseFreezer(
+  userId: string,
+  quantity: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _xpCostPer: number  // ignored — authoritative price comes from the server catalogue
+): Promise<AchievementServiceResponse<PurchaseResult>> {
+  const supabase = getSupabaseBrowserClient();
+
+  // ── Validate quantity ────────────────────────────────────────────────────
+  if (!Number.isInteger(quantity) || quantity <= 0) {
+    return { data: null, error: 'Số lượng không hợp lệ.' };
+  }
+
+  // ── Fetch authoritative price & maxQuantity from server catalogue ────────
+  const catalogItem = getShopItems().find((i) => i.id === 'streak_freezer');
+  if (!catalogItem) {
+    return { data: null, error: 'Mặt hàng không tồn tại.' };
+  }
+  const authoritativePrice = catalogItem.xpCostPer;
+  const maxQuantity = catalogItem.maxQuantity;
+
+  if (quantity > maxQuantity) {
+    return {
+      data: null,
+      error: `Chỉ được mua tối đa ${maxQuantity} Streak Freezer.`,
+    };
+  }
+
+  try {
+    // Fetch current profile
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('total_xp, freeze_count')
+      .eq('id', userId)
+      .single();
+
+    if (profileErr || !profile) {
+      return { data: null, error: 'Không thể tải thông tin người dùng.' };
+    }
+
+    // Enforce total freeze cap (current + new ≤ maxQuantity)
+    const currentFreezeCount = profile.freeze_count ?? 0;
+    if (currentFreezeCount + quantity > maxQuantity) {
+      return {
+        data: null,
+        error: `Bạn đã có ${currentFreezeCount} Streak Freezer. Chỉ được giữ tối đa ${maxQuantity}.`,
+      };
+    }
+
+    const totalCost = quantity * authoritativePrice;
+
+    if (profile.total_xp < totalCost) {
+      return {
+        data: null,
+        error: `Không đủ XP! Cần ${totalCost} XP nhưng bạn chỉ có ${profile.total_xp} XP.`,
+      };
+    }
+
+    const newXP = profile.total_xp - totalCost;
+    const newFreezeCount = (profile.freeze_count ?? 0) + quantity;
+
+    // Conditional update ensures XP hasn't changed since read
+    const { data: updated, error: updateErr } = await supabase
+      .from('profiles')
+      .update({
+        total_xp: newXP,
+        freeze_count: newFreezeCount,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+      .gte('total_xp', totalCost)
+      .select('id')
+      .maybeSingle();
+
+    if (updateErr) {
+      return { data: null, error: 'Giao dịch thất bại, vui lòng thử lại.' };
+    }
+
+    if (!updated) {
+      return { data: null, error: 'XP đã thay đổi, vui lòng thử lại.' };
+    }
+
+    return { data: { newXP, newFreezeCount }, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Lỗi không xác định.',
     };
   }
 }

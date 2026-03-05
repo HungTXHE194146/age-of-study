@@ -48,14 +48,6 @@ export function EnrollMFAModal({
     handleStartEnrollment();
   }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
   // Step 1: Bắt đầu enrollment
   const handleStartEnrollment = async () => {
     setIsStartingEnrollment(true);
@@ -101,19 +93,11 @@ export function EnrollMFAModal({
     setStep("complete");
   };
 
-  const handleCopySecret = async () => {
+  const handleCopySecret = () => {
     if (enrollment?.totp.secret) {
-      if (!navigator?.clipboard?.writeText) {
-        setError("Trình duyệt không hỗ trợ copy tự động");
-        return;
-      }
-      try {
-        await navigator.clipboard.writeText(enrollment.totp.secret);
-        setCopiedSecret(true);
-        setTimeout(() => setCopiedSecret(false), 2000);
-      } catch (err) {
-        setError("Không thể copy mã bí mật");
-      }
+      navigator.clipboard.writeText(enrollment.totp.secret);
+      setCopiedSecret(true);
+      setTimeout(() => setCopiedSecret(false), 2000);
     }
   };
 
@@ -124,12 +108,7 @@ export function EnrollMFAModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="enroll-mfa-title"
-        className="bg-[#fffdf8] rounded-xl shadow-[8px_8px_0_0_rgba(0,0,0,1)] border-2 border-black max-w-lg w-full max-h-[90vh] overflow-y-auto"
-      >
+      <div className="bg-[#fffdf8] rounded-xl shadow-[8px_8px_0_0_rgba(0,0,0,1)] border-2 border-black max-w-lg w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-blue-50/90 backdrop-blur-md border-b-2 border-dashed border-gray-400 px-6 py-4 flex items-center justify-between z-10">
           <div className="flex items-center gap-3">
@@ -137,10 +116,7 @@ export function EnrollMFAModal({
               <Shield className="w-6 h-6 text-blue-900" />
             </div>
             <div>
-              <h2
-                id="enroll-mfa-title"
-                className="text-2xl font-black font-handwritten text-gray-900"
-              >
+              <h2 className="text-2xl font-black font-handwritten text-gray-900">
                 Bật xác thực 2 yếu tố
               </h2>
               <p className="text-sm font-bold text-gray-600">
@@ -150,7 +126,6 @@ export function EnrollMFAModal({
           </div>
           <button
             onClick={onClose}
-            aria-label="Close dialog"
             className="w-8 h-8 flex items-center justify-center border-2 border-transparent hover:border-black rounded-md transition-all text-gray-600 hover:text-black hover:bg-gray-100"
           >
             <X className="w-6 h-6" />
@@ -300,7 +275,7 @@ export function EnrollMFAModal({
                   disabled={otpCode.length !== MFA_CODE_LENGTH || isVerifying}
                   className="w-full inline-flex items-center justify-center rounded-md border-2 border-black bg-blue-600 px-6 py-4 text-xl font-black font-handwritten text-white shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isVerifying ? "ĐANG XÁC MINH..." : "HOÀN TẤT CÀI ĐẶT"}
+                  {isVerifying ? "ĐANG BIÊN DỊCH..." : "HOÀN TẤT CÀI ĐẶT"}
                 </button>
 
                 <button

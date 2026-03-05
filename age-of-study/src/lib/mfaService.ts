@@ -84,18 +84,13 @@ export class MFAService {
       // Update profile mfa_enabled
       const { data: { user } } = await this.supabase.auth.getUser()
       if (user) {
-        const { error: updateError } = await this.supabase
+        await this.supabase
           .from('profiles')
           .update({
             mfa_enabled: true,
             mfa_enrolled_at: new Date().toISOString(),
           })
           .eq('id', user.id)
-        
-        if (updateError) {
-          console.error('Failed to update profile MFA status:', updateError)
-          // MFA is still enabled in Auth, consider returning a warning
-        }
       }
 
       return { success: true, error: null }
@@ -172,8 +167,9 @@ export class MFAService {
         return { data: null, error: profileError.message }
       }
 
-      const authFactorsResp = await this.supabase.auth.mfa.listFactors();
-      const factors = authFactorsResp.data?.factors || [];
+      // Get factors from auth
+      const authFactorsResp = await this.supabase.auth.mfa.listFactors()
+      const factors = authFactorsResp.data?.factors || []
 
       console.log('[DEBUG MFA getMFAStatus]', {
         profile,
@@ -185,7 +181,7 @@ export class MFAService {
         data: {
           enabled: profile.mfa_enabled || false,
           enrolled_at: profile.mfa_enrolled_at,
-          factors: factors as MFAFactor[],
+          factors: (factors || []) as MFAFactor[],
         },
         error: null,
       }
@@ -240,6 +236,8 @@ export class MFAService {
           targetFactorId = factors[0].id
         } else {
           // No factors in Auth, but we are asked to unenroll.
+          // This means Auth and DB are out of sync. We should fix the DB state.
+          console.log('[DEBUG MFA Unenroll] No factors found in Auth, syncing DB state explicitly.');
           
           if (user) {
             await this.supabase
@@ -274,17 +272,13 @@ export class MFAService {
 
       // Update profile
       if (user) {
-        const { error: updateError } = await this.supabase
+        await this.supabase
           .from('profiles')
           .update({
             mfa_enabled: false,
             mfa_enrolled_at: null,
           })
           .eq('id', user.id)
-        
-        if (updateError) {
-          console.error('Failed to update profile after MFA unenroll:', updateError)
-        }
       }
 
       return { success: true, error: null }

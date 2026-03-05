@@ -31,6 +31,7 @@ export interface Badge {
   icon_url: string | null;  // Emoji or image URL
   condition_type: BadgeConditionType | null;
   condition_value: number | null;
+  xp_reward: number;        // One-time XP reward on claim
 }
 
 /**
@@ -40,6 +41,7 @@ export interface UserBadge {
   user_id: string;
   badge_id: string;
   earned_at: string;
+  xp_claimed_at: string | null; // null = reward not yet claimed
 }
 
 /**
@@ -48,8 +50,9 @@ export interface UserBadge {
 export interface BadgeWithStatus extends Badge {
   is_earned: boolean;
   earned_at: string | null;
-  progress?: number;  // Current progress towards earning (e.g., 5/7 days)
-  progress_max?: number;  // Required to earn (e.g., 7 days)
+  xp_claimed: boolean;      // true = XP reward already collected
+  progress?: number;        // Current progress towards earning (e.g., 5/7 days)
+  progress_max?: number;    // Required to earn (e.g., 7 days)
 }
 
 // ============================================================================

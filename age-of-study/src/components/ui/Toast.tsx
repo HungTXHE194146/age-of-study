@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle, XCircle, AlertCircle, Info } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 interface ToastProps {
   message: string;
@@ -17,20 +17,12 @@ export default function Toast({
   onClose,
   duration = 3000,
 }: ToastProps) {
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
   useEffect(() => {
     if (isVisible && duration > 0) {
-      const timer = setTimeout(() => {
-        onCloseRef.current();
-      }, duration);
+      const timer = setTimeout(onClose, duration);
       return () => clearTimeout(timer);
     }
-  }, [isVisible, duration]);
+  }, [isVisible, duration, onClose]);
 
   const variants = {
     success: {
@@ -68,8 +60,6 @@ export default function Toast({
           className="fixed top-4 right-4 z-[200] max-w-md"
         >
           <div
-            role={type === "error" ? "alert" : "status"}
-            aria-live={type === "error" ? "assertive" : "polite"}
             className={`${currentVariant.bg} text-white px-6 py-4 rounded-xl shadow-2xl border-2 ${currentVariant.border} flex items-center gap-4`}
           >
             <div className="flex-shrink-0">{currentVariant.icon}</div>

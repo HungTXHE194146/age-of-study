@@ -181,15 +181,11 @@ export async function PUT(request: NextRequest) {
 
     // --- Get old values for audit log ---
     const supabase = getServerSupabase()
-    const { data: oldSettings, error: oldSettingsError } = await supabase
+    const { data: oldSettings } = await supabase
       .from('system_settings')
       .select('*')
       .eq('id', 1)
       .single()
-    
-    if (oldSettingsError) {
-      console.warn('Failed to fetch old settings for audit log:', oldSettingsError)
-    }
 
     // --- Execute update ---
     const { data, error } = await supabase
@@ -208,21 +204,17 @@ export async function PUT(request: NextRequest) {
     }
 
     // ✅ AUDIT LOG
-    try {
-      await createAuditLog(userId, {
-        action: 'system_settings_changed',
-        resourceType: 'system_settings',
-        resourceId: '1',
-        description: `Cập nhật cài đặt hệ thống: ${Object.keys(body).join(', ')}`,
-        oldValues: oldSettings || undefined,
-        newValues: updatePayload,
-        metadata: {
-          fields_changed: Object.keys(body)
-        }
-      }, request)
-    } catch (auditError) {
-      console.error('Failed to create audit log:', auditError)
-    }
+    await createAuditLog(userId, {
+      action: 'system_settings_changed',
+      resourceType: 'system_settings',
+      resourceId: '1',
+      description: `Cập nhật cài đặt hệ thống: ${Object.keys(body).join(', ')}`,
+      oldValues: oldSettings || undefined,
+      newValues: updatePayload,
+      metadata: {
+        fields_changed: Object.keys(body)
+      }
+    }, request)
 
     return NextResponse.json({ data, message: 'Cài đặt đã được lưu thành công' })
   } catch (error) {
