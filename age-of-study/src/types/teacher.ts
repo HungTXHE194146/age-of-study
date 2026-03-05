@@ -76,4 +76,5 @@ export interface GeneratorFormState {
   fromKnowledgeBase: boolean;
   fromQuestionBank: boolean;
   questionTypes: QuestionType[];
+  action: "append" | "replace" | "edit";
 }

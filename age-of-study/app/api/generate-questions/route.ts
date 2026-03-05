@@ -123,6 +123,10 @@ export async function POST(request: NextRequest) {
     const fromKnowledgeBase = formData.get('fromKnowledgeBase') === 'true'
     const fromQuestionBank = formData.get('fromQuestionBank') === 'true'
     
+    // Parse action and existing questions
+    const action = formData.get('action') as string || 'append'
+    const existingQuestions = formData.get('existingQuestions') as string
+    
     // Parse questionTypes
     let questionTypes: string[] = ['MULTIPLE_CHOICE']
     try {
@@ -182,16 +186,39 @@ export async function POST(request: NextRequest) {
       console.log('>>> [API] Knowledge Base Retrieval Started')
       console.log('>>> [API] Subject:', subject, 'Prompt:', textPrompt)
 
-      // 1. Normalize prompt to NFC for consistent matching
-      const normalizedPrompt = textPrompt?.normalize('NFC') || ''
+      // 1. Normalize prompt to NFC and lowercase for consistent matching
+      const normalizedPrompt = textPrompt?.normalize('NFC').toLowerCase() || ''
       
       // 2. Extract potential keywords with support for common Vietnamese terms
       // Match "Tuần X", "Bài X", "Tiết X", "Chương X" etc.
-      const keywordRegex = /(Tuần|Bài|Tiết|Chương|Tập|Lớp)\s*(\d+|I+V*X*)/gi
+      const keywordRegex = /(tuần|bài|tiết|chương|tập|lớp)\s*(\d+|I+V*X*)/gi
       const keywordMatches = normalizedPrompt.match(keywordRegex)
       let keywords = keywordMatches ? keywordMatches.map(k => k.trim().normalize('NFC')) : []
       
-      // Also add subject name keywords if prompt is short
+      // Stop words specific to question generated context, including comprehensive pedagogical vocabulary
+      const stopWords = [
+        'tạo', 'làm', 'sinh', 'cho', 'tôi', 'bài', 'kiểm tra', 'test', 'đề', 'thi', 'trắc nghiệm', 
+        'tự luận', 'câu', 'hỏi', 'ôn tập', 'môn', 'viết', 'nội dung', 'về', 'dựa', 'trên', 'của', 
+        'giúp', 'nhé', 'đánh giá', 'luyện tập', '15 phút', '1 tiết', '45 phút', 'giữa kì', 'cuối kì', 
+        'học kì', 'đề cương', 'tổng hợp', 'nâng cao', 'cơ bản', 'khó', 'dễ', 'thông hiểu', 'vận dụng', 
+        'soạn', 'giáo án', 'trả lời', 'gợi ý', 'hệ thống', 'tổng kết', 'định kì', 'thường xuyên', 'mức độ', 'phần'
+      ]
+      
+      // Remove stop words from the prompt to find core subject words
+      let coreTopicStr = normalizedPrompt;
+      stopWords.forEach(word => {
+        // Regex to match whole words only
+        const regex = new RegExp(`\\b${word}\\b`, 'gi');
+        coreTopicStr = coreTopicStr.replace(regex, '');
+      });
+      coreTopicStr = coreTopicStr.trim().replace(/\s+/g, ' ');
+
+      // If we found core topic words (e.g., "tiếng việt", "từ đồng nghĩa"), add them to keywords
+      if (coreTopicStr && coreTopicStr.length > 2) {
+          keywords.push(coreTopicStr);
+      }
+      
+      // Also add subject name keywords if prompt is short and no other keywords exist
       if (keywords.length === 0 && normalizedPrompt.length < 50) {
           keywords = [normalizedPrompt]
       }
@@ -212,17 +239,18 @@ export async function POST(request: NextRequest) {
       if (nodeError) console.error('Error fetching nodes:', nodeError)
 
       if (nodes && nodes.length > 0) {
-        console.log('Found Nodes:', nodes.map(n => n.title))
+        console.log('Found Nodes by Keywords:', nodes.map(n => n.title))
         const nodeIds = nodes.map(n => n.id)
         
         // Add node info to context
-        knowledgeBaseContent += nodes.map(n => `[BÀI HỌC: ${n.title}]\n${n.description ? 'Mô tả: ' + n.description : ''}`).join('\n\n') + '\n\n'
+        knowledgeBaseContent += nodes.map(n => `[BÀI HỌC/CHỦ ĐỀ: ${n.title}]\n${n.description ? 'Mô tả: ' + n.description : ''}`).join('\n\n') + '\n\n'
 
-        // 3. Fetch richer lesson_sections for these nodes
+        // 4. Fetch richer lesson_sections for these nodes
         const { data: subSections, error: sectionsError } = await supabase
           .from('lesson_sections')
           .select('title, section_type, content, qa_pairs, remember')
           .in('node_id', nodeIds)
+          .limit(20) // Limit to prevent context overflow
         
         if (sectionsError) console.error('Error fetching lesson_sections:', sectionsError)
 
@@ -255,20 +283,30 @@ export async function POST(request: NextRequest) {
         console.log('No specific nodes found for subject and keywords.')
       }
 
-      // If keywords didn't yield results, try direct hit if subject points to a node
+      // If keywords didn't yield results, or KB is still empty, execute a FALLBACK strategy
       if (!knowledgeBaseContent && subject) {
-        const { data: fallbackSections } = await supabase
-          .from('lesson_sections')
-          .select('title, section_type, content, qa_pairs, remember')
-          .eq('node_id', subject) 
-          .limit(5)
+        console.log('--- Knowledge Base Fallback Triggered ---')
         
+        // Strategy B: More robust fallback - directly query lesson_sections that belong to nodes of this subject
+        const { data: fallbackSections, error: fallbackError } = await supabase
+          .from('lesson_sections')
+          .select('title, section_type, content, qa_pairs, remember, nodes!inner(subject_id)')
+          .eq('nodes.subject_id', parseInt(subject))
+          .limit(10)
+
+        if (fallbackError) {
+           console.error('Fallback query error:', fallbackError)
+        }
+
         if (fallbackSections && fallbackSections.length > 0) {
-          knowledgeBaseContent = fallbackSections.map(s => {
-             let block = `[PHẦN: ${s.title}]\nNội dung: ${s.content}\n`
-             if (s.remember) block += `GHI NHỚ: ${s.remember}\n`
-             return block
-          }).join('\n\n')
+            console.log(`Found ${fallbackSections.length} fallback lesson sections directly via subject_id.`)
+            knowledgeBaseContent = fallbackSections.map(s => {
+                let block = `[PHẦN (Gợi ý do không tìm thấy chính xác): ${s.title}]\nNội dung: ${s.content}\n`
+                if (s.remember) block += `GHI NHỚ: ${s.remember}\n`
+                return block
+            }).join('\n\n')
+        } else {
+            console.log('No fallback sections found for this subject at all.')
         }
       }
       console.log('Total KB Content Length:', knowledgeBaseContent.length)
@@ -363,7 +401,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Build prompt for Gemini
-    const prompt = `${SYSTEM_PROMPT}
+    let prompt = `${SYSTEM_PROMPT}
 
 **NGUỒN DỮ LIỆU ĐƯỢC CUNG CẤP (CHỈ SỬ DỤNG NỘI DUNG NÀY):**
 ${finalContext}
@@ -373,9 +411,22 @@ ${finalContext}
 2. Bạn CHỈ được phép tạo các loại câu hỏi sau: ${questionTypes.join(', ')}.
 3. Nếu tài liệu không đủ thông tin để tạo đủ số lượng câu hỏi, chỉ tạo số lượng tối đa có thể (không được bịa thêm).
 4. Nếu tài liệu hoàn toàn không liên quan đến môn học ${subject}, hãy trả về mảng rỗng [].
+`;
 
+    if (action === 'edit' && existingQuestions) {
+      prompt += `
+**LƯU Ý QUAN TRỌNG: CHẾ ĐỘ CHỈNH SỬA CÂU HỎI**
+Người dùng yêu cầu bạn **CHỈNH SỬA** danh sách câu hỏi hiện tại dựa trên "Prompt/Yêu cầu người dùng".
+Dưới đây là danh sách câu hỏi hiện tại (định dạng JSON):
+${existingQuestions}
+
+Hãy trả về danh sách câu hỏi ĐÃ ĐƯỢC CHỈNH SỬA theo đúng yêu cầu. Giữ nguyên những câu không cần sửa đổi (nếu yêu cầu không áp dụng cho tất cả). Đảm bảo số lượng câu trả về phù hợp với yêu cầu chỉnh sửa hoặc giữ nguyên số câu hiện tại nếu yêu cầu chỉnh sửa toàn bộ.
+`;
+    }
+
+    prompt += `
 Yêu cầu cụ thể:
-- Tạo ${questionCount} câu hỏi
+- Số lượng câu hỏi cần tạo: ${action === 'edit' ? 'Linh hoạt theo yêu cầu chỉnh sửa hoặc giữ nguyên số lượng cũ' : questionCount}
 - Độ khó: ${difficulty}
 - Môn học: ${subject}
 - Prompt/Yêu cầu người dùng (nếu có): ${textPrompt || 'Không có yêu cầu thêm'}
@@ -384,6 +435,7 @@ Schema JSON:
 ${JSON_SCHEMA}
 
 Hãy trả về JSON theo đúng schema trên, không thêm bất kỳ nội dung nào khác.`
+
 
     // 8. Fetch AI settings from DB
     const aiSettings = await getAIQuestionSettings(supabase)

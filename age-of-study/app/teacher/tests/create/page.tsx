@@ -1053,22 +1053,42 @@ function CreateTestContent() {
                   {activeTab === "ai" && (
                     <div>
                       <QuizGeneratorForm
+                        existingQuestionCount={questions.length}
                         onGenerate={async (data) => {
                           setIsGenerating(true);
                           try {
                             const aiQuestionService = new AIQuestionService();
-                            const result =
-                              await aiQuestionService.generateQuestions({
-                                textPrompt: data.topic || "",
-                                questionCount: data.questionCount,
-                                difficulty: data.difficulty,
-                                subject: data.subject || "",
-                                file: data.file || null,
-                                onlyFromFile: data.onlyFromFile,
-                                fromKnowledgeBase: data.fromKnowledgeBase,
-                                fromQuestionBank: data.fromQuestionBank,
-                                questionTypes: data.questionTypes,
-                              });
+
+                            const requestPayload: any = {
+                              textPrompt: data.topic || "",
+                              questionCount: data.questionCount,
+                              difficulty: data.difficulty,
+                              subject: data.subject || "",
+                              file: data.file || null,
+                              onlyFromFile: data.onlyFromFile,
+                              fromKnowledgeBase: data.fromKnowledgeBase,
+                              fromQuestionBank: data.fromQuestionBank,
+                              questionTypes: data.questionTypes,
+                              action: data.action,
+                            };
+
+                            if (data.action === "edit" && questions.length > 0) {
+                              requestPayload.existingQuestions = JSON.stringify(
+                                questions.map((q) => ({
+                                  type: q.type,
+                                  questionText: q.questionText,
+                                  options: q.options.map((opt) => ({
+                                    label: opt.label,
+                                    text: opt.text,
+                                    isCorrect: opt.isCorrect,
+                                  })),
+                                  difficulty: q.difficulty,
+                                  explanation: q.explanation,
+                                }))
+                              );
+                            }
+
+                            const result = await aiQuestionService.generateQuestions(requestPayload);
 
                             if (result.questions && result.questions.length > 0) {
                               // Transform AI-generated questions to match the expected format
@@ -1089,7 +1109,7 @@ function CreateTestContent() {
                                 ) => ({
                                   id: crypto.randomUUID(), // Generate proper UUID
                                   createdAt: Date.now(),
-                                  number: questions.length + index + 1,
+                                  number: (data.action === "replace" || data.action === "edit" ? 0 : questions.length) + index + 1,
                                   type: q.type as
                                     | "MULTIPLE_CHOICE"
                                     | "TRUE_FALSE"
@@ -1107,9 +1127,13 @@ function CreateTestContent() {
                                 }),
                               );
 
-                              transformedQuestions.forEach((q) =>
-                                handleAddQuestion(q),
-                              );
+                              if (data.action === "replace" || data.action === "edit") {
+                                setQuestions(transformedQuestions);
+                              } else {
+                                transformedQuestions.forEach((q) =>
+                                  handleAddQuestion(q),
+                                );
+                              }
 
                               if (result.totalGenerated < result.requested) {
                                 alert(
