@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import { useState } from "react";
+import { Scanner, IDetectedBarcode } from '@yudiel/react-qr-scanner';
 import { X, Camera, ArrowLeft, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -12,154 +12,24 @@ interface QRScannerProps {
 }
 
 export function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
-  const [isInitializing, setIsInitializing] = useState(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [isCameraActive, setIsCameraActive] = useState(false);
-  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
-  const isTransitioningRef = useRef(false);
-  const scannerId = "qr-reader";
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  const stopScanner = async () => {
-    if (isTransitioningRef.current) return;
-
-    if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
-      isTransitioningRef.current = true;
-      try {
-        await html5QrCodeRef.current.stop();
-        setIsCameraActive(false);
-      } catch (err) {
-        console.error("Failed to stop scanner", err);
-      } finally {
-        isTransitioningRef.current = false;
-      }
+  const handleScan = (result: IDetectedBarcode[]) => {
+    if (result && result.length > 0) {
+      onScanSuccess(result[0].rawValue);
     }
   };
 
-  const startScanner = async () => {
-    if (isTransitioningRef.current) return;
-
-    setCameraError(null);
-    setIsInitializing(true);
-    isTransitioningRef.current = true;
-
-    try {
-      // Check for secure context and mediaDevices support
-      const isLocalhost = typeof window !== 'undefined' &&
-        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      const isSecure = typeof window !== 'undefined' && window.isSecureContext;
-
-      if (!isSecure && !isLocalhost) {
-        setCameraError("Máy ảnh chỉ hoạt động trên kết nối bảo mật (HTTPS). Em hãy nhờ thầy cô kiểm tra lại địa chỉ trang web nhé!");
-        setIsInitializing(false);
-        isTransitioningRef.current = false;
-        return;
-      }
-
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setCameraError("Trình duyệt này quá cũ hoặc không hỗ trợ Máy ảnh. Em hãy thử mở bằng Safari (trên iPhone) hoặc Chrome mới nhất nhé!");
-        setIsInitializing(false);
-        isTransitioningRef.current = false;
-        return;
-      }
-
-      if (!html5QrCodeRef.current) {
-        html5QrCodeRef.current = new Html5Qrcode(scannerId);
-      }
-
-      // If already scanning for some reason, stop it first
-      if (html5QrCodeRef.current.isScanning) {
-        try {
-          await html5QrCodeRef.current.stop();
-        } catch (e) { /* ignore */ }
-      }
-
-      const qrCodeSuccessCallback = (decodedText: string) => {
-        stopScanner();
-        onScanSuccess(decodedText);
-      };
-
-      const config = {
-        fps: 20,
-        qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-          const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
-          const qrboxSize = Math.floor(minEdgeSize * 0.7);
-          return {
-            width: qrboxSize,
-            height: qrboxSize
-          };
-        },
-        aspectRatio: 1.0,
-        videoConstraints: {
-          // Use 'ideal' instead of 'min' to be more lenient on mobile devices
-          width: { ideal: 1280 },
-          facingMode: "environment"
-        },
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
-        }
-      };
-
-      // Strict 1-key object for camera selection
-      await html5QrCodeRef.current.start(
-        { facingMode: "environment" },
-        config,
-        qrCodeSuccessCallback,
-        () => { } // Ignore scan failures
-      );
-
-      setIsCameraActive(true);
-      setIsInitializing(false);
-    } catch (err: any) {
-      console.error("Camera start error:", err);
-      setIsInitializing(false);
-
-      const errorStr = err?.toString() || "";
-      if (errorStr.includes("NotAllowedError") || errorStr.includes("Permission denied")) {
-        setCameraError("Em hãy nhấn 'Cho phép' để mở máy ảnh nhé!");
-      } else if (errorStr.includes("NotSupportedError") || errorStr.includes("streaming not supported")) {
-        setCameraError("Điện thoại chưa cho phép trình duyệt quay phim. Em hãy vào Cài đặt của iPhone để kiểm tra nhé!");
-      } else if (errorStr.includes("OverconstrainedError") || errorStr.includes("ConstraintNotSatisfiedError")) {
-        // If 1280px is too much for the device, retry with default settings
-        retryBasicScanner();
-      } else {
-        setCameraError("Máy ảnh bị lỗi rồi. Em hãy thử mở bằng ứng dụng Safari hoặc Chrome mới nhất nhé!");
-      }
-    } finally {
-      isTransitioningRef.current = false;
+  const handleError = (error: any) => {
+    console.error("QR Scanner Error:", error);
+    if (error?.message?.includes("Permission denied") || error?.name === "NotAllowedError") {
+      setCameraError("Em hãy nhấn 'Cho phép' để mở máy ảnh nhé!");
+    } else {
+      setCameraError("Máy ảnh bị lỗi hoặc không tìm thấy. Em hãy nhờ thầy cô kiểm tra nhé!");
     }
+    setIsInitializing(false);
   };
-
-  const retryBasicScanner = async () => {
-    try {
-      if (html5QrCodeRef.current) {
-        await html5QrCodeRef.current.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: 250 },
-          (decodedText) => {
-            stopScanner();
-            onScanSuccess(decodedText);
-          },
-          () => { }
-        );
-        setIsCameraActive(true);
-        setIsInitializing(false);
-        setCameraError(null);
-      }
-    } catch (err) {
-      setCameraError("Không thể khởi động máy ảnh. Em hãy kiểm tra xem có ứng dụng nào khác đang dùng máy ảnh không nhé!");
-    }
-  };
-
-  useEffect(() => {
-    startScanner();
-
-    return () => {
-      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
-        html5QrCodeRef.current.stop()
-          .catch(err => console.error("Unmount stop error", err));
-      }
-    };
-  }, []);
 
   return (
     <motion.div
@@ -176,8 +46,8 @@ export function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
         <div className="p-8 pb-4 text-center">
           <motion.div
             animate={{
-              rotate: isCameraActive ? [0, -5, 5, -5, 0] : 0,
-              scale: isCameraActive ? [1, 1.05, 1] : 1
+              rotate: [0, -5, 5, -5, 0],
+              scale: [1, 1.05, 1]
             }}
             transition={{
               duration: 2,
@@ -204,25 +74,34 @@ export function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
 
         <div className="px-8 pb-8">
           <div className="relative group">
-            <div className="relative">
-              <div
-                id={scannerId}
-                className="w-full relative rounded-3xl overflow-hidden border-4 border-dashed border-blue-200 bg-gray-50 aspect-square"
-              ></div>
-
-              {!isCameraActive && !cameraError && isInitializing && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 rounded-3xl">
-                  <RefreshCw className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-                  <p className="text-gray-400 font-bold">Đang chuẩn bị...</p>
+            <div className="relative rounded-3xl overflow-hidden border-4 border-white/20 bg-gray-950 aspect-square shadow-2xl shadow-blue-900/20">
+              {!cameraError ? (
+                <div className="absolute inset-0 z-0">
+                  <Scanner
+                    onScan={handleScan}
+                    onError={handleError}
+                    sound={false}
+                    components={{
+                      onOff: false,
+                      torch: true,
+                      zoom: false,
+                      finder: false
+                    }}
+                    styles={{
+                      container: { width: '100%', height: '100%' },
+                      video: { objectFit: 'cover', width: '100%', height: '100%' }
+                    }}
+                  />
                 </div>
-              )}
-
-              {cameraError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10 rounded-3xl p-6 text-center">
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10 p-6 text-center">
                   <div className="bg-white p-6 rounded-2xl shadow-sm border-2 border-red-100">
                     <p className="text-gray-700 font-bold mb-4">{cameraError}</p>
                     <Button
-                      onClick={startScanner}
+                      onClick={() => {
+                        setCameraError(null);
+                        setIsInitializing(true);
+                      }}
                       className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-xl"
                     >
                       Thử mở lại máy ảnh 🔄
@@ -232,9 +111,28 @@ export function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
               )}
             </div>
 
-            {isCameraActive && (
-              <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 pointer-events-none opacity-20">
-                <div className="aspect-square border-4 border-blue-500 rounded-[20px] animate-pulse"></div>
+            {/* Custom Viewfinder Overlay - Sạch sẽ và hiện đại hơn */}
+            {!cameraError && (
+              <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+                {/* Lớp phủ tối xung quanh vùng quét */}
+                <div
+                  className="absolute inset-0 bg-black/40"
+                  style={{
+                    clipPath: 'polygon(0% 0%, 0% 100%, 15% 100%, 15% 15%, 85% 15%, 85% 85%, 15% 85%, 15% 100%, 100% 100%, 100% 0%)'
+                  }}
+                />
+
+                {/* Khung quét với 4 góc trắng */}
+                <div className="w-[70%] aspect-square relative">
+                  {/* Góc trên bên trái */}
+                  <div className="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-white shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
+                  {/* Góc trên bên phải */}
+                  <div className="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-white shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
+                  {/* Góc dưới bên trái */}
+                  <div className="absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 border-white shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
+                  {/* Góc dưới bên phải */}
+                  <div className="absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 border-white shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
+                </div>
               </div>
             )}
           </div>
