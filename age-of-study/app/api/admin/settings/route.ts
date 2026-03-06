@@ -135,6 +135,14 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    if (body.ai_chat_banned_words !== undefined) {
+      if (typeof body.ai_chat_banned_words !== 'string') {
+        errors.push('Danh từ cấm phải là một văn bản')
+      } else if (body.ai_chat_banned_words.length > 2000) {
+        errors.push('Danh sách từ cấm quá dài (tối đa 2000 ký tự)')
+      }
+    }
+
     // Validate numeric fields using constraints
     const numericFields = [
       'default_daily_limit_minutes',
@@ -166,14 +174,14 @@ export async function PUT(request: NextRequest) {
     // --- Build clean update payload (only allowed fields) ---
     const allowedFields = [
       'school_name', 'school_year', 'default_daily_limit_minutes',
-      'ai_chat_temperature', 'ai_chat_max_tokens', 'ai_chat_rate_limit_per_minute',
+      'ai_chat_temperature', 'ai_chat_max_tokens', 'ai_chat_rate_limit_per_minute', 'ai_chat_banned_words',
       'ai_question_temperature', 'ai_question_max_tokens',
     ] as const
 
     const updatePayload: Record<string, unknown> = { updated_by: userId }
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
-        updatePayload[field] = field === 'school_name' || field === 'school_year'
+        updatePayload[field] = field === 'school_name' || field === 'school_year' || field === 'ai_chat_banned_words'
           ? (body[field] as string).trim()
           : body[field]
       }

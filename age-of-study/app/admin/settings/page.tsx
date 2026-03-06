@@ -227,6 +227,7 @@ export default function AdminSettingsPage() {
         ai_chat_max_tokens: result.data.ai_chat_max_tokens,
         ai_chat_rate_limit_per_minute:
           result.data.ai_chat_rate_limit_per_minute,
+        ai_chat_banned_words: result.data.ai_chat_banned_words || "",
         ai_question_temperature: parseFloat(
           result.data.ai_question_temperature,
         ),
@@ -301,6 +302,7 @@ export default function AdminSettingsPage() {
       ai_chat_temperature: parseFloat(String(settings.ai_chat_temperature)),
       ai_chat_max_tokens: settings.ai_chat_max_tokens,
       ai_chat_rate_limit_per_minute: settings.ai_chat_rate_limit_per_minute,
+      ai_chat_banned_words: settings.ai_chat_banned_words || "",
       ai_question_temperature: parseFloat(
         String(settings.ai_question_temperature),
       ),
@@ -475,6 +477,22 @@ export default function AdminSettingsPage() {
             max={SETTINGS_CONSTRAINTS.ai_chat_rate_limit_per_minute.max}
             unit="tin nhắn / phút"
           />
+
+          <div className="pt-2 border-t border-gray-100">
+            <FieldLabel
+              label="Danh sách từ cấm"
+              hint="Cách nhau bằng dấu phẩy. Chatbot sẽ lập tức từ chối trả lời nếu câu hỏi chứa những từ này."
+            />
+            <textarea
+              value={formData.ai_chat_banned_words || ""}
+              onChange={(e) =>
+                updateField("ai_chat_banned_words", e.target.value)
+              }
+              rows={3}
+              placeholder="Ví dụ: bạo lực, gian lận, chửi thề..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-gray-400"
+            />
+          </div>
         </SettingsSection>
 
         {/* ============================================================ */}

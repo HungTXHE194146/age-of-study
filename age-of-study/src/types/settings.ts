@@ -17,6 +17,7 @@ export interface SystemSettings {
   ai_chat_temperature: number
   ai_chat_max_tokens: number
   ai_chat_rate_limit_per_minute: number
+  ai_chat_banned_words: string
 
   // AI Question Generator parameters
   ai_question_temperature: number
