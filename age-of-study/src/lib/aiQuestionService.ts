@@ -10,6 +10,8 @@ export interface AIQuestionGenerationRequest {
   fromKnowledgeBase?: boolean;
   fromQuestionBank?: boolean;
   questionTypes?: string[];
+  action?: "append" | "replace" | "edit";
+  existingQuestions?: string;
 }
 
 export interface AIQuestionGenerationResponse {
@@ -66,6 +68,12 @@ export class AIQuestionService {
       }
       if (data.questionTypes) {
         formData.append("questionTypes", JSON.stringify(data.questionTypes));
+      }
+      if (data.action) {
+        formData.append("action", data.action);
+      }
+      if (data.existingQuestions) {
+        formData.append("existingQuestions", data.existingQuestions);
       }
 
       const supabase = await getSupabaseBrowserClient();

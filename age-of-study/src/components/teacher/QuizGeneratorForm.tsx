@@ -16,11 +16,13 @@ import {
 interface QuizGeneratorFormProps {
   onGenerate: (data: GeneratorFormState) => void;
   isLoading?: boolean;
+  existingQuestionCount?: number;
 }
 
 export function QuizGeneratorForm({
   onGenerate,
   isLoading = false,
+  existingQuestionCount = 0,
 }: QuizGeneratorFormProps) {
   const [formData, setFormData] = useState<GeneratorFormState>({
     topic: "",
@@ -31,6 +33,7 @@ export function QuizGeneratorForm({
     fromKnowledgeBase: false,
     fromQuestionBank: false,
     questionTypes: ["MULTIPLE_CHOICE"],
+    action: "append",
   });
   const [isDragging, setIsDragging] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -402,6 +405,44 @@ export function QuizGeneratorForm({
             ))}
           </div>
         </div>
+
+        {/* Action Selection (if questions exist) */}
+        {existingQuestionCount > 0 && (
+          <div className="space-y-4 pt-2">
+            <label className="block text-xl font-black text-gray-800 font-handwritten tracking-tight">
+              Hành động với {existingQuestionCount} câu hỏi hiện tại
+            </label>
+            <div className="flex flex-wrap gap-4">
+              {[
+                { id: 'append', label: 'Thêm vào danh sách' },
+                { id: 'replace', label: 'Thay thế toàn bộ' },
+                { id: 'edit', label: 'AI sửa lại các câu hiện tại' }
+              ].map((actionType) => (
+                <label
+                  key={actionType.id}
+                  className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-all ${formData.action === actionType.id ? 'border-blue-600 bg-blue-50 shadow-[2px_2px_0_0_rgba(0,0,0,1)]' : 'border-black bg-white hover:bg-gray-50'}`}
+                >
+                  <input
+                    type="radio"
+                    name="generation_action"
+                    checked={formData.action === actionType.id}
+                    onChange={() => setFormData(prev => ({ ...prev, action: actionType.id as "append" | "replace" | "edit" }))}
+                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                  />
+                  <span className="font-bold text-gray-800">{actionType.label}</span>
+                </label>
+              ))}
+            </div>
+            {formData.action === 'edit' && (
+              <p className="text-sm font-bold text-blue-700 bg-blue-50 p-3 rounded-lg border-2 border-blue-200 mt-2 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <span>
+                  Trí tuệ nhân tạo sẽ dùng yêu cầu ở trên để chỉnh sửa trực tiếp <strong>{existingQuestionCount} câu hỏi</strong> đang có. Hãy ghi rõ yêu cầu sửa (VD: "Đổi tất cả đáp án đúng thành A").
+                </span>
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Action Button */}
         <div className="pt-8">
