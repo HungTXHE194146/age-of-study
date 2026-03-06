@@ -29,6 +29,93 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { AIQuestionService } from "@/lib/aiQuestionService";
 import { getTeacherClasses } from "@/lib/classService";
 
+// Helper functions extracted to improve code health
+const isValidSubject = (subject: string | undefined | null): boolean => {
+  return Boolean(subject && subject !== "" && subject !== "0");
+};
+
+const validateTestDetails = (testDetails: any, questions: any[]): string | null => {
+  if (!testDetails.title.trim()) {
+    return "Vui lòng nhập tiêu đề bài kiểm tra";
+  }
+  if (!isValidSubject(testDetails.subject)) {
+    return "Vui lòng chọn môn học liên quan cho bài kiểm tra";
+  }
+  if (questions.length === 0) {
+    return "Vui lòng thêm ít nhất một câu hỏi";
+  }
+  return null;
+};
+
+const resolveSubjectId = (subject: string | undefined | null): number | null => {
+  return isValidSubject(subject) ? parseInt(subject as string) : null;
+};
+
+const resolveNodeId = (subject: string | undefined | null, node: string | undefined | null): number | null => {
+  if (!isValidSubject(subject)) return null;
+  return node ? parseInt(node) : null;
+};
+
+const fetchSubjectsData = async () => {
+  try {
+    return await subjectService.getSubjects();
+  } catch (error) {
+    console.error("Failed to fetch subjects:", error);
+    return [];
+  }
+};
+
+const fetchTeacherClassesData = async (userId: string) => {
+  try {
+    const { data, error } = await getTeacherClasses(userId);
+    if (error) throw error;
+    const allTeacherClasses = [
+      ...(data?.homeroom_classes || []),
+      ...(data?.subject_classes || []),
+    ];
+    return Array.from(new Map(allTeacherClasses.map((c: any) => [c.id, c])).values());
+  } catch (error) {
+    console.error("Failed to fetch teacher classes:", error);
+    return [];
+  }
+};
+
+const prepareQuestionsToSave = (questions: Question[], testDetails: any, userId: string | undefined) => {
+  return questions.map((q) => {
+    let qType = "multiple_choice";
+    if (q.type === "TRUE_FALSE") qType = "true_false";
+    else if (q.type === "ESSAY") qType = "essay";
+
+    let correctIndex = -1;
+    if (q.type === "MULTIPLE_CHOICE") {
+      correctIndex = q.options.findIndex((opt) => opt.isCorrect);
+    } else if (q.type === "TRUE_FALSE") {
+      correctIndex = 0;
+    }
+
+    return {
+      id: q.id,
+      node_id: resolveNodeId(testDetails.subject, testDetails.node),
+      content: {
+        questionText: q.questionText,
+        options: q.options.map((opt) => ({
+          label: opt.label,
+          text: opt.text,
+        })),
+      },
+      correct_option_index: correctIndex,
+      difficulty: q.difficulty.toLowerCase() as "easy" | "medium" | "hard",
+      status: "available",
+      created_by: userId || null,
+      created_at: new Date().toISOString(),
+      q_type: qType,
+      model_answer: q.model_answer || "",
+      subject_id: resolveSubjectId(testDetails.subject),
+      explanation: q.explanation || null,
+    };
+  });
+};
+
 function CreateTestContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -94,35 +181,16 @@ function CreateTestContent() {
   // Fetch subjects and teacher classes from Supabase
   useEffect(() => {
     async function loadInitialData() {
-      try {
-        setIsLoadingSubjects(true);
-        const subjectList = await subjectService.getSubjects();
-        setSubjects(subjectList);
-      } catch (error) {
-        console.error("Failed to fetch subjects:", error);
-      } finally {
-        setIsLoadingSubjects(false);
-      }
+      setIsLoadingSubjects(true);
+      const subjectList = await fetchSubjectsData();
+      setSubjects(subjectList);
+      setIsLoadingSubjects(false);
 
       if (user?.id) {
-        try {
-          setIsLoadingClasses(true);
-          const { data, error } = await getTeacherClasses(user.id);
-          if (error) throw error;
-          const allTeacherClasses = [
-            ...(data?.homeroom_classes || []),
-            ...(data?.subject_classes || []),
-          ];
-          // Remove duplicates if any
-          const uniqueClasses = Array.from(
-            new Map(allTeacherClasses.map((c) => [c.id, c])).values(),
-          );
-          setTeacherClasses(uniqueClasses);
-        } catch (error) {
-          console.error("Failed to fetch teacher classes:", error);
-        } finally {
-          setIsLoadingClasses(false);
-        }
+        setIsLoadingClasses(true);
+        const classes = await fetchTeacherClassesData(user.id);
+        setTeacherClasses(classes);
+        setIsLoadingClasses(false);
       }
     }
 
@@ -137,23 +205,10 @@ function CreateTestContent() {
     setQuestions((prev) => prev.filter((q) => q.id !== id));
   };
 
-  const handleSaveTest = async () => {
-    if (!testDetails.title.trim()) {
-      alert("Vui lòng nhập tiêu đề bài kiểm tra");
-      return;
-    }
-
-    if (
-      !testDetails.subject ||
-      testDetails.subject === "" ||
-      testDetails.subject === "0"
-    ) {
-      alert("Vui lòng chọn môn học liên quan cho bài kiểm tra");
-      return;
-    }
-
-    if (questions.length === 0) {
-      alert("Vui lòng thêm ít nhất một câu hỏi");
+  const handleSave = async (isDraft: boolean) => {
+    const errorMsg = validateTestDetails(testDetails, questions);
+    if (errorMsg) {
+      alert(errorMsg);
       return;
     }
 
@@ -161,99 +216,47 @@ function CreateTestContent() {
     try {
       const testService = new TestService();
 
-      // Create test data for Supabase
       const createTestRequest: CreateTestRequest = {
         title: testDetails.title,
         description: testDetails.description,
         type: "practice",
-
-        // 1. Lưu ID môn học vào cột subject_id
-        subject_id: testDetails.subject ? parseInt(testDetails.subject) : null,
-
-        // 2. node_id chỉ có dữ liệu nếu người dùng chọn cụ thể một bài học (Skill Node)
-        // Nếu chỉ chọn môn chung chung, node_id phải là null
-        node_id: testDetails.node ? parseInt(testDetails.node) : null,
-
+        subject_id: resolveSubjectId(testDetails.subject),
+        node_id: resolveNodeId(testDetails.subject, testDetails.node),
         settings: {
           time_limit: testDetails.timeLimit,
           allow_retry: true,
         },
-        is_published: true,
+        is_published: !isDraft,
         created_by: user?.id || "",
         class_id: testDetails.classId ? parseInt(testDetails.classId) : null,
       };
 
-      // Fix for foreign key violation: ensure node_id is properly null for practice tests
-      if (
-        !testDetails.subject ||
-        testDetails.subject === "" ||
-        testDetails.subject === "0"
-      ) {
-        createTestRequest.node_id = null;
-      }
-
-      // Create the test in Supabase
       const createdTest = await testService.createTest(createTestRequest);
-
-      // Create test_questions relationships
       const supabase = await getSupabaseBrowserClient();
 
-      // Update existing questions or create new ones
-      // Use upsert for all questions to handle both new and existing questions from bank
-      const questionsToSave = questions.map((q, index) => ({
-        id: q.id,
-        node_id: testDetails.node ? parseInt(testDetails.node) : null,
-        content: {
-          questionText: q.questionText,
-          options: q.options.map((opt) => ({
-            label: opt.label,
-            text: opt.text,
-          })),
-        },
-        correct_option_index:
-          q.type === "MULTIPLE_CHOICE"
-            ? q.options.findIndex((opt) => opt.isCorrect)
-            : q.type === "TRUE_FALSE"
-              ? 0 // Assume first option (True) is correct for TRUE_FALSE
-              : -1, // -1 for ESSAY questions
-        difficulty: q.difficulty.toLowerCase() as "easy" | "medium" | "hard",
-        status: "available",
-        created_by: user?.id || null,
-        created_at: new Date().toISOString(),
-        q_type:
-          q.type === "MULTIPLE_CHOICE"
-            ? "multiple_choice"
-            : q.type === "TRUE_FALSE"
-              ? "true_false"
-              : "essay",
-        model_answer: q.model_answer || "",
-        subject_id: testDetails.subject ? parseInt(testDetails.subject) : null,
-        explanation: q.explanation || null,
-      }));
+      const questionsToSave = prepareQuestionsToSave(questions, testDetails, user?.id);
 
       try {
-        // Use upsert with conflict resolution to handle both new and existing questions
         const { error: questionsError } = await supabase
           .from("questions")
           .upsert(questionsToSave, { onConflict: "id" });
 
         if (questionsError) {
-          console.error("Error upserting questions:", questionsError);
+          console.error(`Error upserting questions for ${isDraft ? "draft" : "test"}:`, questionsError);
           throw questionsError;
         }
       } catch (error) {
-        console.error("Error saving questions:", error);
+        console.error(`Error saving questions for ${isDraft ? "draft" : "test"}:`, error);
         throw error;
       }
 
-      // Insert test_questions relationships for all questions
       const testQuestionsToInsert = questions.map(
         (q: Question, index: number) => ({
           test_id: createdTest.id,
           question_id: q.id,
           points: q.points || 10,
           display_order: index,
-        }),
+        })
       );
 
       const { error: testQuestionsError } = await supabase
@@ -262,157 +265,22 @@ function CreateTestContent() {
 
       if (testQuestionsError) throw testQuestionsError;
 
-      alert("Bài kiểm tra đã được lưu thành công!");
+      alert(`Bài kiểm tra đã được lưu ${isDraft ? "nháp " : ""}thành công!`);
       if (classIdParam) {
         router.push(`/teacher/classes/${classIdParam}`);
       } else {
         router.push("/teacher/tests");
       }
     } catch (error) {
-      console.error("Error saving test:", error);
-      alert("Có lỗi xảy ra khi lưu bài kiểm tra");
+      console.error(`Error saving ${isDraft ? "draft" : "test"}:`, error);
+      alert(`Có lỗi xảy ra khi lưu ${isDraft ? "nháp " : ""}bài kiểm tra`);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleSaveDraft = async () => {
-    if (!testDetails.title.trim()) {
-      alert("Vui lòng nhập tiêu đề bài kiểm tra");
-      return;
-    }
-
-    if (
-      !testDetails.subject ||
-      testDetails.subject === "" ||
-      testDetails.subject === "0"
-    ) {
-      alert("Vui lòng chọn môn học liên quan cho bài kiểm tra");
-      return;
-    }
-
-    if (questions.length === 0) {
-      alert("Vui lòng thêm ít nhất một câu hỏi");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const testService = new TestService();
-
-      // Create test data for Supabase (draft version)
-      const createTestRequest: CreateTestRequest = {
-        title: testDetails.title,
-        description: testDetails.description,
-        type: "practice",
-
-        // 1. Lưu ID môn học vào cột subject_id
-        subject_id: testDetails.subject ? parseInt(testDetails.subject) : null,
-
-        // 2. node_id chỉ có dữ liệu nếu người dùng chọn cụ thể một bài học (Skill Node)
-        // Nếu chỉ chọn môn chung chung, node_id phải là null
-        node_id: testDetails.node ? parseInt(testDetails.node) : null,
-
-        settings: {
-          time_limit: testDetails.timeLimit,
-          allow_retry: true,
-        },
-        is_published: false, // Draft status
-        created_by: user?.id || "",
-        class_id: testDetails.classId ? parseInt(testDetails.classId) : null,
-      };
-
-      // Fix for foreign key violation: ensure node_id is properly null for practice tests
-      if (
-        !testDetails.subject ||
-        testDetails.subject === "" ||
-        testDetails.subject === "0"
-      ) {
-        createTestRequest.node_id = null;
-      }
-
-      // Create the test in Supabase
-      const createdTest = await testService.createTest(createTestRequest);
-
-      // Create test_questions relationships
-      const supabase = await getSupabaseBrowserClient();
-
-      // IMPORTANT FIX: For draft saves, we ALSO need to upsert questions 
-      // if they are new (manually created) and not yet in the question bank.
-      const questionsToSave = questions.map((q, index) => ({
-        id: q.id,
-        node_id: testDetails.node ? parseInt(testDetails.node) : null,
-        content: {
-          questionText: q.questionText,
-          options: q.options.map((opt) => ({
-            label: opt.label,
-            text: opt.text,
-          })),
-        },
-        correct_option_index:
-          q.type === "MULTIPLE_CHOICE"
-            ? q.options.findIndex((opt) => opt.isCorrect)
-            : q.type === "TRUE_FALSE"
-              ? 0 // Assume first option (True) is correct for TRUE_FALSE
-              : -1, // -1 for ESSAY questions
-        difficulty: q.difficulty.toLowerCase() as "easy" | "medium" | "hard",
-        status: "available",
-        created_by: user?.id || null,
-        created_at: new Date().toISOString(),
-        q_type:
-          q.type === "MULTIPLE_CHOICE"
-            ? "multiple_choice"
-            : q.type === "TRUE_FALSE"
-              ? "true_false"
-              : "essay",
-        model_answer: q.model_answer || "",
-        subject_id: testDetails.subject ? parseInt(testDetails.subject) : null,
-        explanation: q.explanation || null,
-      }));
-
-      try {
-        const { error: questionsError } = await supabase
-          .from("questions")
-          .upsert(questionsToSave, { onConflict: "id" });
-
-        if (questionsError) {
-          console.error("Error upserting questions for draft:", questionsError);
-          throw questionsError;
-        }
-      } catch (error) {
-        console.error("Error saving questions for draft:", error);
-        throw error;
-      }
-
-      // Insert test_questions relationships
-      const testQuestionsToInsert = questions.map(
-        (q: Question, index: number) => ({
-          test_id: createdTest.id,
-          question_id: q.id, // Use existing question ID from question bank
-          points: 10, // Default points
-          display_order: index,
-        }),
-      );
-
-      const { error: testQuestionsError } = await supabase
-        .from("test_questions")
-        .insert(testQuestionsToInsert);
-
-      if (testQuestionsError) throw testQuestionsError;
-
-      alert("Bài kiểm tra đã được lưu nháp thành công!");
-      if (classIdParam) {
-        router.push(`/teacher/classes/${classIdParam}`);
-      } else {
-        router.push("/teacher/tests");
-      }
-    } catch (error) {
-      console.error("Error saving draft:", error);
-      alert("Có lỗi xảy ra khi lưu nháp bài kiểm tra");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const handleSaveTest = () => handleSave(false);
+  const handleSaveDraft = () => handleSave(true);
 
   return (
     <div className="container mx-auto px-4 py-8">
