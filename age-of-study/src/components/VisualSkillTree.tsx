@@ -20,7 +20,10 @@ import {
 import "@xyflow/react/dist/style.css";
 import { Search, Star, Target } from "lucide-react";
 import { transformDBNodesToFlow } from "@/utils/skillTreeMapper";
-import { updateNodeConnection, updateNodePositions } from "@/actions/skillTreeActions";
+import {
+  updateNodeConnection,
+  updateNodePositions,
+} from "@/actions/skillTreeActions";
 import { getLayoutedElements } from "@/utils/layoutUtils";
 import Loading from "@/components/ui/loading";
 
@@ -31,7 +34,10 @@ import { NotebookDecorations } from "./visual-skill-tree/NotebookDecorations";
 import { CustomNode } from "./visual-skill-tree/CustomNode";
 import { CustomEdge } from "./visual-skill-tree/CustomEdge";
 import { NodeCallbacksContext } from "./visual-skill-tree/NodeCallbacksContext";
-import { VisualSkillTreeProps, CustomNodeType } from "./visual-skill-tree/types";
+import {
+  VisualSkillTreeProps,
+  CustomNodeType,
+} from "./visual-skill-tree/types";
 import { EMPTY_NODE_IDS } from "./visual-skill-tree/constants";
 
 const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
@@ -79,7 +85,8 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     };
     handleStorageChange();
     window.addEventListener("lowDataModeChanged", handleStorageChange);
-    return () => window.removeEventListener("lowDataModeChanged", handleStorageChange);
+    return () =>
+      window.removeEventListener("lowDataModeChanged", handleStorageChange);
   }, []);
 
   // Form submit for search
@@ -125,13 +132,16 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     subjectNodes,
     nodes,
     completedNodeIds,
-    isTeacherMode
+    isTeacherMode,
   );
 
   // Translate extent for zooming boundaries
   const calculatedTranslateExtent = useMemo(() => {
     if (!nodes || nodes.length === 0) {
-      return [[-1000, -Infinity], [1000, Infinity]] as any;
+      return [
+        [-1000, -Infinity],
+        [1000, Infinity],
+      ] as any;
     }
 
     let minY = Infinity;
@@ -165,7 +175,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     () => ({
       custom: (props: any) => <CustomEdge {...props} setEdges={setEdges} />,
     }),
-    [setEdges]
+    [setEdges],
   );
 
   // Connect edges
@@ -185,7 +195,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
           params.source,
           params.target,
           sourceHandle,
-          targetHandle
+          targetHandle,
         );
 
         if (!result.success) {
@@ -198,7 +208,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
         console.error("Error in onConnect:", error);
       }
     },
-    [isTeacherMode, setEdges]
+    [isTeacherMode, setEdges],
   );
 
   // Delete edges
@@ -209,7 +219,9 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
       let previousEdges: Edge[] = [];
       setEdges((eds) => {
         previousEdges = eds;
-        return eds.filter((edge) => !edgesToDelete.find((e) => e.id === edge.id));
+        return eds.filter(
+          (edge) => !edgesToDelete.find((e) => e.id === edge.id),
+        );
       });
 
       try {
@@ -222,7 +234,8 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
               targetId: parseInt(edge.target),
             }),
           });
-          if (!response.ok) throw new Error(`Failed to delete connection ${edge.id}`);
+          if (!response.ok)
+            throw new Error(`Failed to delete connection ${edge.id}`);
           return response;
         });
 
@@ -233,7 +246,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
         alert("Lỗi khi xóa kết nối. Vui lòng thử lại.");
       }
     },
-    [isTeacherMode, setEdges]
+    [isTeacherMode, setEdges],
   );
 
   // Drag logic
@@ -245,11 +258,15 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
           console.error("Failed to update node positions:", result.error);
         }
       }, 1000),
-    []
+    [],
   );
 
   const onNodeDragStop = useCallback(
-    (event: React.MouseEvent, node: CustomNodeType, nodesArg: CustomNodeType[]) => {
+    (
+      event: React.MouseEvent,
+      node: CustomNodeType,
+      nodesArg: CustomNodeType[],
+    ) => {
       if (!isTeacherMode) return;
 
       const selectedNodes = nodesArg.filter((n) => n.selected === true);
@@ -263,7 +280,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
 
       debouncedUpdatePositions(positions);
     },
-    [isTeacherMode, debouncedUpdatePositions]
+    [isTeacherMode, debouncedUpdatePositions],
   );
 
   const onNodeClick = useCallback(
@@ -272,13 +289,16 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
         onNodeSelected(node.id);
       }
     },
-    [onNodeSelected]
+    [onNodeSelected],
   );
 
   const onLayout = useCallback(async () => {
     if (!isTeacherMode) return;
 
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges);
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      nodes,
+      edges,
+    );
 
     setNodes([...layoutedNodes] as CustomNodeType[]);
     setEdges([...layoutedEdges]);
@@ -436,7 +456,10 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
 
         {/* Thanh Search Nổi */}
         <div className="absolute top-4 left-4 right-4 z-50">
-          <form onSubmit={handleSearchFormSubmit} className="relative flex items-center">
+          <form
+            onSubmit={handleSearchFormSubmit}
+            className="relative flex items-center"
+          >
             <input
               type="text"
               placeholder="Tìm kiếm bài học..."
@@ -478,7 +501,9 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
               {searchResults.map((node) => (
                 <div
                   key={node.id}
-                  onMouseDown={() => handleSelectNode(node.id.toString(), setNodes as any)}
+                  onMouseDown={() =>
+                    handleSelectNode(node.id.toString(), setNodes as any)
+                  }
                   className={
                     isTeacherMode
                       ? "px-4 py-3 hover:bg-yellow-200 cursor-pointer transition-colors border-b-2 border-dashed border-gray-400 last:border-0 flex items-center gap-3 text-gray-800 font-bold"
@@ -617,8 +642,6 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
                 </button>
               </Panel>
             )}
-          </ReactFlow>
-
             {!isTeacherMode && (
               <Panel
                 position="bottom-center"
