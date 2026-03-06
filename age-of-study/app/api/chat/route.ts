@@ -46,7 +46,7 @@ async function getAIChatSettings(supabase: SupabaseClient) {
   try {
     const { data } = await supabase
       .from('system_settings')
-      .select('ai_chat_temperature, ai_chat_max_tokens, ai_chat_rate_limit_per_minute')
+      .select('ai_chat_temperature, ai_chat_max_tokens, ai_chat_rate_limit_per_minute, ai_chat_banned_words')
       .eq('id', 1)
       .single()
 
@@ -55,6 +55,7 @@ async function getAIChatSettings(supabase: SupabaseClient) {
         temperature: parseFloat(data.ai_chat_temperature) || DEFAULT_AI_CHAT_TEMPERATURE,
         maxTokens: parseInt(data.ai_chat_max_tokens, 10) || DEFAULT_AI_CHAT_MAX_TOKENS,
         rateLimit: parseInt(data.ai_chat_rate_limit_per_minute, 10) || DEFAULT_RATE_LIMIT_PER_MINUTE,
+        bannedWords: data.ai_chat_banned_words || '',
       }    }
   } catch {
     // Fall through to defaults
@@ -63,6 +64,7 @@ async function getAIChatSettings(supabase: SupabaseClient) {
     temperature: DEFAULT_AI_CHAT_TEMPERATURE,
     maxTokens: DEFAULT_AI_CHAT_MAX_TOKENS,
     rateLimit: DEFAULT_RATE_LIMIT_PER_MINUTE,
+    bannedWords: '',
   }
 }
 
@@ -111,6 +113,29 @@ export async function POST(request: NextRequest) {
 
     // 3. Load AI chat settings from DB
     const aiSettings = await getAIChatSettings(supabase)
+
+    // 3.5 Check banned words
+    if (aiSettings.bannedWords.trim() !== '') {
+      const bannedList = aiSettings.bannedWords.split(',').map((w: string) => w.trim().toLowerCase()).filter((w: string) => w.length > 0)
+      const cleanMsgLower = message.toLowerCase()
+      for (const bannedWord of bannedList) {
+        if (cleanMsgLower.includes(bannedWord)) {
+          // Log blocked message without saving AI response
+          await supabase.from('chat_logs').insert({
+            user_id: userId,
+            sender: 'user',
+            message: message,
+            is_blocked: true,
+            subject_id: subjectId || null,
+          })
+
+          return NextResponse.json({ 
+            response: 'Tin nhắn của bạn chứa từ vựng không phù hợp. Vui lòng hỏi những câu liên quan đến bài học nhé! 🦉',
+            cached: true // Send as "cached" to prevent streaming logic from running on UI
+          })
+        }
+      }
+    }
 
     // 4. Rate limit check - count recent messages in chat_logs
     const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
@@ -325,49 +350,61 @@ async function retrieveContext(
 
   // Extract search keywords from the message
   // Note: Don't include "từ" in stopwords because it's part of compound words like "đại từ", "động từ"
-  const stopwords = new Set(['là', 'gì', 'cho', 'mình', 'của', 'và', 'hay', 'hoặc', 'thì', 'mà', 'để', 'có', 'không', 'được', 'với', 'trong', 'này', 'đó', 'một', 'các', 'những', 'bạn', 'em', 'hãy', 'như', 'nào', 'sao', 'thế', 'bao', 'nhiêu', 'vậy', 'nhỉ', 'à', 'ạ', 'ơi', 'nha', 'nhé', 'đi', 'đâu', 'rồi', 'chưa'])
+  const stopwords = new Set(['là', 'gì', 'cho', 'mình', 'của', 'và', 'hay', 'hoặc', 'thì', 'mà', 'để', 'có', 'không', 'được', 'với', 'trong', 'này', 'đó', 'một', 'các', 'những', 'bạn', 'em', 'hãy', 'như', 'nào', 'sao', 'thế', 'bao', 'nhiêu', 'vậy', 'nhỉ', 'à', 'ạ', 'ơi', 'nha', 'nhé', 'đi', 'đâu', 'rồi', 'chưa', 'tôi', 'anh', 'chị', 'giúp', 'giải', 'thích', 'câu', 'hỏi', 'trả', 'lời', 'biết', 'muốn', 'cần', 'xin', 'chào', 'cú', 'mèo'])
   
   // Clean message
-  const cleanedMessage = message.replace(/[?!.,;:]/g, '').toLowerCase()
+  const cleanedMessage = message.replace(/[?!.,;:"']/g, '').toLowerCase()
   
-  // Extract keywords
-  const keywords = cleanedMessage
-    .split(/\s+/)
-    .filter(w => w.length > 1 && !stopwords.has(w))
-
-  if (keywords.length === 0) {
-    keywords.push(...cleanedMessage.split(/\s+/).filter(w => w.length > 1).slice(0, 5))
-  }
-  
-  // Build search terms: 
-  // 1. Join keywords as phrase (e.g., "đại từ" from ["đại", "từ"])
-  // 2. Individual keywords for broader matching
+  const tokens = cleanedMessage.split(/\s+/).filter(w => w.length > 0)
   const searchTerms: string[] = []
-  
-  // Add keywords joined as phrase (e.g., "đại từ động từ")
-  if (keywords.length > 0) {
-    const keywordsPhrase = keywords.slice(0, 3).join(' ')  // Max 3 words
-    if (keywordsPhrase.length > 2) {
-      searchTerms.push(keywordsPhrase)
-    }
-  }
-  
-  // Add individual keywords
-  searchTerms.push(...keywords.slice(0, 5))
 
-  // Build search query
-  const searchTerm = keywords.slice(0, 5).join(' ')
+  // 1. Generate 3-grams and 2-grams (meaningful phrases)
+  for (let i = 0; i < tokens.length - 2; i++) {
+    const term = `${tokens[i]} ${tokens[i+1]} ${tokens[i+2]}`
+    searchTerms.push(term)
+  }
+  for (let i = 0; i < tokens.length - 1; i++) {
+    const term = `${tokens[i]} ${tokens[i+1]}`
+    searchTerms.push(term)
+  }
+
+  // 2. Add individual significant keywords
+  const keywords = tokens.filter(w => w.length > 1 && !stopwords.has(w))
+  searchTerms.push(...keywords)
+
+  // Deduplicate and filter out terms that are purely stopwords
+  const uniqueSearchTerms = [...new Set(searchTerms)].filter(term => {
+    if (term.length <= 2) return false
+    const termTokens = term.split(' ')
+    // Discard phrases entirely made of stopwords
+    return termTokens.some(t => !stopwords.has(t))
+  })
+
+  // Limit terms to avoid massive queries
+  const topSearchTerms = uniqueSearchTerms.slice(0, 10)
+
+  // Fallback: if all extracted terms were filtered out (e.g message only had stopwords), 
+  // extract some raw terms to ensure we don't query the entire database arbitrarily.
+  if (topSearchTerms.length === 0 && tokens.length > 0) {
+    const fallbackTerms = tokens.filter(w => w.length >= 2).slice(0, 3)
+    topSearchTerms.push(...fallbackTerms)
+  }
   
   // Debug logging (gated by environment variable to avoid PII leaks)
   const DEBUG = process.env.DEBUG === 'true'
   if (DEBUG) {
     console.log('[CHAT-API] Original message:', message?.substring(0, 100))
-    console.log('[CHAT-API] Extracted keywords:', keywords)
-    console.log('[CHAT-API] Search terms:', searchTerms)
+    console.log('[CHAT-API] Tokens:', tokens)
+    console.log('[CHAT-API] Top Search terms:', topSearchTerms)
   }
 
   // --- Retrieve relevant LESSON SECTIONS with Q&A pairs ---
   try {
+    // If we STILL have no search terms (empty message?), return empty context
+    if (topSearchTerms.length === 0) {
+      return 'Chưa có tài liệu bài học nào được cung cấp. Hãy từ chối trả lời và gợi ý học sinh hỏi thầy/cô giáo.'
+    }
+
     // Get node_ids for the subject first
     let nodeIds: number[] = []
     if (subjectId) {
@@ -407,7 +444,7 @@ async function retrieveContext(
     }
     
     // Build OR condition for each search term in title or content
-    const orConditions = searchTerms.map(term => {
+    const orConditions = topSearchTerms.map(term => {
       const escaped = escapeLike(term)
       return `title.ilike.%${escaped}%,content.ilike.%${escaped}%`
     }).join(',')
@@ -420,9 +457,8 @@ async function retrieveContext(
       sectionsQuery = sectionsQuery.in('node_id', nodeIds)
     }
 
-    // Order by relevance: prioritize exact phrase matches in title
-    // Note: Supabase doesn't support complex ORDER BY expressions, so we'll sort in JS
-    sectionsQuery = sectionsQuery.limit(20)  // Get more results to sort
+    // Get a wide net of matches before scoring to ensure we don't truncate relevant content
+    sectionsQuery = sectionsQuery.limit(100)
 
     const { data: sectionsRaw, error: sectionsError } = await sectionsQuery
     
@@ -430,33 +466,32 @@ async function retrieveContext(
       console.error('Error querying lesson_sections:', sectionsError)
     }
 
-    // Sort results by relevance in JavaScript
+    // Sort results by relevance in JavaScript based on N-gram weights
     const sections = sectionsRaw?.sort((a, b) => {
       const aTitle = (a.title ?? '').toLowerCase()
       const bTitle = (b.title ?? '').toLowerCase()
       const aContent = (a.content ?? '').toLowerCase()
       const bContent = (b.content ?? '').toLowerCase()
       
-      // Priority 1: Exact phrase match in title
-      const firstTerm = searchTerms[0]?.toLowerCase() || ''
-      const aExactTitle = aTitle.includes(firstTerm) ? 1 : 0
-      const bExactTitle = bTitle.includes(firstTerm) ? 1 : 0
-      if (aExactTitle !== bExactTitle) return bExactTitle - aExactTitle
+      let aScore = 0
+      let bScore = 0
+
+      for (const term of topSearchTerms) {
+        const weight = term.includes(' ') ? (term.split(' ').length === 3 ? 30 : 10) : 1
+        
+        if (aTitle.includes(term)) aScore += weight * 3 // Highest priority: exact phrase in title
+        if (aContent.includes(term)) aScore += weight
+        
+        if (bTitle.includes(term)) bScore += weight * 3
+        if (bContent.includes(term)) bScore += weight
+      }
       
-      // Priority 2: Any match in title
-      const aTitleMatch = searchTerms.some(t => aTitle.includes(t.toLowerCase())) ? 1 : 0
-      const bTitleMatch = searchTerms.some(t => bTitle.includes(t.toLowerCase())) ? 1 : 0
-      if (aTitleMatch !== bTitleMatch) return bTitleMatch - aTitleMatch
-      
-      // Priority 3: Content match
-      const aContentMatch = searchTerms.some(t => aContent.includes(t.toLowerCase())) ? 1 : 0
-      const bContentMatch = searchTerms.some(t => bContent.includes(t.toLowerCase())) ? 1 : 0
-      return bContentMatch - aContentMatch
+      return bScore - aScore
     }).slice(0, MAX_CONTEXT_DOCUMENTS)  // Take top 5 after sorting
 
     if (DEBUG) {
-      console.log(`[DEBUG] Search terms: ${searchTerms.join(', ')}`)
-      console.log(`[DEBUG] Found ${sections?.length || 0} sections`)
+      console.log(`[DEBUG] Found ${sectionsRaw?.length || 0} sections from DB, selected top ${sections?.length || 0}`)
+      console.log(`[DEBUG] Top Section Titles: ${sections?.map(s => s.title).join(', ')}`)
     }
 
     if (sections && sections.length > 0) {
@@ -510,7 +545,7 @@ async function retrieveContext(
     const qaMatches = sections?.filter(section => {
       if (!section.qa_pairs || section.qa_pairs.length === 0) return false
       const qaStr = JSON.stringify(section.qa_pairs).toLowerCase()
-      return searchTerms.some(term => qaStr.includes(term.toLowerCase()))
+      return topSearchTerms.some(term => qaStr.includes(term.toLowerCase()))
     }).slice(0, 5) || []
 
     if (DEBUG) console.log(`[DEBUG] Found ${qaMatches?.length || 0} Q&A matches`)
@@ -524,7 +559,7 @@ async function retrieveContext(
         if (match.qa_pairs && match.qa_pairs.length > 0) {
           // Find matching Q&A pairs
           const relevantQA = match.qa_pairs.filter((qa: any) => 
-            searchTerms.some(term => 
+            topSearchTerms.some(term => 
               qa.question.toLowerCase().includes(term.toLowerCase()) ||
               qa.answer.toLowerCase().includes(term.toLowerCase())
             )

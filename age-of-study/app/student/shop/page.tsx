@@ -295,7 +295,7 @@ export default function ShopPage() {
                         }
                         transition={SPRING}
                         className={`
-                          ml-auto px-6 py-2.5 font-black text-sm uppercase tracking-wider transition-colors
+                          w-full sm:w-auto sm:ml-auto px-6 py-2.5 font-black text-sm uppercase tracking-wider transition-colors
                           ${
                             canAfford && !isLoading
                               ? "bg-amber-400 text-black hover:bg-amber-300 cursor-pointer"

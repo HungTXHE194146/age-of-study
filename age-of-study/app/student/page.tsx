@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import {
@@ -89,10 +89,12 @@ export default function LearnPage() {
         console.error("Error loading class:", result.error);
       } else {
         setCurrentClass(result.data);
-        // Load subjects and tests if student has a class
+        // Load subjects and tests in parallel if student has a class
         if (result.data?.class?.id) {
-          loadClassSubjects(result.data.class.id);
-          loadPendingTests(result.data.class.id);
+          await Promise.all([
+            loadClassSubjects(result.data.class.id),
+            loadPendingTests(result.data.class.id),
+          ]);
         }
       }
     } catch (error) {
@@ -225,12 +227,12 @@ export default function LearnPage() {
     icon: tierConfig.icon,
   };
 
-  const getGreeting = () => {
+  const greeting = (() => {
     const hour = new Date().getHours();
     if (hour < 12) return "Chào buổi sáng";
     if (hour < 18) return "Chào buổi chiều";
     return "Chào buổi tối";
-  };
+  })();
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -238,23 +240,23 @@ export default function LearnPage() {
       <div className="mb-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Greeting Card */}
         <div className="lg:col-span-1 flex flex-col justify-center">
-          <h1 className="text-4xl font-extrabold text-gray-900 mb-2">
-            {getGreeting()},{" "}
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-2">
+            {greeting},{" "}
             <span className="text-purple-600">
               {user.full_name || user.username}
             </span>
             ! 👋
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-base sm:text-lg text-gray-600">
             Hãy khám phá những bài học thú vị đang chờ đón bạn hôm nay nhé.
           </p>
         </div>
 
         {/* Stats Card */}
         <div className="lg:col-span-2 bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col justify-center">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* XP & Progress */}
-            <div className="col-span-3 sm:col-span-1 p-4 bg-purple-50 rounded-2xl flex flex-col justify-center">
+            <div className="p-4 bg-purple-50 rounded-2xl flex flex-col justify-center">
               <div className="flex items-center gap-2 mb-2">
                 <div className="p-2 bg-purple-100 rounded-xl">
                   <Star className="w-5 h-5 text-purple-600 fill-current" />
@@ -310,7 +312,7 @@ export default function LearnPage() {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="mb-12 relative bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-2xl p-8 hover:shadow-2xl transition-all group overflow-hidden cursor-pointer"
+        className="mb-12 relative bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-2xl p-5 sm:p-8 hover:shadow-2xl transition-all group overflow-hidden cursor-pointer"
         onClick={() => router.push("/student/learn")}
       >
         {/* Background decoration */}
@@ -318,19 +320,19 @@ export default function LearnPage() {
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-16 -mb-16"></div>
 
         {/* Content */}
-        <div className="relative flex items-start justify-between gap-4">
+        <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="flex items-start gap-4 flex-1">
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl">
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl flex-shrink-0">
               <Target className="w-8 h-8 text-white" />
             </div>
             <div>
               <div className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full mb-2 uppercase tracking-wide">
                 Luyện tập mỗi ngày
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">
                 Muốn giỏi hơn? Hãy luyện tập thêm! 💪
               </h2>
-              <p className="text-emerald-100">
+              <p className="text-emerald-100 text-sm sm:text-base">
                 Mỗi ngày luyện tập một chút, kiến thức sẽ vững vàng hơn. Vào
                 phần Học tập để chinh phục thêm nhiều bài học mới nhé!
               </p>
@@ -342,7 +344,7 @@ export default function LearnPage() {
               e.stopPropagation();
               router.push("/student/skill-tree");
             }}
-            className="w-full lg:w-auto px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-white font-bold text-lg rounded-2xl shadow-[0_4px_14px_0_rgba(251,146,60,0.39)] transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-white font-bold text-lg rounded-2xl shadow-[0_4px_14px_0_rgba(251,146,60,0.39)] transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 flex-shrink-0"
           >
             <Play className="w-5 h-5 fill-current" />
             Học ngay

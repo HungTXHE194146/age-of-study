@@ -276,10 +276,10 @@ export default function ClassDetailPage() {
               </NotebookButton>
             </Link>
             <div className="flex-1 ml-4">
-              <h1 className="text-4xl font-black text-gray-900 tracking-tight font-handwritten">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 tracking-tight font-handwritten">
                 {classData.name}
               </h1>
-              <p className="text-xl font-bold text-gray-600 font-handwritten mt-1">
+              <p className="text-base sm:text-xl font-bold text-gray-600 font-handwritten mt-1">
                 Khối {classData.grade} • Năm {classData.school_year}
               </p>
             </div>

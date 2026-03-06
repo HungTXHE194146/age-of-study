@@ -223,7 +223,7 @@ export default function StudentProfilePage() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
           <div className="bg-gray-50 rounded-xl p-3">
             <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">
               Họ và tên
@@ -278,7 +278,7 @@ export default function StudentProfilePage() {
           <label className="block text-sm font-bold text-gray-700 mb-3">
             Môn học yêu thích của bạn? ❤️
           </label>
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
             {SUBJECTS.map((subject) => (
               <motion.button
                 key={subject.id}

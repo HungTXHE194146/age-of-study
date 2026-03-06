@@ -29,8 +29,11 @@ import {
   NotebookCardTitle,
   NotebookCardContent,
   NotebookButton,
-  NotebookBadge
+  NotebookBadge,
 } from "@/components/ui/notebook-card";
+
+// Module-level singleton – avoids re-instantiation on every render
+const testService = new TestService();
 
 export default function StudentSkillTreePage() {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
@@ -40,12 +43,22 @@ export default function StudentSkillTreePage() {
   const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null);
   const [nodeStats, setNodeStats] = useState<StudentNodeStats | null>(null);
   const [nodeStatsLoading, setNodeStatsLoading] = useState(false);
-  const [subjectNodes, setSubjectNodes] = useState<{ id: number; title: string; node_type: string; parent_node_id?: number | null; position_x?: number; position_y?: number; order_index: number }[] | null>(null);
+  const [subjectNodes, setSubjectNodes] = useState<
+    | {
+        id: number;
+        title: string;
+        node_type: string;
+        parent_node_id?: number | null;
+        position_x?: number;
+        position_y?: number;
+        order_index: number;
+      }[]
+    | null
+  >(null);
   const [completedNodeIds, setCompletedNodeIds] = useState<number[]>([]);
 
   const router = useRouter();
   const { user } = useAuthStore();
-  const testService = new TestService();
 
   const handleSubjectSelect = (subject: Subject) => {
     setSelectedSubject(subject);
@@ -79,12 +92,12 @@ export default function StudentSkillTreePage() {
       if (selectedSubject && user?.id) {
         setSubjectNodes(null);
         try {
-          // Fetch nodes
-          const { nodes } = await fetchSubjectSkillTree(selectedSubject.id);
+          // Fetch nodes and completion status in parallel
+          const [{ nodes }, completedIds] = await Promise.all([
+            fetchSubjectSkillTree(selectedSubject.id),
+            testService.getCompletedNodeIds(user.id),
+          ]);
           setSubjectNodes(nodes || []);
-
-          // Fetch completed nodes
-          const completedIds = await testService.getCompletedNodeIds(user.id);
           setCompletedNodeIds(completedIds);
         } catch (error) {
           console.error("Failed to fetch subject data:", error);
@@ -127,7 +140,6 @@ export default function StudentSkillTreePage() {
     // The service already filters for published tests
     const publishedTests = nodeStats.tests;
 
-
     if (publishedTests.length === 0) {
       alert("Bài học này hiện chưa có bài luyện tập nào được công khai!");
       return;
@@ -140,7 +152,7 @@ export default function StudentSkillTreePage() {
     router.push(`/student/learn/tests/${selectedTest.id}`);
   };
 
-  const selectedNodeData = subjectNodes?.find(n => n.id === selectedNodeId);
+  const selectedNodeData = subjectNodes?.find((n) => n.id === selectedNodeId);
 
   return (
     <RouteProtectedWrapper>
@@ -156,7 +168,7 @@ export default function StudentSkillTreePage() {
                 SỔ TAY CỦA EM
               </h1>
               <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                {selectedSubject?.name || 'Đang tải...'}
+                {selectedSubject?.name || "Đang tải..."}
               </p>
             </div>
           </div>
@@ -172,7 +184,11 @@ export default function StudentSkillTreePage() {
                   {selectedSubject ? selectedSubject.name : "Chọn Môn Học"}
                 </span>
               </div>
-              {isSubjectSelectorOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {isSubjectSelectorOpen ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
             </div>
 
             {isSubjectSelectorOpen && (
@@ -208,12 +224,16 @@ export default function StudentSkillTreePage() {
                   isTeacherMode={false}
                   subjectNodes={subjectNodes}
                   completedNodeIds={completedNodeIds}
-                  onNodeSelected={(id: string | number) => setSelectedNodeId(Number(id))}
+                  onNodeSelected={(id: string | number) =>
+                    setSelectedNodeId(Number(id))
+                  }
                 />
               </div>
             ) : (
               <div className="h-full flex items-center justify-center">
-                <p className="text-gray-400 font-bold italic">Bé hãy chọn môn học để bắt đầu nhé!</p>
+                <p className="text-gray-400 font-bold italic">
+                  Bé hãy chọn môn học để bắt đầu nhé!
+                </p>
               </div>
             )}
 
@@ -231,16 +251,27 @@ export default function StudentSkillTreePage() {
                     <div className="flex items-center gap-3">
                       <div
                         className="w-12 h-12 rounded-2xl flex items-center justify-center border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)]"
-                        style={{ backgroundColor: completedNodeIds.includes(selectedNodeId) ? '#22c55e' : '#fbbf24' }}
+                        style={{
+                          backgroundColor: completedNodeIds.includes(
+                            selectedNodeId,
+                          )
+                            ? "#22c55e"
+                            : "#fbbf24",
+                        }}
                       >
                         <Sparkles className="text-white w-6 h-6" />
                       </div>
                       <div>
                         <NotebookCardTitle className="text-xl">
-                          {selectedNodeData?.title || 'Bài học'}
+                          {selectedNodeData?.title || "Bài học"}
                         </NotebookCardTitle>
                         {completedNodeIds.includes(selectedNodeId) && (
-                          <NotebookBadge variant="success" className="text-[10px] mt-1">Hoàn thành xuất sắc!</NotebookBadge>
+                          <NotebookBadge
+                            variant="success"
+                            className="text-[10px] mt-1"
+                          >
+                            Hoàn thành xuất sắc!
+                          </NotebookBadge>
                         )}
                       </div>
                     </div>
@@ -250,18 +281,27 @@ export default function StudentSkillTreePage() {
                     <div className="space-y-4">
                       <div className="bg-gray-50 p-3 rounded-lg border-2 border-black/5">
                         <p className="text-sm text-gray-600 italic">
-                          "{selectedNodeData?.title} giúp em rèn luyện kỹ năng và kiến thức bổ ích. Cùng bắt đầu nào!"
+                          "{selectedNodeData?.title} giúp em rèn luyện kỹ năng
+                          và kiến thức bổ ích. Cùng bắt đầu nào!"
                         </p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="text-center p-2 bg-blue-50 rounded-lg border-2 border-blue-100">
-                          <div className="text-lg font-black text-blue-700">{nodeStats?.stats?.completed || 0}</div>
-                          <div className="text-[10px] font-bold text-blue-500 uppercase">Đã làm</div>
+                          <div className="text-lg font-black text-blue-700">
+                            {nodeStats?.stats?.completed || 0}
+                          </div>
+                          <div className="text-[10px] font-bold text-blue-500 uppercase">
+                            Đã làm
+                          </div>
                         </div>
                         <div className="text-center p-2 bg-orange-50 rounded-lg border-2 border-orange-100">
-                          <div className="text-lg font-black text-orange-700">{nodeStats?.stats?.bestScore || 0}%</div>
-                          <div className="text-[10px] font-bold text-orange-500 uppercase">Điểm cao</div>
+                          <div className="text-lg font-black text-orange-700">
+                            {nodeStats?.stats?.bestScore || 0}%
+                          </div>
+                          <div className="text-[10px] font-bold text-orange-500 uppercase">
+                            Điểm cao
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -284,15 +324,31 @@ export default function StudentSkillTreePage() {
               <div className="flex flex-col items-center">
                 <div className="w-24 h-24 rounded-full bg-blue-100 border-4 border-black flex items-center justify-center text-4xl shadow-[6px_6px_0_0_rgba(0,0,0,1)] mb-4 overflow-hidden">
                   {user?.avatar_url ? (
-                    <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : '👦'}
+                    user.avatar_url.includes("/") ? (
+                      <img
+                        src={user.avatar_url}
+                        alt="Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      user.avatar_url
+                    )
+                  ) : (
+                    "👦"
+                  )}
                 </div>
-                <h2 className="text-2xl font-black font-handwritten">{user?.full_name || 'Học sinh'}</h2>
-                <NotebookBadge className="mt-2">{user?.total_xp || 0} XP</NotebookBadge>
+                <h2 className="text-2xl font-black font-handwritten">
+                  {user?.full_name || "Học sinh"}
+                </h2>
+                <NotebookBadge className="mt-2">
+                  {user?.total_xp || 0} XP
+                </NotebookBadge>
               </div>
 
               <div className="space-y-4">
-                <h3 className="font-black text-gray-500 uppercase tracking-widest text-xs">Thành tích gần đây</h3>
+                <h3 className="font-black text-gray-500 uppercase tracking-widest text-xs">
+                  Thành tích gần đây
+                </h3>
                 <div className="space-y-3">
                   <div className="p-3 border-2 border-black rounded-xl bg-yellow-50 flex items-center gap-3">
                     <div className="w-10 h-10 bg-yellow-400 border-2 border-black rounded-lg flex items-center justify-center shrink-0">
@@ -300,7 +356,9 @@ export default function StudentSkillTreePage() {
                     </div>
                     <div>
                       <div className="text-sm font-black">Khám phá</div>
-                      <div className="text-[10px] font-bold text-yellow-700">Mở khóa 5 bài học</div>
+                      <div className="text-[10px] font-bold text-yellow-700">
+                        Mở khóa 5 bài học
+                      </div>
                     </div>
                   </div>
                   <div className="p-3 border-2 border-black rounded-xl bg-orange-50 flex items-center gap-3">
@@ -309,7 +367,9 @@ export default function StudentSkillTreePage() {
                     </div>
                     <div>
                       <div className="text-sm font-black">Chuyên cần</div>
-                      <div className="text-[10px] font-bold text-orange-700">Học 3 ngày liên tiếp</div>
+                      <div className="text-[10px] font-bold text-orange-700">
+                        Học 3 ngày liên tiếp
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getTeacherClasses } from "@/lib/classService";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,14 @@ import {
   ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
-import { NotebookCard, NotebookCardHeader, NotebookCardTitle, NotebookCardContent, NotebookButton, NotebookBadge } from "@/components/ui/notebook-card";
+import {
+  NotebookCard,
+  NotebookCardHeader,
+  NotebookCardTitle,
+  NotebookCardContent,
+  NotebookButton,
+  NotebookBadge,
+} from "@/components/ui/notebook-card";
 
 interface ClassData {
   id: number;
@@ -102,53 +109,65 @@ export default function TeacherClassesPage() {
   }, [user?.id]);
 
   // Combine all classes
-  const allClasses = [
-    ...(teacherData?.homeroom_classes || []),
-    ...(teacherData?.subject_classes || []),
-  ];
+  const allClasses = useMemo(
+    () => [
+      ...(teacherData?.homeroom_classes || []),
+      ...(teacherData?.subject_classes || []),
+    ],
+    [teacherData],
+  );
 
-  // Filter and sort classes
-  const filteredAndSortedClasses = allClasses
-    .filter((classData) => {
-      // Search filter
-      const matchesSearch =
-        searchTerm === "" ||
-        classData.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        classData.class_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        classData.subjects?.some(s =>
-          s.name?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+  // Filter and sort classes – memoized to avoid re-running on unrelated state changes
+  const filteredAndSortedClasses = useMemo(
+    () =>
+      allClasses
+        .filter((classData) => {
+          // Search filter
+          const matchesSearch =
+            searchTerm === "" ||
+            classData.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            classData.class_code
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase()) ||
+            classData.subjects?.some((s) =>
+              s.name?.toLowerCase().includes(searchTerm.toLowerCase()),
+            );
 
-      // Type filter
-      const matchesType = filterType === "all" || classData.type === filterType;
+          // Type filter
+          const matchesType =
+            filterType === "all" || classData.type === filterType;
 
-      // Grade filter
-      const matchesGrade = filterGrade === 0 || classData.grade === filterGrade;
+          // Grade filter
+          const matchesGrade =
+            filterGrade === 0 || classData.grade === filterGrade;
 
-      return matchesSearch && matchesType && matchesGrade;
-    })
-    .sort((a, b) => {
-      let comparison = 0;
+          return matchesSearch && matchesType && matchesGrade;
+        })
+        .sort((a, b) => {
+          let comparison = 0;
 
-      switch (sortBy) {
-        case "name":
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case "grade":
-          comparison = a.grade - b.grade;
-          break;
-        case "students":
-          comparison = a.student_count - b.student_count;
-          break;
-        case "date":
-        default:
-          comparison =
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          break;
-      }
+          switch (sortBy) {
+            case "name":
+              comparison = a.name.localeCompare(b.name);
+              break;
+            case "grade":
+              comparison = a.grade - b.grade;
+              break;
+            case "students":
+              comparison = a.student_count - b.student_count;
+              break;
+            case "date":
+            default:
+              comparison =
+                new Date(a.created_at).getTime() -
+                new Date(b.created_at).getTime();
+              break;
+          }
 
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
+          return sortOrder === "asc" ? comparison : -comparison;
+        }),
+    [allClasses, searchTerm, filterType, filterGrade, sortBy, sortOrder],
+  );
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedClasses.length / itemsPerPage);
@@ -161,13 +180,7 @@ export default function TeacherClassesPage() {
   };
 
   if (loading) {
-    return (
-      <Loading
-        message="Đang tải lớp học..."
-        size="lg"
-        fullScreen
-      />
-    );
+    return <Loading message="Đang tải lớp học..." size="lg" fullScreen />;
   }
 
   if (error) {
@@ -230,7 +243,7 @@ export default function TeacherClassesPage() {
               <GraduationCap className="w-8 h-8 text-blue-900" />
             </div>
             <div>
-              <h1 className="text-4xl font-black text-gray-900 tracking-tight font-handwritten">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 tracking-tight font-handwritten">
                 Lớp học của tôi
               </h1>
               <p className="text-xl font-bold text-gray-600 font-handwritten mt-1">
@@ -248,7 +261,9 @@ export default function TeacherClassesPage() {
                 <NotebookBadge variant="success">Chủ nhiệm</NotebookBadge>
                 <Users className="w-8 h-8 text-green-900" />
               </div>
-              <p className="text-4xl font-black text-green-900">{teacherData.homeroom_classes.length}</p>
+              <p className="text-3xl sm:text-4xl font-black text-green-900">
+                {teacherData.homeroom_classes.length}
+              </p>
               <p className="text-lg font-bold text-gray-600">Lớp học</p>
             </NotebookCardContent>
           </NotebookCard>
@@ -259,7 +274,9 @@ export default function TeacherClassesPage() {
                 <NotebookBadge variant="default">Bộ môn</NotebookBadge>
                 <BookOpen className="w-8 h-8 text-blue-900" />
               </div>
-              <p className="text-4xl font-black text-blue-900">{teacherData.subject_classes.length}</p>
+              <p className="text-3xl sm:text-4xl font-black text-blue-900">
+                {teacherData.subject_classes.length}
+              </p>
               <p className="text-lg font-bold text-gray-600">Lớp học</p>
             </NotebookCardContent>
           </NotebookCard>
@@ -270,9 +287,15 @@ export default function TeacherClassesPage() {
                 <NotebookBadge variant="warning">Học sinh</NotebookBadge>
                 <Users2 className="w-8 h-8 text-purple-900" />
               </div>
-              <p className="text-4xl font-black text-purple-900">
-                {teacherData.homeroom_classes.reduce((sum, c) => sum + c.student_count, 0) +
-                  teacherData.subject_classes.reduce((sum, c) => sum + c.student_count, 0)}
+              <p className="text-3xl sm:text-4xl font-black text-purple-900">
+                {teacherData.homeroom_classes.reduce(
+                  (sum, c) => sum + c.student_count,
+                  0,
+                ) +
+                  teacherData.subject_classes.reduce(
+                    (sum, c) => sum + c.student_count,
+                    0,
+                  )}
               </p>
               <p className="text-lg font-bold text-gray-600">Tổng số</p>
             </NotebookCardContent>
@@ -300,7 +323,9 @@ export default function TeacherClassesPage() {
               <select
                 value={filterType}
                 onChange={(e) => {
-                  setFilterType(e.target.value as "all" | "homeroom" | "subject");
+                  setFilterType(
+                    e.target.value as "all" | "homeroom" | "subject",
+                  );
                   setCurrentPage(1);
                 }}
                 className="px-4 py-3 border-2 border-black rounded-md focus:ring-0 focus:border-blue-600 text-lg font-bold bg-white/80"
@@ -335,7 +360,11 @@ export default function TeacherClassesPage() {
                 <span className="font-bold">Sắp xếp:</span>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as "name" | "grade" | "students" | "date")}
+                  onChange={(e) =>
+                    setSortBy(
+                      e.target.value as "name" | "grade" | "students" | "date",
+                    )
+                  }
                   className="px-3 py-1 border-2 border-black rounded-md focus:ring-0 text-base font-bold bg-white"
                 >
                   <option value="name">Tên</option>
@@ -343,7 +372,12 @@ export default function TeacherClassesPage() {
                   <option value="students">Sĩ số</option>
                   <option value="date">Ngày</option>
                 </select>
-                <button onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")} className="border-2 border-black bg-white p-1 rounded-md hover:bg-gray-200">
+                <button
+                  onClick={() =>
+                    setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                  }
+                  className="border-2 border-black bg-white p-1 rounded-md hover:bg-gray-200"
+                >
                   {sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />}
                 </button>
               </div>
@@ -359,57 +393,94 @@ export default function TeacherClassesPage() {
             </div>
           ) : (
             currentClasses.map((classData) => (
-              <NotebookCard key={classData.id} className="group hover:scale-[1.02] transition-transform">
+              <NotebookCard
+                key={classData.id}
+                className="group hover:scale-[1.02] transition-transform"
+              >
                 <NotebookCardHeader className="bg-blue-50/80">
                   <div className="flex justify-between items-start">
                     <div>
-                      <NotebookCardTitle className="text-2xl sm:text-3xl mb-1">{classData.name}</NotebookCardTitle>
-                      <div className="text-lg text-gray-600 font-bold">Năm: {classData.school_year}</div>
+                      <NotebookCardTitle className="text-2xl sm:text-3xl mb-1">
+                        {classData.name}
+                      </NotebookCardTitle>
+                      <div className="text-lg text-gray-600 font-bold">
+                        Năm: {classData.school_year}
+                      </div>
                     </div>
                     {classData.type === "homeroom" ? (
-                      <NotebookBadge variant="success" className="text-sm border-2">Chủ nhiệm</NotebookBadge>
+                      <NotebookBadge
+                        variant="success"
+                        className="text-sm border-2"
+                      >
+                        Chủ nhiệm
+                      </NotebookBadge>
                     ) : (
-                      <NotebookBadge variant="default" className="text-sm border-2">Bộ môn</NotebookBadge>
+                      <NotebookBadge
+                        variant="default"
+                        className="text-sm border-2"
+                      >
+                        Bộ môn
+                      </NotebookBadge>
                     )}
                   </div>
                 </NotebookCardHeader>
                 <NotebookCardContent className="py-6 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
-                      <span className="block text-sm text-gray-500 font-bold uppercase">Sĩ số</span>
+                      <span className="block text-sm text-gray-500 font-bold uppercase">
+                        Sĩ số
+                      </span>
                       <span className="text-2xl font-black text-gray-800 flex items-center gap-2">
                         <Users className="w-5 h-5" /> {classData.student_count}
                       </span>
                     </div>
                     <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
-                      <span className="block text-sm text-gray-500 font-bold uppercase">Khối</span>
+                      <span className="block text-sm text-gray-500 font-bold uppercase">
+                        Khối
+                      </span>
                       <span className="text-2xl font-black text-gray-800">
                         {classData.grade}
                       </span>
                     </div>
                     <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
-                      <span className="block text-sm text-gray-500 font-bold uppercase">Mã lớp</span>
+                      <span className="block text-sm text-gray-500 font-bold uppercase">
+                        Mã lớp
+                      </span>
                       <span className="text-xl font-bold text-gray-800 tracking-wider">
                         {classData.class_code}
                       </span>
                     </div>
                     <div className="bg-white/60 p-3 rounded-lg border-2 border-gray-300">
-                      <span className="block text-sm text-gray-500 font-bold uppercase">Môn học</span>
-                      <span className="text-xl font-bold text-gray-800 truncate block" title={classData.subjects?.map(s => s.name).join(', ')}>
-                        {classData.subjects?.map(s => s.name).join(', ') || "N/A"}
+                      <span className="block text-sm text-gray-500 font-bold uppercase">
+                        Môn học
+                      </span>
+                      <span
+                        className="text-xl font-bold text-gray-800 truncate block"
+                        title={classData.subjects
+                          ?.map((s) => s.name)
+                          .join(", ")}
+                      >
+                        {classData.subjects?.map((s) => s.name).join(", ") ||
+                          "N/A"}
                       </span>
                     </div>
                   </div>
                 </NotebookCardContent>
                 <div className="p-6 pt-0 flex gap-3 flex-col sm:flex-row border-t-2 border-dashed border-gray-300 mt-4 h-auto items-end">
-                  <Link href={`/teacher/classes/${classData.id}`} className="flex-1 w-full mt-4">
+                  <Link
+                    href={`/teacher/classes/${classData.id}`}
+                    className="flex-1 w-full mt-4"
+                  >
                     <NotebookButton className="w-full bg-blue-100 text-blue-900 border-blue-900 hover:bg-blue-200 text-lg">
                       <Eye className="w-5 h-5 mr-2" />
                       Xem lớp
                     </NotebookButton>
                   </Link>
                   {classData.type === "homeroom" && (
-                    <Link href={`/teacher/classes/${classData.id}`} className="flex-1 w-full mt-4 sm:mt-4">
+                    <Link
+                      href={`/teacher/classes/${classData.id}`}
+                      className="flex-1 w-full mt-4 sm:mt-4"
+                    >
                       <NotebookButton className="w-full bg-green-100 text-green-900 border-green-900 hover:bg-green-200 text-lg">
                         <Users2 className="w-5 h-5 mr-2" />
                         Học sinh

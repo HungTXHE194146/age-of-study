@@ -31,8 +31,7 @@ export default function RankCard({
   improvement,
   isCurrentUser = false,
 }: RankCardProps) {
-  const isEmoji =
-    avatarUrl && !avatarUrl.startsWith("http") && !avatarUrl.startsWith("/");
+  const isEmoji = avatarUrl && !avatarUrl.includes("/");
   // Ensure positive index for color class (rank >= 4 expected, but handle edge cases)
   const colorIndex = rank >= 4 ? (rank - 4) % RANK_COLORS.length : 0;
   const colorClass = RANK_COLORS[colorIndex];

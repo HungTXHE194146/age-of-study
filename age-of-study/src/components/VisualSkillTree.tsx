@@ -20,7 +20,10 @@ import {
 import "@xyflow/react/dist/style.css";
 import { Search, Star, Target } from "lucide-react";
 import { transformDBNodesToFlow } from "@/utils/skillTreeMapper";
-import { updateNodeConnection, updateNodePositions } from "@/actions/skillTreeActions";
+import {
+  updateNodeConnection,
+  updateNodePositions,
+} from "@/actions/skillTreeActions";
 import { getLayoutedElements } from "@/utils/layoutUtils";
 import Loading from "@/components/ui/loading";
 
@@ -31,7 +34,10 @@ import { NotebookDecorations } from "./visual-skill-tree/NotebookDecorations";
 import { CustomNode } from "./visual-skill-tree/CustomNode";
 import { CustomEdge } from "./visual-skill-tree/CustomEdge";
 import { NodeCallbacksContext } from "./visual-skill-tree/NodeCallbacksContext";
-import { VisualSkillTreeProps, CustomNodeType } from "./visual-skill-tree/types";
+import {
+  VisualSkillTreeProps,
+  CustomNodeType,
+} from "./visual-skill-tree/types";
 import { EMPTY_NODE_IDS } from "./visual-skill-tree/constants";
 
 const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
@@ -43,15 +49,21 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   onEditNode,
   onDeleteNode,
 }) => {
+  // Create refs for values used in focus logic to avoid dependency loop re-renders
+  const completedNodeIdsRef = React.useRef(completedNodeIds);
+  useEffect(() => {
+    completedNodeIdsRef.current = completedNodeIds;
+  }, [completedNodeIds]);
+
   const [nodes, setNodes, onNodesChange] = useNodesState<CustomNodeType>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const [isLowData, setIsLowData] = useState(false);
 
-  // Context value for callbacks
+  // MUST BE CALLED TOP LEVEL TO AVOID REACT HOOK ORDER VIOLATION
   const contextValue = useMemo(
     () => ({ onEditNode, onDeleteNode, isTeacherMode }),
-    [onEditNode, onDeleteNode, isTeacherMode]
+    [onEditNode, onDeleteNode, isTeacherMode],
   );
 
   // Search logic
@@ -73,7 +85,8 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     };
     handleStorageChange();
     window.addEventListener("lowDataModeChanged", handleStorageChange);
-    return () => window.removeEventListener("lowDataModeChanged", handleStorageChange);
+    return () =>
+      window.removeEventListener("lowDataModeChanged", handleStorageChange);
   }, []);
 
   // Form submit for search
@@ -89,18 +102,23 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   // Memoized nodes and edges data from DB nodes
   const mappedData = useMemo(() => {
     if (!subjectNodes) return null;
-    return transformDBNodesToFlow(subjectNodes, isTeacherMode, completedNodeIds);
+    return transformDBNodesToFlow(
+      subjectNodes,
+      isTeacherMode || false,
+      completedNodeIds,
+    );
   }, [subjectNodes, isTeacherMode, completedNodeIds]);
 
   // Sync flows to local state
   useEffect(() => {
     if (mappedData) {
       setNodes(mappedData.nodes);
+      // Inject isLowData and isTeacherMode into edge data
       setEdges(
         mappedData.edges.map((e) => ({
           ...e,
           data: { ...e.data, isLowData, isTeacherMode },
-        }))
+        })),
       );
     } else {
       setNodes([]);
@@ -114,13 +132,16 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     subjectNodes,
     nodes,
     completedNodeIds,
-    isTeacherMode
+    isTeacherMode,
   );
 
   // Translate extent for zooming boundaries
   const calculatedTranslateExtent = useMemo(() => {
     if (!nodes || nodes.length === 0) {
-      return [[-1000, -Infinity], [1000, Infinity]] as any;
+      return [
+        [-1000, -Infinity],
+        [1000, Infinity],
+      ] as any;
     }
 
     let minY = Infinity;
@@ -154,7 +175,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     () => ({
       custom: (props: any) => <CustomEdge {...props} setEdges={setEdges} />,
     }),
-    [setEdges]
+    [setEdges],
   );
 
   // Connect edges
@@ -174,7 +195,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
           params.source,
           params.target,
           sourceHandle,
-          targetHandle
+          targetHandle,
         );
 
         if (!result.success) {
@@ -187,7 +208,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
         console.error("Error in onConnect:", error);
       }
     },
-    [isTeacherMode, setEdges]
+    [isTeacherMode, setEdges],
   );
 
   // Delete edges
@@ -198,7 +219,9 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
       let previousEdges: Edge[] = [];
       setEdges((eds) => {
         previousEdges = eds;
-        return eds.filter((edge) => !edgesToDelete.find((e) => e.id === edge.id));
+        return eds.filter(
+          (edge) => !edgesToDelete.find((e) => e.id === edge.id),
+        );
       });
 
       try {
@@ -211,7 +234,8 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
               targetId: parseInt(edge.target),
             }),
           });
-          if (!response.ok) throw new Error(`Failed to delete connection ${edge.id}`);
+          if (!response.ok)
+            throw new Error(`Failed to delete connection ${edge.id}`);
           return response;
         });
 
@@ -222,7 +246,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
         alert("Lỗi khi xóa kết nối. Vui lòng thử lại.");
       }
     },
-    [isTeacherMode, setEdges]
+    [isTeacherMode, setEdges],
   );
 
   // Drag logic
@@ -234,11 +258,15 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
           console.error("Failed to update node positions:", result.error);
         }
       }, 1000),
-    []
+    [],
   );
 
   const onNodeDragStop = useCallback(
-    (event: React.MouseEvent, node: CustomNodeType, nodesArg: CustomNodeType[]) => {
+    (
+      event: React.MouseEvent,
+      node: CustomNodeType,
+      nodesArg: CustomNodeType[],
+    ) => {
       if (!isTeacherMode) return;
 
       const selectedNodes = nodesArg.filter((n) => n.selected === true);
@@ -252,7 +280,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
 
       debouncedUpdatePositions(positions);
     },
-    [isTeacherMode, debouncedUpdatePositions]
+    [isTeacherMode, debouncedUpdatePositions],
   );
 
   const onNodeClick = useCallback(
@@ -261,13 +289,16 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
         onNodeSelected(node.id);
       }
     },
-    [onNodeSelected]
+    [onNodeSelected],
   );
 
   const onLayout = useCallback(async () => {
     if (!isTeacherMode) return;
 
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges);
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      nodes,
+      edges,
+    );
 
     setNodes([...layoutedNodes] as CustomNodeType[]);
     setEdges([...layoutedEdges]);
@@ -300,15 +331,135 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   return (
     <NodeCallbacksContext.Provider value={contextValue}>
       <div
-        className={`w-full h-full relative overflow-hidden flex flex-col ${isTeacherMode
-            ? "max-w-[400px] mx-auto border-x-4 border-black shadow-[4px_0_0_0_rgba(0,0,0,1),-4px_0_0_0_rgba(0,0,0,1)] bg-[#fffdf8]"
-            : "bg-transparent"
-          }`}
+        className={`w-full h-full relative overflow-hidden flex flex-col ${isTeacherMode ? "max-w-[400px] mx-auto border-x-4 border-black shadow-[4px_0_0_0_rgba(0,0,0,1),-4px_0_0_0_rgba(0,0,0,1)] bg-[#fffdf8]" : "bg-transparent"}`}
       >
-        {isTeacherMode && <NotebookDecorations />}
+        {/* Shared SVG filter – rendered once to avoid duplicate DOM nodes per edge */}
+        <svg
+          style={{
+            position: "absolute",
+            width: 0,
+            height: 0,
+            overflow: "hidden",
+          }}
+        >
+          <defs>
+            <filter
+              id="glow-shared"
+              x="-50%"
+              y="-50%"
+              width="200%"
+              height="200%"
+            >
+              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+        </svg>
+        {/* Cảnh vật trang trí cho Notebook */}
+        {isTeacherMode && (
+          <>
+            {/* Lưới gáy sổ bên trái */}
+            <div className="absolute left-0 top-0 bottom-0 w-8 border-r-2 border-dashed border-gray-300 z-0 pointer-events-none flex flex-col justify-around py-10 opacity-60">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="w-4 h-4 rounded-full bg-gray-200 border-2 border-gray-300 ml-1 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]"
+                ></div>
+              ))}
+            </div>
 
+            {/* Doodle hành tinh/ngôi sao */}
+            <div className="absolute bottom-16 right-4 opacity-[0.15] pointer-events-none z-0 rotate-12">
+              <svg
+                width="60"
+                height="60"
+                viewBox="0 0 100 100"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10,90 Q50,10 90,90 Q50,50 10,90 Z"
+                  fill="none"
+                  stroke="#000"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="10"
+                  fill="none"
+                  stroke="#000"
+                  strokeWidth="4"
+                />
+              </svg>
+            </div>
+
+            {/* Doodle mũi tên vẽ tay */}
+            <div className="absolute top-40 right-6 opacity-20 pointer-events-none z-0 rotate-[15deg] scale-100">
+              <svg
+                width="40"
+                height="40"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#000"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </div>
+
+            {/* Doodle chữ thập */}
+            <div className="absolute bottom-40 left-12 opacity-15 pointer-events-none z-0 -rotate-12 scale-75">
+              <svg
+                width="30"
+                height="30"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#000"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </div>
+
+            {/* Decal Text nhỏ chìm dưới nền dọc theo viền phải */}
+            <div className="absolute top-[60%] -right-16 opacity-[0.05] pointer-events-none z-0 rotate-90 font-handwritten text-5xl tracking-[0.5em] text-black font-black whitespace-nowrap">
+              SKILL TREE
+            </div>
+
+            {/* Doodle đám mây */}
+            <div className="absolute top-16 left-12 opacity-[0.15] pointer-events-none z-0 -rotate-6 scale-90">
+              <svg
+                width="60"
+                height="40"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#000"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M17.5 19c2.485 0 4.5-2.015 4.5-4.5S19.985 10 17.5 10c-.394 0-.776.05-1.144.148C15.422 7.025 12.518 5 9 5c-3.866 0-7 3.134-7 7 0 .195.008.388.024.579A4.5 4.5 0 0 0 3.5 19h14z" />
+              </svg>
+            </div>
+          </>
+        )}
+
+        {/* Thanh Search Nổi */}
         <div className="absolute top-4 left-4 right-4 z-50">
-          <form onSubmit={handleSearchFormSubmit} className="relative flex items-center">
+          <form
+            onSubmit={handleSearchFormSubmit}
+            className="relative flex items-center"
+          >
             <input
               type="text"
               placeholder="Tìm kiếm bài học..."
@@ -350,7 +501,9 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
               {searchResults.map((node) => (
                 <div
                   key={node.id}
-                  onMouseDown={() => handleSelectNode(node.id.toString(), setNodes as any)}
+                  onMouseDown={() =>
+                    handleSelectNode(node.id.toString(), setNodes as any)
+                  }
                   className={
                     isTeacherMode
                       ? "px-4 py-3 hover:bg-yellow-200 cursor-pointer transition-colors border-b-2 border-dashed border-gray-400 last:border-0 flex items-center gap-3 text-gray-800 font-bold"
@@ -366,7 +519,9 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
                   >
                     <Star
                       size={14}
-                      className={isTeacherMode ? "text-black" : "text-indigo-400"}
+                      className={
+                        isTeacherMode ? "text-black" : "text-indigo-400"
+                      }
                     />
                   </div>
                   <div>
@@ -395,7 +550,9 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
           )}
         </div>
 
-        <div className={`flex-1 w-full h-full relative ${isTeacherMode ? "pl-8" : ""}`}>
+        <div
+          className={`flex-1 w-full h-full relative ${isTeacherMode ? "pl-8" : ""}`}
+        >
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -422,7 +579,43 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
             nodesDraggable={isTeacherMode}
             nodesConnectable={isTeacherMode}
             elementsSelectable={true}
-            translateExtent={calculatedTranslateExtent}
+            translateExtent={(() => {
+              if (!nodes || nodes.length === 0) {
+                return [
+                  [-1000, -Infinity],
+                  [1000, Infinity],
+                ];
+              }
+
+              let minY = Infinity;
+              let maxY = -Infinity;
+              let minX = Infinity;
+              let maxX = -Infinity;
+
+              nodes.forEach((node) => {
+                const x = node.position.x;
+                const y = node.position.y;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+              });
+
+              const centerX = (minX + maxX) / 2 + 75; // 75 is half node width
+
+              // For students, we want to lock horizontal scroll.
+              // To prevent the 'snapping' issue, the X range should be centered around the nodes.
+              // We use a safe margin that prevents significant horizontal movement but avoids snapping.
+              const horizontalRange = 1;
+
+              const headerMarginY = 150;
+              const bottomMarginY = 250;
+
+              return [
+                [centerX - horizontalRange, minY - headerMarginY],
+                [centerX + horizontalRange, maxY + bottomMarginY],
+              ] as any;
+            })()}
             defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
             selectionMode={isTeacherMode ? SelectionMode.Partial : undefined}
             onlyRenderVisibleElements={true}
@@ -436,7 +629,10 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
             />
 
             {isTeacherMode && (
-              <Panel position="bottom-center" className="flex gap-2 mb-4 w-full justify-center">
+              <Panel
+                position="bottom-center"
+                className="flex gap-2 mb-4 w-full justify-center"
+              >
                 <button
                   onClick={onLayout}
                   className="bg-white border-2 border-black text-black font-black py-2 px-6 shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:bg-yellow-100 flex items-center gap-2 transition-all text-lg"
@@ -446,19 +642,60 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
                 </button>
               </Panel>
             )}
-          </ReactFlow>
-
-          {!isTeacherMode && (
-            <div className="absolute bottom-6 left-0 right-0 flex justify-center z-50 pointer-events-none">
-              <button
-                onClick={() => applyFocus(false)}
-                className="pointer-events-auto bg-white hover:bg-yellow-50 text-black border-2 border-black font-black py-3 px-6 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] flex items-center gap-2 transition-all text-sm uppercase"
+            {!isTeacherMode && (
+              <Panel
+                position="bottom-center"
+                className="flex gap-2 mb-6 w-full justify-center z-50"
               >
-                <Target size={20} className="text-blue-500" />
-                Về Bài Hiện Tại
-              </button>
-            </div>
-          )}
+                <button
+                  onClick={() => {
+                    if (rfInstance && nodes.length > 0) {
+                      let activeNode;
+                      if (completedNodeIds.length === 0) {
+                        activeNode = [...nodes].sort(
+                          (a, b) =>
+                            (a.data.id as number) - (b.data.id as number),
+                        )[0];
+                      } else {
+                        // Logic: Lấy node ID đã hoàn thành cao nhất + 1
+                        const maxCompletedId = Math.max(...completedNodeIds);
+                        const nextNodeId = maxCompletedId + 1;
+                        activeNode =
+                          nodes.find(
+                            (n) => (n.data.id as number) === nextNodeId,
+                          ) ||
+                          nodes.find(
+                            (n) => (n.data.id as number) === maxCompletedId,
+                          ) ||
+                          nodes[0];
+                      }
+
+                      if (activeNode) {
+                        // Tính toán centerX động để đảm bảo viewport không bị lệch khi bấm nút
+                        let minX = Infinity;
+                        let maxX = -Infinity;
+                        nodes.forEach((n) => {
+                          if (n.position.x < minX) minX = n.position.x;
+                          if (n.position.x > maxX) maxX = n.position.x;
+                        });
+                        const centerX = (minX + maxX) / 2 + 75;
+
+                        rfInstance.setCenter(
+                          centerX,
+                          activeNode.position.y + 75,
+                          { zoom: 0.8, duration: 800 },
+                        );
+                      }
+                    }
+                  }}
+                  className="bg-white hover:bg-yellow-50 text-black border-2 border-black font-black py-3 px-6 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] flex items-center gap-2 transition-all text-sm uppercase"
+                >
+                  <Target size={20} className="text-blue-500" />
+                  Về Bài Hiện Tại
+                </button>
+              </Panel>
+            )}
+          </ReactFlow>
         </div>
       </div>
     </NodeCallbacksContext.Provider>

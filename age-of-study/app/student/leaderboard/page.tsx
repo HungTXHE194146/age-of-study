@@ -60,10 +60,10 @@ export default function LeaderboardPage() {
         animate={{ y: 0, opacity: 1 }}
         className="text-center mb-8"
       >
-        <h1 className="text-5xl font-black text-gray-900 mb-3">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 mb-3">
           🏆 Bảng Vinh Danh
         </h1>
-        <p className="text-xl text-gray-600">
+        <p className="text-base sm:text-xl text-gray-600">
           So sánh với chính mình, không so với người khác!
         </p>
       </motion.div>
@@ -73,12 +73,12 @@ export default function LeaderboardPage() {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="flex justify-center gap-3 mb-8"
+        className="flex justify-center flex-wrap gap-3 mb-8"
       >
         <button
           onClick={() => setViewMode("personal")}
           className={`
-            px-8 py-4 rounded-2xl font-black text-lg
+            px-4 sm:px-8 py-3 sm:py-4 rounded-2xl font-black text-base sm:text-lg
             transition-all duration-200
             ${
               viewMode === "personal"
@@ -92,7 +92,7 @@ export default function LeaderboardPage() {
         <button
           onClick={() => setViewMode("class")}
           className={`
-            px-8 py-4 rounded-2xl font-black text-lg
+            px-4 sm:px-8 py-3 sm:py-4 rounded-2xl font-black text-base sm:text-lg
             transition-all duration-200
             ${
               viewMode === "class"
@@ -140,8 +140,8 @@ export default function LeaderboardPage() {
                 transition={{ duration: 0.3 }}
                 className="text-center py-20 bg-white rounded-3xl shadow-xl border-4 border-purple-200"
               >
-                <div className="text-8xl mb-6 animate-bounce">🌱</div>
-                <h3 className="text-3xl font-black text-gray-800 mb-4">
+                <div className="text-5xl sm:text-8xl mb-6 animate-bounce">🌱</div>
+                <h3 className="text-2xl sm:text-3xl font-black text-gray-800 mb-4">
                   Hành trình của bạn mới bắt đầu!
                 </h3>
                 <p className="text-xl text-gray-600 max-w-md mx-auto mb-8">
@@ -149,7 +149,7 @@ export default function LeaderboardPage() {
                   bạn
                 </p>
                 <button
-                  onClick={() => (window.location.href = "/student")}
+                  onClick={() => router.push("/student")}
                   className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black text-lg rounded-2xl shadow-lg hover:scale-105 transition-transform"
                 >
                   🚀 Bắt đầu học ngay!
@@ -165,7 +165,7 @@ export default function LeaderboardPage() {
               transition={{ duration: 0.3 }}
             >
               {/* Period Selector */}
-              <div className="flex justify-center gap-3 mb-8">
+              <div className="flex justify-center flex-wrap gap-3 mb-8">
                 {[
                   {
                     value: "weekly" as LeaderboardPeriod,
@@ -187,7 +187,7 @@ export default function LeaderboardPage() {
                     key={option.value}
                     onClick={() => setPeriod(option.value)}
                     className={`
-                      px-6 py-3 rounded-2xl font-black text-base
+                      px-3 sm:px-6 py-2 sm:py-3 rounded-2xl font-black text-sm sm:text-base
                       transition-all duration-200
                       ${
                         period === option.value
