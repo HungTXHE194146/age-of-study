@@ -325,7 +325,9 @@ export default function ClassAnalyticsPage() {
             <div>
               <p className="text-sm text-gray-600 font-medium">Điểm TB chung</p>
               <p className="text-2xl font-bold text-gray-900">
-                {(data.summary.averageScore ?? 0).toFixed(1)}
+                {data.summary.averageScore > 0
+                  ? data.summary.averageScore.toFixed(1)
+                  : <span className="text-base text-gray-400">Chưa có dữ liệu</span>}
               </p>
             </div>
           </div>
@@ -425,6 +427,13 @@ export default function ClassAnalyticsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
+              {sortedClasses.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                    Chưa có dữ liệu lớp học
+                  </td>
+                </tr>
+              )}
               {sortedClasses.map((cls) => (
                 <tr key={cls.classId} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">
@@ -437,17 +446,21 @@ export default function ClassAnalyticsPage() {
                     {cls.studentCount}
                   </td>
                   <td className="px-4 py-3 text-sm text-center">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                        cls.averageScore >= 80
-                          ? "bg-green-100 text-green-800"
-                          : cls.averageScore >= 60
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {cls.averageScore.toFixed(1)}
-                    </span>
+                    {cls.completedNodes > 0 ? (
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          cls.averageScore >= 80
+                            ? "bg-green-100 text-green-800"
+                            : cls.averageScore >= 60
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {cls.averageScore.toFixed(1)}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">Chưa có</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm text-center">
                     <div className="flex flex-col items-center">
