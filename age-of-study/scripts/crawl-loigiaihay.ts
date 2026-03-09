@@ -82,23 +82,21 @@ function cleanText(text: string): string {
 function loadCurriculumStructure(): { weeks: Array<{ theme: string, lessons: Array<{ title: string, url: string }> }> } {
   console.log('📋 Loading curriculum structure from config file...')
   
-  // Filter only Tập 1 lessons (URLs contain "tap-1")
-  const tap1Weeks = CURRICULUM.filter(week => 
-    week.lessons.some(lesson => lesson.url.includes('tap-1'))
-  ).map(week => ({
+  // Load ALL weeks (Tập 1 + Tập 2) - no filtering
+  const allWeeks = CURRICULUM.map(week => ({
     theme: week.theme,
-    lessons: week.lessons.filter(lesson => lesson.url.includes('tap-1'))
+    lessons: week.lessons,
   }))
   
-  console.log(`   ✅ Found ${tap1Weeks.length} weeks (Tập 1 only)`)
-  console.log(`   ✅ Total lessons: ${tap1Weeks.reduce((sum, w) => sum + w.lessons.length, 0)}`)
+  console.log(`   ✅ Found ${allWeeks.length} weeks (full book)`)
+  console.log(`   ✅ Total lessons: ${allWeeks.reduce((sum, w) => sum + w.lessons.length, 0)}`)
   
   // Debug: show first few weeks
-  tap1Weeks.slice(0, 3).forEach((week, idx) => {
+  allWeeks.slice(0, 3).forEach((week, idx) => {
     console.log(`   🔍 Week ${idx + 1} has ${week.lessons.length} lessons`)
   })
   
-  return { weeks: tap1Weeks }
+  return { weeks: allWeeks }
 }
 
 // Step 2: Crawl individual page
@@ -247,13 +245,13 @@ async function crawlPage(url: string, retries = 3): Promise<Partial<Section>> {
 
 // Step 3: Parse structure and crawl all pages
 async function crawlAll(): Promise<CrawledData> {
-  console.log('🚀 Starting crawl of loigiaihay.com (Tập 1)')
+  console.log('🚀 Starting crawl of loigiaihay.com (Full book)')
   console.log('='.repeat(60))
   
   const structure = loadCurriculumStructure()
   
   const crawledData: CrawledData = {
-    textbook: 'Tiếng Việt 5 - Tập 1 - Kết nối tri thức',
+    textbook: 'Tiếng Việt 5 - Kết nối tri thức (Full)',
     source: 'loigiaihay.com',
     source_url: 'https://loigiaihay.com/tieng-viet-5-ket-noi-tri-thuc-c1786.html',
     crawled_at: new Date().toISOString(),
@@ -379,7 +377,7 @@ async function main() {
     const data = await crawlAll()
     
     // Save to JSON
-    const outputPath = path.join(OUTPUT_DIR, 'tiengviet5-tap1.json')
+    const outputPath = path.join(OUTPUT_DIR, 'tiengviet5-full.json')
     fs.writeFileSync(outputPath, JSON.stringify(data, null, 2), 'utf-8')
     
     console.log('\n' + '='.repeat(60))

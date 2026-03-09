@@ -12,6 +12,7 @@ export const transformDBNodesToFlow = (
     position_x?: number; 
     position_y?: number; 
     order_index: number; 
+    week_number?: number | null;
     source_position?: 'top' | 'bottom' | 'left' | 'right' | null; 
     target_position?: 'top' | 'bottom' | 'left' | 'right' | null 
   }[], 
@@ -25,11 +26,10 @@ export const transformDBNodesToFlow = (
   const nodeMap = new Map();
   dbNodes.forEach(n => nodeMap.set(n.id, { ...n }));
 
-  // 2. Tìm các Chapter (Chủ điểm) và gán màu độc lập cho mỗi nhánh
+  // 2. Gán màu theo week_number hoặc chapter (fallback cho subjects không có week)
   let chapterIndex = 0;
   const chapterColors = new Map();
 
-  // Sắp xếp để đảm bảo thứ tự màu ổn định
   const sortedNodes = [...dbNodes].sort((a, b) => a.order_index - b.order_index);
   sortedNodes.forEach(n => {
     if (n.node_type === 'chapter' || n.node_type === 'subject') {
@@ -38,7 +38,7 @@ export const transformDBNodesToFlow = (
     }
   });
 
-  // 3. Hàm đệ quy để lấy màu của nhánh cha
+  // 3. Hàm lấy màu: ưu tiên week_number, fallback chapter cascade
   const colorCache = new Map<number, string>();
   const getBranchColor = (nodeId: number): string => {
     if (colorCache.has(nodeId)) return colorCache.get(nodeId)!;
@@ -47,7 +47,11 @@ export const transformDBNodesToFlow = (
     if (!node) return "#fbbf24";
     
     let color: string;
-    if (chapterColors.has(node.id)) {
+
+    // Week-based coloring: cùng tuần = cùng màu
+    if (node.week_number) {
+      color = BRANCH_COLORS[(node.week_number - 1) % BRANCH_COLORS.length];
+    } else if (chapterColors.has(node.id)) {
       color = chapterColors.get(node.id);
     } else if (node.parent_node_id) {
       color = getBranchColor(node.parent_node_id);

@@ -11,6 +11,7 @@ import {
   Archive,
   AlertCircle,
   Pencil,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   getAllClasses,
@@ -31,6 +32,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import CreateClassModal from "@/components/admin/CreateClassModal";
 import AssignTeacherModal from "@/components/admin/AssignTeacherModal";
 import EditClassModal from "@/components/admin/EditClassModal";
+import HomeroomImportModal from "@/components/admin/HomeroomImportModal";
 
 interface Profile {
   id: string;
@@ -144,6 +146,7 @@ export default function ClassesManagementPage() {
   const [selectedClass, setSelectedClass] = useState<ClassDetail | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Edit modal states
   const [showEditModal, setShowEditModal] = useState(false);
@@ -217,7 +220,7 @@ export default function ClassesManagementPage() {
         (c) =>
           c.name.toLowerCase().includes(term) ||
           c.class_code.toLowerCase().includes(term) ||
-          c.homeroom_teacher_name?.toLowerCase().includes(term)
+          c.homeroom_teacher_name?.toLowerCase().includes(term),
       );
     }
 
@@ -241,7 +244,7 @@ export default function ClassesManagementPage() {
       return;
     }
     if (!result.data) {
-      alert('Không tìm thấy thông tin lớp');
+      alert("Không tìm thấy thông tin lớp");
       return;
     }
     setSelectedClass(result.data);
@@ -255,7 +258,7 @@ export default function ClassesManagementPage() {
 
   const handleEditSubmit = async (
     classId: number,
-    updates: { name: string; grade: number; school_year: string }
+    updates: { name: string; grade: number; school_year: string },
   ) => {
     const result = await updateClass(classId, updates);
     if (result.error) {
@@ -268,24 +271,27 @@ export default function ClassesManagementPage() {
     return true;
   };
 
-  const handleArchiveClass = useCallback(async (classId: number, className: string) => {
-    if (
-      !confirm(
-        `Bạn có chắc muốn lưu trữ lớp "${className}"? Lớp này sẽ không còn hiển thị trong danh sách lớp đang hoạt động.`
-      )
-    ) {
-      return;
-    }
+  const handleArchiveClass = useCallback(
+    async (classId: number, className: string) => {
+      if (
+        !confirm(
+          `Bạn có chắc muốn lưu trữ lớp "${className}"? Lớp này sẽ không còn hiển thị trong danh sách lớp đang hoạt động.`,
+        )
+      ) {
+        return;
+      }
 
-    const result = await archiveClass(classId);
-    if (result.error) {
-      alert(`Lỗi lưu trữ lớp: ${result.error}`);
-      return;
-    }
+      const result = await archiveClass(classId);
+      if (result.error) {
+        alert(`Lỗi lưu trữ lớp: ${result.error}`);
+        return;
+      }
 
-    await loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      await loadData();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [],
+  );
 
   const handleAssignTeacher = async (input: AssignTeacherInput) => {
     const result = await assignTeacherToClass(input);
@@ -293,7 +299,7 @@ export default function ClassesManagementPage() {
       alert(`Lỗi phân công giáo viên: ${result.error}`);
       return false;
     }
-    
+
     // Reload class detail
     if (selectedClass) {
       const detailResult = await getClassDetail(selectedClass.id);
@@ -301,7 +307,7 @@ export default function ClassesManagementPage() {
         setSelectedClass(detailResult.data);
       }
     }
-    
+
     await loadData();
     return true;
   };
@@ -349,7 +355,7 @@ export default function ClassesManagementPage() {
             value={gradeFilter}
             onChange={(e) =>
               setGradeFilter(
-                e.target.value === "all" ? "all" : parseInt(e.target.value)
+                e.target.value === "all" ? "all" : parseInt(e.target.value),
               )
             }
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
@@ -372,9 +378,18 @@ export default function ClassesManagementPage() {
             <span className="sm:hidden">Tạo lớp</span>
           </button>
 
+          {/* Import Homeroom Button */}
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium whitespace-nowrap"
+          >
+            <FileSpreadsheet className="w-5 h-5" />
+            <span className="hidden sm:inline">Nhập GVCN từ Excel</span>
+          </button>
+
           {/* Archive Button */}
           <button
-            onClick={() => router.push('/admin/classes/archived')}
+            onClick={() => router.push("/admin/classes/archived")}
             className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium whitespace-nowrap"
           >
             <Archive className="w-5 h-5" />
@@ -452,6 +467,19 @@ export default function ClassesManagementPage() {
               setShowCreateModal(false);
             }
             return success;
+          }}
+        />
+      )}
+
+      {/* Homeroom Import Modal */}
+      {showImportModal && (
+        <HomeroomImportModal
+          classes={classes}
+          teachers={teachers}
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => {
+            setShowImportModal(false);
+            loadData();
           }}
         />
       )}
@@ -581,7 +609,10 @@ function ClassDetailModal({
               </h3>
               <div className="space-y-2">
                 {classDetail.subject_teachers.map((st, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between bg-gray-50 rounded-lg p-3"
+                  >
                     <span className="font-medium text-gray-900">
                       {st.teacher.full_name}
                     </span>

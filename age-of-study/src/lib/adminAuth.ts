@@ -38,8 +38,9 @@ export async function verifyAdmin(
   ).auth.getUser(token);
 
   if (authError || !authUser) {
+    console.error('verifyAdmin JWT Error:', authError);
     return NextResponse.json(
-      { error: 'Phiên đăng nhập hết hạn' },
+      { error: authError ? `Lỗi xác thực Admin: ${authError.message}` : 'Phiên đăng nhập hết hạn' },
       { status: 401 }
     );
   }

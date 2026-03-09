@@ -43,6 +43,7 @@ export default function StudentSkillTreePage() {
   const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null);
   const [nodeStats, setNodeStats] = useState<StudentNodeStats | null>(null);
   const [nodeStatsLoading, setNodeStatsLoading] = useState(false);
+  const [selectedVolume, setSelectedVolume] = useState<number>(1);
   const [subjectNodes, setSubjectNodes] = useState<
     | {
         id: number;
@@ -52,6 +53,7 @@ export default function StudentSkillTreePage() {
         position_x?: number;
         position_y?: number;
         order_index: number;
+        week_number?: number | null;
       }[]
     | null
   >(null);
@@ -91,10 +93,13 @@ export default function StudentSkillTreePage() {
     const fetchData = async () => {
       if (selectedSubject && user?.id) {
         setSubjectNodes(null);
+        setSelectedNodeId(null);
         try {
+          // Pass volume for subjects with volume support (e.g., TV5)
+          const volumeParam = selectedSubject.code === 'TV5' ? selectedVolume : undefined;
           // Fetch nodes and completion status in parallel
           const [{ nodes }, completedIds] = await Promise.all([
-            fetchSubjectSkillTree(selectedSubject.id),
+            fetchSubjectSkillTree(selectedSubject.id, volumeParam),
             testService.getCompletedNodeIds(user.id),
           ]);
           setSubjectNodes(nodes || []);
@@ -107,7 +112,7 @@ export default function StudentSkillTreePage() {
     };
 
     fetchData();
-  }, [selectedSubject, user?.id]);
+  }, [selectedSubject, user?.id, selectedVolume]);
 
   // Fetch student node stats when a node is selected
   useEffect(() => {
@@ -207,6 +212,32 @@ export default function StudentSkillTreePage() {
               </div>
             )}
           </div>
+
+          {/* Volume selector - only show for subjects with volumes (e.g., TV5) */}
+          {selectedSubject?.code === 'TV5' && (
+            <div className="flex items-center gap-1 bg-white border-2 border-black rounded-xl overflow-hidden shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+              <button
+                onClick={() => setSelectedVolume(1)}
+                className={`px-4 py-2 text-sm font-bold transition-all ${
+                  selectedVolume === 1
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                Tập 1
+              </button>
+              <button
+                onClick={() => setSelectedVolume(2)}
+                className={`px-4 py-2 text-sm font-bold transition-all ${
+                  selectedVolume === 2
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                Tập 2
+              </button>
+            </div>
+          )}
         </div>
 
         {/* --- MAIN CONTENT --- */}
