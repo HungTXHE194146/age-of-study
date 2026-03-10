@@ -264,7 +264,7 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
         .select(`
           *,
           teacher:profiles!inner(id, username, full_name, avatar_url),
-          subject:subjects!inner(id, name)
+          subject:subjects(id, name)
         `)
         .eq('class_id', classId),
       
@@ -314,7 +314,7 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
     const homeroomTeacher = homeroomTeachers.length > 0 ? {
       id: homeroomTeachers[0].teacher.id,
       full_name: homeroomTeachers[0].teacher.full_name,
-      subjects: homeroomTeachers.map((ct: any) => ct.subject),
+      subjects: homeroomTeachers.map((ct: any) => ct.subject).filter(Boolean),
     } : null;
 
     // Get subject teachers (not homeroom)

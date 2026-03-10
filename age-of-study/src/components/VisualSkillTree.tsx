@@ -649,44 +649,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
               >
                 <button
                   onClick={() => {
-                    if (rfInstance && nodes.length > 0) {
-                      let activeNode;
-                      if (completedNodeIds.length === 0) {
-                        activeNode = [...nodes].sort(
-                          (a, b) =>
-                            (a.data.id as number) - (b.data.id as number),
-                        )[0];
-                      } else {
-                        // Logic: Lấy node ID đã hoàn thành cao nhất + 1
-                        const maxCompletedId = Math.max(...completedNodeIds);
-                        const nextNodeId = maxCompletedId + 1;
-                        activeNode =
-                          nodes.find(
-                            (n) => (n.data.id as number) === nextNodeId,
-                          ) ||
-                          nodes.find(
-                            (n) => (n.data.id as number) === maxCompletedId,
-                          ) ||
-                          nodes[0];
-                      }
-
-                      if (activeNode) {
-                        // Tính toán centerX động để đảm bảo viewport không bị lệch khi bấm nút
-                        let minX = Infinity;
-                        let maxX = -Infinity;
-                        nodes.forEach((n) => {
-                          if (n.position.x < minX) minX = n.position.x;
-                          if (n.position.x > maxX) maxX = n.position.x;
-                        });
-                        const centerX = (minX + maxX) / 2 + 75;
-
-                        rfInstance.setCenter(
-                          centerX,
-                          activeNode.position.y + 75,
-                          { zoom: 0.8, duration: 800 },
-                        );
-                      }
-                    }
+                    applyFocus(false);
                   }}
                   className="bg-white hover:bg-yellow-50 text-black border-2 border-black font-black py-3 px-6 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] flex items-center gap-2 transition-all text-sm uppercase"
                 >

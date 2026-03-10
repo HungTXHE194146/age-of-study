@@ -19,7 +19,12 @@ import {
   FileEdit,
 } from "lucide-react";
 import Loading from "@/components/ui/loading";
-import { NotebookCard, NotebookCardContent, NotebookButton, NotebookBadge } from "@/components/ui/notebook-card";
+import {
+  NotebookCard,
+  NotebookCardContent,
+  NotebookButton,
+  NotebookBadge,
+} from "@/components/ui/notebook-card";
 
 export default function TeacherTestDetailPage() {
   const router = useRouter();
@@ -172,7 +177,9 @@ export default function TeacherTestDetailPage() {
         <h1 className="text-5xl font-black text-gray-900 mb-4 font-handwritten tracking-tight drop-shadow-sm leading-10 pl-6">
           {test.title}
         </h1>
-        <p className="text-xl text-gray-700 font-bold italic pl-6 leading-10">Mô tả: {test.description}</p>
+        <p className="text-xl text-gray-700 font-bold italic pl-6 leading-10">
+          Mô tả: {test.description}
+        </p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
@@ -198,7 +205,9 @@ export default function TeacherTestDetailPage() {
                   <span className="text-4xl font-black text-blue-700 font-handwritten drop-shadow-sm">
                     {test.questions.length}
                   </span>
-                  <p className="text-sm font-bold text-gray-600 uppercase mt-1">câu hỏi</p>
+                  <p className="text-sm font-bold text-gray-600 uppercase mt-1">
+                    câu hỏi
+                  </p>
                 </div>
               </div>
 
@@ -227,7 +236,9 @@ export default function TeacherTestDetailPage() {
                       </div>
                       <span className="text-sm font-black text-blue-800 bg-blue-100 px-3 py-1 rounded border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] uppercase">
                         Đáp án:{" "}
-                        {String.fromCharCode(65 + question.correct_option_index)}
+                        {String.fromCharCode(
+                          65 + question.correct_option_index,
+                        )}
                       </span>
                     </div>
 
@@ -239,19 +250,30 @@ export default function TeacherTestDetailPage() {
                       {question.content.options.map((option, optionIndex) => (
                         <div
                           key={optionIndex}
-                          className={`p-3 rounded-lg border-2 flex items-center gap-3 transition-colors ${optionIndex === question.correct_option_index
+                          className={`p-3 rounded-lg border-2 flex items-center gap-3 transition-colors ${
+                            optionIndex === question.correct_option_index
                               ? "border-green-600 bg-green-50 shadow-[2px_2px_0_0_rgba(22,163,74,1)]"
                               : "border-black bg-gray-50 hover:bg-white shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
-                            }`}
+                          }`}
                         >
-                          <span className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm border-2 ${optionIndex === question.correct_option_index
-                              ? "bg-green-500 text-white border-green-700"
-                              : "bg-white text-gray-900 border-black"
-                            }`}>
-                            {option.label}
+                          <span
+                            className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm border-2 ${
+                              optionIndex === question.correct_option_index
+                                ? "bg-green-500 text-white border-green-700"
+                                : "bg-white text-gray-900 border-black"
+                            }`}
+                          >
+                            {typeof option === "string"
+                              ? String.fromCharCode(65 + optionIndex)
+                              : (option as any)?.label ||
+                                String.fromCharCode(65 + optionIndex)}
                           </span>
-                          <span className={`flex-1 font-bold ${optionIndex === question.correct_option_index ? "text-green-900" : "text-gray-800"}`}>
-                            {option.text}
+                          <span
+                            className={`flex-1 font-bold ${optionIndex === question.correct_option_index ? "text-green-900" : "text-gray-800"}`}
+                          >
+                            {typeof option === "string"
+                              ? option
+                              : (option as any)?.text || ""}
                           </span>
                           {optionIndex === question.correct_option_index && (
                             <span className="ml-2 text-green-700 font-black px-2 py-1 bg-white border-2 border-green-600 rounded-md shadow-[2px_2px_0_0_rgba(22,163,74,1)] text-xs uppercase transform rotate-2">
@@ -281,7 +303,9 @@ export default function TeacherTestDetailPage() {
                   <h2 className="text-2xl font-black text-gray-900 font-handwritten tracking-tight">
                     Thông tin chung
                   </h2>
-                  <p className="text-gray-700 font-bold text-sm">Chi tiết và trạng thái</p>
+                  <p className="text-gray-700 font-bold text-sm">
+                    Chi tiết và trạng thái
+                  </p>
                 </div>
               </div>
 
@@ -290,7 +314,9 @@ export default function TeacherTestDetailPage() {
                   <span className="text-sm text-gray-700 h-[28px] flex items-center">
                     Trạng thái
                   </span>
-                  <NotebookBadge variant={test.is_published ? "success" : "warning"}>
+                  <NotebookBadge
+                    variant={test.is_published ? "success" : "warning"}
+                  >
                     {test.is_published ? "Đã xuất bản" : "Nháp"}
                   </NotebookBadge>
                 </div>
@@ -299,8 +325,12 @@ export default function TeacherTestDetailPage() {
                   <span className="text-sm text-gray-700 h-[28px] flex items-center">
                     Loại bài kiểm tra
                   </span>
-                  <NotebookBadge variant={test.type === "practice" ? "default" : "warning"}>
-                    {test.type === "practice" ? "Luyện tập" : "Kiểm tra kỹ năng"}
+                  <NotebookBadge
+                    variant={test.type === "practice" ? "default" : "warning"}
+                  >
+                    {test.type === "practice"
+                      ? "Luyện tập"
+                      : "Kiểm tra kỹ năng"}
                   </NotebookBadge>
                 </div>
 
@@ -314,18 +344,14 @@ export default function TeacherTestDetailPage() {
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-white border-2 border-gray-300 rounded-lg shadow-sm">
-                  <span className="text-sm text-gray-700">
-                    Số câu hỏi
-                  </span>
+                  <span className="text-sm text-gray-700">Số câu hỏi</span>
                   <span className="text-sm text-gray-900 bg-gray-100 px-2 py-1 rounded border border-gray-200">
                     {test.questions.length}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-white border-2 border-gray-300 rounded-lg shadow-sm">
-                  <span className="text-sm text-gray-700">
-                    Ngày tạo
-                  </span>
+                  <span className="text-sm text-gray-700">Ngày tạo</span>
                   <span className="text-sm text-gray-900 bg-gray-100 px-2 py-1 rounded border border-gray-200">
                     {new Date(test.created_at).toLocaleDateString("vi-VN")}
                   </span>
@@ -342,8 +368,12 @@ export default function TeacherTestDetailPage() {
                   <Edit className="w-6 h-6 text-purple-800" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-gray-900 font-handwritten tracking-tight">Hành động</h2>
-                  <p className="text-gray-700 font-bold text-sm">Quản lý bài kiểm tra</p>
+                  <h2 className="text-2xl font-black text-gray-900 font-handwritten tracking-tight">
+                    Hành động
+                  </h2>
+                  <p className="text-gray-700 font-bold text-sm">
+                    Quản lý bài kiểm tra
+                  </p>
                 </div>
               </div>
 
@@ -358,10 +388,11 @@ export default function TeacherTestDetailPage() {
 
                 <NotebookButton
                   onClick={handlePublishTest}
-                  className={`w-full py-3 text-base flex justify-center ${test.is_published
+                  className={`w-full py-3 text-base flex justify-center ${
+                    test.is_published
                       ? "bg-white text-green-700 border-green-700 shadow-none border-dashed"
                       : "bg-green-100 text-green-900 border-green-900"
-                    }`}
+                  }`}
                 >
                   <FileCheck className="w-5 h-5 mr-3" />
                   {test.is_published ? "Đang xuất bản (Hủy)" : "Xuất bản"}

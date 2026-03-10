@@ -31,11 +31,13 @@ export interface QuestionOption {
 
 export interface QuestionContent {
   type: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'ESSAY';
-  options: QuestionOption[];
+  options: QuestionOption[] | string[];
   difficulty: string;
   explanation?: string;
   questionText: string;
   question: string;
+  passage?: string | null;          // Trích đoạn 2-3 câu (comprehension questions)
+  question_type?: 'comprehension' | 'grammar' | 'vocabulary';
 }
 
 export interface Question {
