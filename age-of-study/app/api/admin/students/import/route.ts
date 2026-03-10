@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { verifyAdmin } from "@/lib/adminAuth";
 import { createAuditLog } from "@/lib/auditService";
 import { ParsedStudent } from "@/components/admin/StudentImportModal";
+import { now } from "lodash";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,6 +29,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Invalid data format" },
         { status: 400 }
+      );
+    }
+
+    const MAX_BATCH_SIZE = 100;
+    if (students.length > MAX_BATCH_SIZE) {
+      return NextResponse.json(
+        { error: "Batch too large" },
+        { status: 413 }
       );
     }
 
@@ -88,27 +97,46 @@ export async function POST(request: NextRequest) {
             const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
             const classCode = `${className.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()}_${randomSuffix}`;
 
+            // Derive school year from current date (Aug-Dec = current year, Jan-Jul = previous year)
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const schoolYear = month >= 7 
+              ? `${year}-${year + 1}` 
+              : `${year - 1}-${year}`;
+
             const { data: newClass, error: classInputError } = await supabaseAdmin
               .from("classes")
-              .insert({
+              .upsert({
                 name: className,
                 grade: grade ? Number(grade) : 1,
-                school_year: "2024-2025", 
+                school_year: schoolYear,
                 class_code: classCode,
                 status: "active",
-              })
+              }, { onConflict: "name" })
               .select("id")
               .single();
 
-            if (classInputError || !newClass) {
-              console.error(`Error creating class ${className}:`, classInputError);
-              errorCount++;
-              continue; // Skip this student if class creation failed
-            }
+            if (classInputError) {
+              const { data: existingClassFallback } = await supabaseAdmin
+                .from("classes")
+                .select("id")
+                .ilike("name", cacheKey)
+                .single();
 
-            finalClassId = newClass.id;
-            classIdCache[cacheKey] = finalClassId as number;
-            classesCreatedCount++;
+              if (existingClassFallback) {
+                finalClassId = existingClassFallback.id;
+                classIdCache[cacheKey] = finalClassId as number;
+              } else {
+                console.error(`Error creating class ${className}:`, classInputError);
+                errorCount++;
+                continue; // Skip this student if class creation failed
+              }
+            } else if (newClass) {
+              finalClassId = newClass.id;
+              classIdCache[cacheKey] = finalClassId as number;
+              classesCreatedCount++;
+            }
           }
         }
       }
@@ -117,8 +145,8 @@ export async function POST(request: NextRequest) {
       
       // Default password = dob (DDMMYYYY format based on input)
       // Strip out / or -
-      const cleanDob = dob ? dob.replace(/[-\/]/g, "") : "123456"; 
-      let password = cleanDob.length === 8 ? cleanDob : "123456";
+      const cleanDob = dob ? dob.replace(/[-\/]/g, "") : ""; 
+      let password = cleanDob.length >= 8 ? cleanDob : globalThis.crypto.randomUUID().slice(0, 12);
 
       // Try finding the user first by username
       const { data: existingUserParams } = await supabaseAdmin
@@ -198,7 +226,7 @@ export async function POST(request: NextRequest) {
         if (currentClassMapping?.class_id !== finalClassId) {
           // If in a different active class, withdraw them from it
           if (currentClassMapping) {
-            await supabaseAdmin
+            const { error: transferError } = await supabaseAdmin
               .from("class_students")
               .update({
                 status: "transferred",
@@ -206,6 +234,12 @@ export async function POST(request: NextRequest) {
               })
               .eq("student_id", targetUserId)
               .eq("class_id", currentClassMapping.class_id);
+
+            if (transferError) {
+              console.error(`Class transfer failed for ${username}:`, transferError);
+              errorCount++;
+              continue;
+            }
           }
           
           // Insert into new class

@@ -1,6 +1,7 @@
 {
-  "dependencies": {
-    "axios": "^1.13.6",
-    "cheerio": "^1.2.0"
-  }
+  "name": "age-of-study-workspace",
+  "private": true,
+  "workspaces": [
+    "age-of-study"
+  ]
 }

@@ -63,16 +63,25 @@ export const transformDBNodesToFlow = (
     return color;
   };
 
+  // Compute locks based on sequential order (Strict Sequential Locking)
+  let isAnyPreviousLockedOrUncompleted = false;
+
   // 4. Khởi tạo Nodes và Edges
-  dbNodes.forEach(node => {
+  sortedNodes.forEach(node => {
     const branchColor = getBranchColor(node.id);
     
-    // Logic Khóa Node:
+    const isCompleted = completedNodeIds.includes(Number(node.id));
+    
+    // Logic Khóa Node Mới:
     // - Luôn mở khóa nếu là giáo viên
-    // - Luôn mở khóa nếu là node gốc (parent_node_id null)
-    // - Mở khóa nếu node cha nằm trong danh sách completedNodeIds
-    const isParentCompleted = !node.parent_node_id || completedNodeIds.includes(Number(node.parent_node_id));
-    const isNodeLocked = isTeacherMode ? false : !isParentCompleted;
+    // - Cắt đứt chuỗi mở khóa nếu có MỘT node phía trước theo order_index chưa hoàn thành
+    // - Node đầu tiên luôn mở khóa (isAnyPreviousLockedOrUncompleted = false)
+    const isNodeLocked = isTeacherMode ? false : isAnyPreviousLockedOrUncompleted;
+
+    // Nếu node hiện tại chưa hoàn thành -> set flag để khóa toàn bộ các node phía sau
+    if (!isCompleted && node.node_type !== 'chapter' && node.node_type !== 'subject') {
+       isAnyPreviousLockedOrUncompleted = true;
+    }
 
     // Ensure unique ID by using the database node ID
     const nodeId = node.id.toString();
@@ -88,7 +97,7 @@ export const transformDBNodesToFlow = (
         color: branchColor,
         isLocked: isNodeLocked,
         isTeacherMode: isTeacherMode,
-        isCompleted: completedNodeIds.includes(Number(node.id))
+        isCompleted: isCompleted
       }
     });
 

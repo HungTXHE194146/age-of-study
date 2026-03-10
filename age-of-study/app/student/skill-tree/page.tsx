@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { RouteProtectedWrapper } from "@/lib/routeMiddleware";
@@ -31,6 +31,7 @@ import {
   NotebookButton,
   NotebookBadge,
 } from "@/components/ui/notebook-card";
+import { getRecommendedVolumeAction } from "@/actions/skillTreeProgressActions";
 
 // Module-level singleton – avoids re-instantiation on every render
 const testService = new TestService();
@@ -44,6 +45,7 @@ export default function StudentSkillTreePage() {
   const [nodeStats, setNodeStats] = useState<StudentNodeStats | null>(null);
   const [nodeStatsLoading, setNodeStatsLoading] = useState(false);
   const [selectedVolume, setSelectedVolume] = useState<number>(1);
+  const autoSelectedSubjectIdRef = useRef<number | null>(null);
   const [subjectNodes, setSubjectNodes] = useState<
     | {
         id: number;
@@ -95,8 +97,29 @@ export default function StudentSkillTreePage() {
         setSubjectNodes(null);
         setSelectedNodeId(null);
         try {
+          let currentVolume = selectedVolume;
+
+          // Auto-select volume on initial load for subjects with volumes
+          if (
+            selectedSubject.code === "TV5" &&
+            autoSelectedSubjectIdRef.current !== selectedSubject.id
+          ) {
+            const recommendedVolume = await getRecommendedVolumeAction(
+              selectedSubject.id,
+              user.id,
+            );
+            autoSelectedSubjectIdRef.current = selectedSubject.id;
+            if (recommendedVolume && recommendedVolume !== selectedVolume) {
+              currentVolume = recommendedVolume;
+              setSelectedVolume(recommendedVolume);
+              return; // Let the state update trigger the useEffect again
+            }
+          }
+
           // Pass volume for subjects with volume support (e.g., TV5)
-          const volumeParam = selectedSubject.code === 'TV5' ? selectedVolume : undefined;
+          const volumeParam =
+            selectedSubject.code === "TV5" ? currentVolume : undefined;
+
           // Fetch nodes and completion status in parallel
           const [{ nodes }, completedIds] = await Promise.all([
             fetchSubjectSkillTree(selectedSubject.id, volumeParam),
@@ -214,7 +237,7 @@ export default function StudentSkillTreePage() {
           </div>
 
           {/* Volume selector - only show for subjects with volumes (e.g., TV5) */}
-          {selectedSubject?.code === 'TV5' && (
+          {selectedSubject?.code === "TV5" && (
             <div className="flex items-center gap-1 bg-white border-2 border-black rounded-xl overflow-hidden shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               <button
                 onClick={() => setSelectedVolume(1)}

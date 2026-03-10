@@ -64,12 +64,12 @@ export async function POST(request: NextRequest) {
       // Automatically create the class if it doesn't exist (class_id is missing)
       if (!class_id) {
          // Create the class
-         // Generate unique code
-         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-         let classCode = '';
-         for (let i = 0; i < 8; i++) {
-            classCode += chars.charAt(Math.floor(Math.random() * chars.length));
-         }
+         const classCode = globalThis.crypto.randomUUID();
+         
+         const now = new Date();
+         const year = now.getFullYear();
+         const month = now.getMonth();
+         const schoolYear = month >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
 
          const { data: newClass, error: createError } = await supabaseAdmin
            .from('classes')
@@ -77,14 +77,13 @@ export async function POST(request: NextRequest) {
              name: class_name,
              grade: grade || 1,
              class_code: classCode,
-             // Use a default school year, or assume current
-             school_year: "2024-2025", 
+             school_year: schoolYear,
              status: 'active'
            })
            .select('id')
            .single();
 
-         if (createError) {
+         if (createError || !newClass) {
            console.error("Error creating missing class:", createError);
            errors.push(`Lỗi tạo lớp mới ${class_name}`);
            continue;
@@ -92,11 +91,11 @@ export async function POST(request: NextRequest) {
          class_id = newClass.id;
       }
 
-      // Xóa GVCN cũ của lớp này (is_homeroom = true)
       const { error: deleteError } = await supabaseAdmin
         .from("class_teachers")
         .delete()
-        .match({ class_id, is_homeroom: true });
+        .match({ class_id, is_homeroom: true })
+        .neq('teacher_id', teacher_id); // Don't delete if it's the same teacher
 
       if (deleteError) {
         console.error("Error deleting old homeroom teacher:", deleteError);

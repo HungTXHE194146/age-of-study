@@ -66,12 +66,8 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Format dob (DD/MM/YYYY) to password DDMMYYYY
-      // Some excel dates come as MM/DD/YYYY or strings. Assuming validated client-side format DD/MM/YYYY
-      let password = teacher.dob.replace(/[^0-9]/g, "");
-      if (password.length !== 8) {
-        password = "password123!"; // fallback, should not happen if validated
-      }
+      // Generate secure temporary password
+      const password = globalThis.crypto.randomUUID().slice(0, 12);
 
       // Create auth user using existing supabaseAdmin instance
       // Using @ageofstudy.local to match how login in useAuthStore works
@@ -97,6 +93,12 @@ export async function POST(request: NextRequest) {
       }
 
       if (!authData.user) {
+        results.errors++;
+        results.logs.push({
+          action: "error",
+          username: teacher.username,
+          message: "Auth user created but no user data returned",
+        });
         continue;
       }
 
@@ -126,12 +128,14 @@ export async function POST(request: NextRequest) {
         .eq("id", userId);
 
       if (profileError) {
-        // Rollback? Too complex. Keep log.
+        // Rollback Auth user creation
+        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+        
         results.errors++;
         results.logs.push({
           action: "error",
           username: teacher.username,
-          message: `Profile update failed: ${profileError.message}`,
+          message: `Profile update failed: ${profileError.message}` + (deleteError ? ` (Failed to rollback user: ${deleteError.message})` : " (Auth user rolled back)"),
         });
       } else {
         results.success++;

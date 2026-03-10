@@ -47,6 +47,9 @@ export default function TeacherImportModal({
     if (!file) return;
 
     const reader = new FileReader();
+    reader.onerror = () => {
+      showToast("Không thể đọc file. Vui lòng thử lại.", "error");
+    };
     reader.onload = (event) => {
       try {
         const bstr = event.target?.result;
@@ -55,11 +58,14 @@ export default function TeacherImportModal({
         const ws = wb.Sheets[wsname];
         // The data seems to start with headers. Let's read as array of arrays
         const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
-
-        // Find the header row index safely (usually contains "Mã định danh" or "Họ tên")
         let headerRowIdx = -1;
         for (let i = 0; i < Math.min(20, data.length); i++) {
-          const rowStr = data[i].join("").toLowerCase();
+          const row = data[i];
+          if (!row) continue;
+          const rowStr = row
+            .map((cell) => cell ?? "")
+            .join("")
+            .toLowerCase();
           if (rowStr.includes("họ tên") || rowStr.includes("mã định danh")) {
             headerRowIdx = i;
             break;
@@ -91,14 +97,13 @@ export default function TeacherImportModal({
 
           if (!username && !full_name) continue;
 
-          // Excel dates might be numeric or strings
           let dob = String(row[3] || "").trim();
           if (typeof row[3] === "number") {
             // Convert Excel serial date to DD/MM/YYYY
             const date = new Date(Math.round((row[3] - 25569) * 86400 * 1000));
-            const day = String(date.getDate()).padStart(2, "0");
-            const month = String(date.getMonth() + 1).padStart(2, "0");
-            dob = `${day}/${month}/${date.getFullYear()}`;
+            const day = String(date.getUTCDate()).padStart(2, "0");
+            const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+            dob = `${day}/${month}/${date.getUTCFullYear()}`;
           }
 
           const statusRaw = String(row[5] || "").trim();
@@ -187,8 +192,14 @@ export default function TeacherImportModal({
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Có lỗi từ server");
+          let errorMessage = "Có lỗi từ server";
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            // Response was not JSON
+          }
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();

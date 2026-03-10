@@ -385,6 +385,7 @@ export default function ClassesManagementPage() {
           >
             <FileSpreadsheet className="w-5 h-5" />
             <span className="hidden sm:inline">Nhập GVCN từ Excel</span>
+            <span className="sm:hidden">Nhập</span>
           </button>
 
           {/* Archive Button */}

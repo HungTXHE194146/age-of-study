@@ -1,25 +1,27 @@
 const XLSX = require("xlsx");
 const fs = require("fs");
+const path = require("path");
 
 try {
-    const filePaths = [
-        "C:/Users/kythu/Downloads/PHAN_CONG_CHU_NHIEM_HOCKY_1_NAMHOC_20252026.xlsx",
-        "C:/Users/kythu/Downloads/PHAN CONG CHU NHIEM HOCKY 1 NAMHOC 20252026.xlsx"
-    ];
-    let workbook;
-    for (const p of filePaths) {
-        if (fs.existsSync(p)) {
-            workbook = XLSX.readFile(p);
-            console.log("Loaded:", p);
-            break;
-        }
+    const inputPath = process.argv[2];
+    if (!inputPath) {
+        console.error("Usage: node test_excel.js <path-to-excel-file>");
+        process.exit(1);
     }
+    const resolvedPath = path.resolve(inputPath);
 
-    if (!workbook) {
-        console.log("File not found in paths");
+    if (!fs.existsSync(resolvedPath)) {
+        console.log("File not found at path:", resolvedPath);
         process.exit(1);
     }
 
+    let workbook = XLSX.readFile(resolvedPath);
+    console.log("Loaded:", resolvedPath);
+
+    if (!workbook.SheetNames.length) {
+        console.error("Workbook has no sheets");
+        process.exit(1);
+    }
     const firstSheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[firstSheetName];
 

@@ -162,7 +162,7 @@ export default function StudentImportModal({
 
         // Class matching logic
         let matchedClassId: number | undefined = undefined;
-        if (className) {
+        if (className && rowStatus !== "missing_data") {
           const matched = classes.find(
             (c) => c.name.toLowerCase() === className.toLowerCase(),
           );
@@ -181,6 +181,15 @@ export default function StudentImportModal({
                 grade = 1; // Default
               }
             }
+          }
+        } else if (className && rowStatus === "missing_data") {
+          // Still try to match class for display purposes, but don't change rowStatus
+          const matched = classes.find(
+            (c) => c.name.toLowerCase() === className.toLowerCase(),
+          );
+          if (matched) {
+            matchedClassId = matched.id;
+            if (!grade) grade = matched.grade;
           }
         }
 
@@ -264,8 +273,14 @@ export default function StudentImportModal({
         });
 
         if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || "Có lỗi khi import");
+          let errorMessage = `HTTP ${response.status}: Có lỗi khi import`;
+          try {
+            const errData = await response.json();
+            errorMessage = errData.error || errorMessage;
+          } catch {
+            // Response body is not JSON, use status-based message
+          }
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();

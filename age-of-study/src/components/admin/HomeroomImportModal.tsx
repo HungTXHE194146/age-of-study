@@ -191,7 +191,10 @@ export default function HomeroomImportModal({
           if (!grade) {
             const m = classNameRaw.match(/\d+/);
             if (m) grade = parseInt(m[0]);
-            else grade = 1; // Default fallback
+            else {
+              grade = undefined;
+              status = "missing_data";
+            }
           }
         }
 
@@ -283,11 +286,19 @@ export default function HomeroomImportModal({
           body: JSON.stringify({ assignments: chunk }),
         });
 
-        const result = await response.json();
-
         if (!response.ok) {
-          throw new Error(result.error || "Lỗi khi lưu dữ liệu");
+          const text = await response.text();
+          let errorMsg = "Lỗi khi lưu dữ liệu";
+          try {
+            const errJson = JSON.parse(text);
+            errorMsg = errJson.error || errorMsg;
+          } catch {
+            // Response was not JSON
+          }
+          throw new Error(errorMsg);
         }
+
+        const result = await response.json();
 
         const res = result.results;
         totalSuccess += res?.success || 0;

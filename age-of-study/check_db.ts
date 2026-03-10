@@ -14,11 +14,20 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function check() {
-  const { data: classes } = await supabase.from("classes").select("name");
+  const { data: classes, error: classesError } = await supabase.from("classes").select("name");
+  if (classesError) {
+    console.error("Error fetching classes:", classesError.message);
+  }
   console.log("CLASSES:", classes);
   
-  const { data: profiles } = await supabase.from("profiles").select("full_name").eq("role", "teacher").limit(5);
+  const { data: profiles, error: profilesError } = await supabase.from("profiles").select("full_name").eq("role", "teacher").limit(5);
+  if (profilesError) {
+    console.error("Error fetching profiles:", profilesError.message);
+  }
   console.log("TEACHERS:", profiles);
 }
 
-check();
+check().catch((err) => {
+  console.error("Check failed:", err);
+  process.exit(1);
+});
