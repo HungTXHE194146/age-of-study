@@ -1,4 +1,4 @@
--- Add missing fields to profiles table for student settings
+*-- Add missing fields to profiles table for student settings
 -- Run this migration if these columns don't exist yet
 
 -- Add age column (6-12 for primary school students)

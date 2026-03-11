@@ -162,12 +162,9 @@ export async function getClassComparisonData(): Promise<{
           if (progress.status === 'completed') {
             completedNodes++;
           }
-          if (progress.score !== null) {
-            const scoreNum = Number(progress.score);
-            if (!isNaN(scoreNum) && scoreNum > 0) {
-              totalScore += scoreNum;
-              scoreCount++;
-            }
+          if (progress.score !== null && progress.score > 0) {
+            totalScore += progress.score;
+            scoreCount++;
           }
         }
       }
@@ -194,10 +191,9 @@ export async function getClassComparisonData(): Promise<{
 
     // Calculate summary statistics
     const totalStudents = classAnalytics.reduce((sum, c) => sum + c.studentCount, 0);
-    const classesWithScores = classAnalytics.filter((c) => c.completedNodes > 0);
     const avgScore =
-      classesWithScores.length > 0
-        ? classesWithScores.reduce((sum, c) => sum + c.averageScore, 0) / classesWithScores.length
+      classAnalytics.length > 0
+        ? classAnalytics.reduce((sum, c) => sum + c.averageScore, 0) / classAnalytics.length
         : 0;
     const avgCompletion =
       classAnalytics.length > 0
@@ -208,15 +204,9 @@ export async function getClassComparisonData(): Promise<{
     let highestClass = null;
     let lowestClass = null;
     if (classAnalytics.length > 0) {
-      const withScores = classAnalytics.filter((c) => c.completedNodes > 0);
-      if (withScores.length > 0) {
-        const sorted = [...withScores].sort((a, b) => b.averageScore - a.averageScore);
-        highestClass = sorted[0].className;
-        // Only show lowest if it's genuinely different from highest
-        if (sorted.length > 1) {
-          lowestClass = sorted[sorted.length - 1].className;
-        }
-      }
+      const sorted = [...classAnalytics].sort((a, b) => b.averageScore - a.averageScore);
+      highestClass = sorted[0].className;
+      lowestClass = sorted[sorted.length - 1].className;
     }
 
     return {

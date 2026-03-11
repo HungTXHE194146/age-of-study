@@ -191,22 +191,30 @@ function TestEditContent() {
         id: q.id,
         createdAt: Date.now(),
         number: index + 1,
-        type: "MULTIPLE_CHOICE" as const,
-        questionText: q.content.questionText,
-        options: q.content.options.map((opt, optIndex) => {
-          const isString = typeof opt === "string";
-          return {
-            id: optIndex.toString(),
-            label: isString
-              ? String.fromCharCode(65 + optIndex)
-              : (opt as any)?.label || String.fromCharCode(65 + optIndex),
-            text: isString ? opt : (opt as any)?.text || "",
-            isCorrect: optIndex === q.correct_option_index,
-          };
-        }),
-        difficulty: q.difficulty.toLowerCase() as QuestionDifficulty,
+        type: (q.content.type || "MULTIPLE_CHOICE") as any,
+        questionText:
+          q.content.questionText || (q.content as any).question || "",
+        options: Array.isArray(q.content.options)
+          ? q.content.options.map((opt, optIndex) => {
+              const isString = typeof opt === "string";
+              return {
+                id: optIndex.toString(),
+                label: isString
+                  ? String.fromCharCode(65 + optIndex)
+                  : (opt as any)?.label || String.fromCharCode(65 + optIndex),
+                text: isString ? opt : (opt as any)?.text || "",
+                isCorrect: optIndex === q.correct_option_index,
+              };
+            })
+          : [],
+        difficulty: (q.difficulty
+          ? q.difficulty.charAt(0).toUpperCase() +
+            q.difficulty.slice(1).toLowerCase()
+          : "Medium") as QuestionDifficulty,
         topic: "Existing",
-        points: q.points || 10, // Use existing points or default to 10
+        points: q.points || 10,
+        explanation: q.explanation || q.content.explanation || "",
+        model_answer: q.model_answer || "",
       }));
       setQuestions(mappedQuestions);
 

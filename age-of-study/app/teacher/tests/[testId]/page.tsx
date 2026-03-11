@@ -225,64 +225,97 @@ export default function TeacherTestDetailPage() {
                           Câu {index + 1}
                         </NotebookBadge>
                         <NotebookBadge
-                          variant={index % 2 === 0 ? "success" : "warning"}
+                          variant={
+                            question.content.type === "MULTIPLE_CHOICE"
+                              ? "success"
+                              : question.content.type === "TRUE_FALSE"
+                                ? "default"
+                                : "warning"
+                          }
                           className="text-sm"
                         >
-                          {index % 2 === 0 ? "Trắc nghiệm" : "Tự luận"}
+                          {question.content.type === "MULTIPLE_CHOICE"
+                            ? "Trắc nghiệm"
+                            : question.content.type === "TRUE_FALSE"
+                              ? "Đúng/Sai"
+                              : "Tự luận"}
                         </NotebookBadge>
                         <NotebookBadge variant="danger" className="text-sm">
                           {question.points || 10} pts
                         </NotebookBadge>
                       </div>
-                      <span className="text-sm font-black text-blue-800 bg-blue-100 px-3 py-1 rounded border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] uppercase">
-                        Đáp án:{" "}
-                        {String.fromCharCode(
-                          65 + question.correct_option_index,
+                      {question.content.type !== "ESSAY" &&
+                        question.correct_option_index !== undefined &&
+                        question.correct_option_index >= 0 && (
+                          <span className="text-sm font-black text-blue-800 bg-blue-100 px-3 py-1 rounded border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] uppercase">
+                            Đáp án:{" "}
+                            {String.fromCharCode(
+                              65 + question.correct_option_index,
+                            )}
+                          </span>
                         )}
-                      </span>
                     </div>
 
                     <div className="text-gray-900 mb-6 text-xl font-bold font-handwritten tracking-tight">
-                      {question.content.questionText}
+                      {question.content.questionText ||
+                        question.content.question}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {question.content.options.map((option, optionIndex) => (
-                        <div
-                          key={optionIndex}
-                          className={`p-3 rounded-lg border-2 flex items-center gap-3 transition-colors ${
-                            optionIndex === question.correct_option_index
-                              ? "border-green-600 bg-green-50 shadow-[2px_2px_0_0_rgba(22,163,74,1)]"
-                              : "border-black bg-gray-50 hover:bg-white shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
-                          }`}
-                        >
-                          <span
-                            className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm border-2 ${
-                              optionIndex === question.correct_option_index
-                                ? "bg-green-500 text-white border-green-700"
-                                : "bg-white text-gray-900 border-black"
-                            }`}
-                          >
-                            {typeof option === "string"
-                              ? String.fromCharCode(65 + optionIndex)
-                              : (option as any)?.label ||
-                                String.fromCharCode(65 + optionIndex)}
-                          </span>
-                          <span
-                            className={`flex-1 font-bold ${optionIndex === question.correct_option_index ? "text-green-900" : "text-gray-800"}`}
-                          >
-                            {typeof option === "string"
-                              ? option
-                              : (option as any)?.text || ""}
-                          </span>
-                          {optionIndex === question.correct_option_index && (
-                            <span className="ml-2 text-green-700 font-black px-2 py-1 bg-white border-2 border-green-600 rounded-md shadow-[2px_2px_0_0_rgba(22,163,74,1)] text-xs uppercase transform rotate-2">
-                              ✓ Đúng
-                            </span>
-                          )}
+                    {question.content.type === "ESSAY" ? (
+                      <div className="bg-blue-50/50 border-2 border-dashed border-blue-200 rounded-xl p-4">
+                        <p className="text-sm font-bold text-blue-800 uppercase mb-2 flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          Gợi ý đáp án / Hướng dẫn:
+                        </p>
+                        <div className="text-gray-700 italic font-medium">
+                          {question.explanation ||
+                            "Chưa có gợi ý đáp án cho câu hỏi này."}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {Array.isArray(question.content.options) &&
+                          question.content.options.map(
+                            (option, optionIndex) => (
+                              <div
+                                key={optionIndex}
+                                className={`p-3 rounded-lg border-2 flex items-center gap-3 transition-colors ${
+                                  optionIndex === question.correct_option_index
+                                    ? "border-green-600 bg-green-50 shadow-[2px_2px_0_0_rgba(22,163,74,1)]"
+                                    : "border-black bg-gray-50 hover:bg-white shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+                                }`}
+                              >
+                                <span
+                                  className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm border-2 ${
+                                    optionIndex ===
+                                    question.correct_option_index
+                                      ? "bg-green-500 text-white border-green-700"
+                                      : "bg-white text-gray-900 border-black"
+                                  }`}
+                                >
+                                  {typeof option === "string"
+                                    ? String.fromCharCode(65 + optionIndex)
+                                    : (option as any)?.label ||
+                                      String.fromCharCode(65 + optionIndex)}
+                                </span>
+                                <span
+                                  className={`flex-1 font-bold ${optionIndex === question.correct_option_index ? "text-green-900" : "text-gray-800"}`}
+                                >
+                                  {typeof option === "string"
+                                    ? option
+                                    : (option as any)?.text || ""}
+                                </span>
+                                {optionIndex ===
+                                  question.correct_option_index && (
+                                  <span className="ml-2 text-green-700 font-black px-2 py-1 bg-white border-2 border-green-600 rounded-md shadow-[2px_2px_0_0_rgba(22,163,74,1)] text-xs uppercase transform rotate-2">
+                                    ✓ Đúng
+                                  </span>
+                                )}
+                              </div>
+                            ),
+                          )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

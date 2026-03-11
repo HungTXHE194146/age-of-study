@@ -11,6 +11,10 @@ import Loading from "@/components/ui/loading";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { Question, TestWithQuestions } from "@/types/test";
 import { getTestWithQuestionsServer } from "@/actions/testActions";
+import {
+  calculateRemainingSeconds,
+  shouldTriggerOneMinuteWarning,
+} from "@/utils/testTimer";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +47,7 @@ export default function StudentTestPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number | string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
+  const [testStartedAtMs, setTestStartedAtMs] = useState<number | null>(null);
   const [isStarted, setIsStarted] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,33 +95,12 @@ export default function StudentTestPage() {
     }
   };
 
-  // ── Countdown timer ──────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!isStarted || !test?.settings?.time_limit || isSubmitted) return;
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        // 60-second warning
-        if (prev === 61) {
-          setTimeWarning(true);
-          setShowTimeToast(true);
-          setTimeout(() => setShowTimeToast(false), 5000);
-        }
-        if (prev <= 1) {
-          handleSubmitTest();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isStarted, test, isSubmitted]);
-
   // ── Handlers ─────────────────────────────────────────────────────────────
 
-  const handleStartTest = () => setIsStarted(true);
+  const handleStartTest = () => {
+    setTestStartedAtMs(Date.now());
+    setIsStarted(true);
+  };
 
   const handleAnswerChange = (questionId: string, answer: number | string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: answer }));
@@ -137,7 +121,7 @@ export default function StudentTestPage() {
   };
 
   const handleSubmitTest = useCallback(async () => {
-    if (!user || !test) return;
+    if (!user || !test || isSubmitted || isSubmitting) return;
     setShowConfirmModal(false);
     setIsSubmitting(true);
     setSubmitError(null);
@@ -175,7 +159,62 @@ export default function StudentTestPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [user, test, answers, testId, updateUserXP]);
+  }, [
+    user,
+    test,
+    answers,
+    testId,
+    updateUserXP,
+    isSubmitted,
+    isSubmitting,
+  ]);
+
+  // ── Countdown timer ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (
+      !isStarted ||
+      !test?.settings?.time_limit ||
+      isSubmitted ||
+      testStartedAtMs === null
+    ) {
+      return;
+    }
+
+    const totalSeconds = test.settings.time_limit * 60;
+
+    const syncRemainingTime = () => {
+      const nextTimeLeft = calculateRemainingSeconds({
+        limitSeconds: totalSeconds,
+        startedAtMs: testStartedAtMs,
+        nowMs: Date.now(),
+      });
+
+      setTimeLeft((prev) => {
+        if (shouldTriggerOneMinuteWarning(prev, nextTimeLeft)) {
+          setTimeWarning(true);
+          setShowTimeToast(true);
+          setTimeout(() => setShowTimeToast(false), 5000);
+        }
+        return nextTimeLeft;
+      });
+
+      if (nextTimeLeft <= 0) {
+        handleSubmitTest();
+      }
+    };
+
+    syncRemainingTime();
+
+    const timer = setInterval(syncRemainingTime, 1000);
+    document.addEventListener("visibilitychange", syncRemainingTime);
+    window.addEventListener("focus", syncRemainingTime);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", syncRemainingTime);
+      window.removeEventListener("focus", syncRemainingTime);
+    };
+  }, [isStarted, test, isSubmitted, testStartedAtMs, handleSubmitTest]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -435,16 +474,9 @@ export default function StudentTestPage() {
                                       65 + userAnswer.selected_option_index,
                                     )}
                                     .{" "}
-                                    {(() => {
-                                      const errOption = (question.content
-                                        .options || [])[
-                                        userAnswer.selected_option_index
-                                      ];
-                                      return typeof errOption === "string"
-                                        ? errOption
-                                        : (errOption as any)?.text ||
-                                            "Lỗi dữ liệu";
-                                    })()}
+                                    {(question.content.options || [])[
+                                      userAnswer.selected_option_index
+                                    ]?.text || "Lỗi dữ liệu"}
                                   </>
                                 ) : (
                                   <span className="text-red-500 italic">
@@ -465,15 +497,9 @@ export default function StudentTestPage() {
                                   65 + question.correct_option_index,
                                 )}
                                 .{" "}
-                                {(() => {
-                                  const correctOpt = (question.content
-                                    .options || [])[
-                                    question.correct_option_index
-                                  ];
-                                  return typeof correctOpt === "string"
-                                    ? correctOpt
-                                    : (correctOpt as any)?.text || "";
-                                })()}
+                                {(question.content.options || [])[
+                                  question.correct_option_index
+                                ]?.text || ""}
                               </p>
                             </div>
                           )}
@@ -484,13 +510,7 @@ export default function StudentTestPage() {
                               </p>
                               <p className="font-bold text-lg text-green-900 whitespace-pre-wrap">
                                 {question.model_answer ||
-                                  (() => {
-                                    const firstOpt = (question.content
-                                      .options || [])[0];
-                                    return typeof firstOpt === "string"
-                                      ? firstOpt
-                                      : (firstOpt as any)?.text;
-                                  })() ||
+                                  (question.content.options || [])[0]?.text ||
                                   "Không có gợi ý"}
                               </p>
                             </div>
@@ -534,9 +554,7 @@ export default function StudentTestPage() {
                                         {String.fromCharCode(65 + optionIndex)}
                                       </span>
                                       <span className="flex-1">
-                                        {typeof option === "string"
-                                          ? option
-                                          : (option as any)?.text}
+                                        {option.text}
                                       </span>
                                       {isCorrectOption && (
                                         <span className="text-xl">🌟</span>
@@ -854,10 +872,7 @@ export default function StudentTestPage() {
                               />
                             </div>
                             <span className="text-lg font-bold text-slate-800 leading-snug">
-                              {String.fromCharCode(65 + index)}.{" "}
-                              {typeof option === "string"
-                                ? option
-                                : (option as any)?.text}
+                              {String.fromCharCode(65 + index)}. {option.text}
                             </span>
                           </label>
                         );
