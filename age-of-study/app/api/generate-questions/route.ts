@@ -174,8 +174,9 @@ export async function POST(request: NextRequest) {
       content = parsedContent.text
     } else if (textPrompt) {
       content = textPrompt
-    } else {
-      return NextResponse.json({ error: 'Vui lòng cung cấp tài liệu hoặc nội dung để tạo câu hỏi' }, { status: 400 })
+    } else if (!fromKnowledgeBase && !fromQuestionBank) {
+      // Only error if neither file, prompt, nor KB/QB sources are provided
+      return NextResponse.json({ error: 'Vui lòng cung cấp tài liệu, nội dung hoặc chọn nguồn từ kho kiến thức/ngân hàng câu hỏi để tạo câu hỏi' }, { status: 400 })
     }
 
     // 4. Validate and Fetch content from other sources
@@ -452,12 +453,22 @@ Hãy trả về JSON theo đúng schema trên, không thêm bất kỳ nội dun
       generationConfig: {
         responseMimeType: "application/json",
         temperature: aiSettings.temperature,
-        maxOutputTokens: aiSettings.maxTokens,
+        maxOutputTokens: Math.max(aiSettings.maxTokens, 8192), // Ensure enough tokens for long JSON
       },
     })
 
     // 9. Generate response
-    const result = await model.generateContent(prompt)
+    let result;
+    try {
+        result = await model.generateContent(prompt)
+    } catch (apiError: any) {
+        if (apiError.status === 429) {
+            return NextResponse.json({ 
+                error: 'Hệ thống AI đang bận (Quá giới hạn lượt gọi). Vui lòng thử lại sau khoảng 1 phút.'
+            }, { status: 429 })
+        }
+        throw apiError;
+    }
     const response = await result.response
     let text = response.text()
 
@@ -472,23 +483,40 @@ Hãy trả về JSON theo đúng schema trên, không thêm bất kỳ nội dun
       console.error('JSON parse error:', parseError)
       console.error('Raw response:', text)
       
-      // Try to extract JSON from response if it's wrapped in text
-      const jsonMatch = text.match(/\[.*\]/)
-      if (jsonMatch) {
-        try {
-          questions = JSON.parse(jsonMatch[0])
-        } catch (secondParseError) {
-          console.error('Second JSON parse attempt failed:', secondParseError)
+      // Attempt to fix truncated JSON if it looks like it's cut off
+      let repairedText = text;
+      if (!repairedText.endsWith(']')) {
+          // If it started as an array but didn't finish
+          if (repairedText.startsWith('[')) {
+              // Find the last complete object
+              const lastFullObjectMatch = repairedText.lastIndexOf('}');
+              if (lastFullObjectMatch !== -1) {
+                  repairedText = repairedText.substring(0, lastFullObjectMatch + 1) + ']';
+                  console.log('>>> [API] Attempted to repair truncated JSON');
+              }
+          }
+      }
+
+      try {
+        questions = JSON.parse(repairedText)
+      } catch (secondParseError) {
+        // Try one more time with match
+        const jsonMatch = text.match(/\[[\s\S]*\]/) 
+        if (jsonMatch) {
+          try {
+            questions = JSON.parse(jsonMatch[0])
+          } catch (thirdParseError) {
+            return NextResponse.json({ 
+              error: 'AI không thể tạo câu hỏi hoàn chỉnh. Vui lòng thử lại với số lượng câu hỏi ít hơn.',
+              rawResponse: text 
+            }, { status: 500 })
+          }
+        } else {
           return NextResponse.json({ 
-            error: 'AI không thể tạo câu hỏi từ tài liệu này. Vui lòng thử với tài liệu khác hoặc nội dung rõ ràng hơn.',
+            error: 'AI không thể tạo câu hỏi hoàn chỉnh. Vui lòng thử lại với số lượng câu hỏi ít hơn.',
             rawResponse: text 
           }, { status: 500 })
         }
-      } else {
-        return NextResponse.json({ 
-          error: 'AI không thể tạo câu hỏi từ tài liệu này. Vui lòng thử với tài liệu khác hoặc nội dung rõ ràng hơn.',
-          rawResponse: text 
-        }, { status: 500 })
       }
     }
 

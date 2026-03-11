@@ -190,7 +190,7 @@ export function QuestionBankTab({
       number: 0, // Will be set when added to test
       type: q.type,
       questionText: q.questionText,
-      options: q.options.map((opt, idx) => ({
+      options: (q.options || []).map((opt, idx) => ({
         id: opt.id,
         label: opt.label,
         text:
@@ -232,7 +232,7 @@ export function QuestionBankTab({
       number: 0, // Will be set when added to test
       type: question.type,
       questionText: question.questionText,
-      options: question.options.map((opt, idx) => ({
+      options: (question.options || []).map((opt, idx) => ({
         id: opt.id,
         label: opt.label,
         text:
@@ -533,7 +533,7 @@ export function QuestionBankTab({
                                       {typeof option.text === "string"
                                         ? option.text
                                         : (option.text as { text?: string })
-                                            ?.text || ""}
+                                          ?.text || ""}
                                     </span>
                                   </div>
                                 ))}

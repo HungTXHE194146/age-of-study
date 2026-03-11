@@ -220,26 +220,38 @@ export default function TeacherTestDetailPage() {
                     <div className="absolute top-0 right-4 w-4 h-8 bg-red-400/50 transform -translate-y-1/2 -rotate-[15deg] border border-red-500 rounded-sm"></div>
 
                     <div className="flex items-start justify-between mb-4 border-b-2 border-dashed border-gray-200 pb-4">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-start gap-2 flex-wrap">
                         <NotebookBadge variant="default" className="text-sm">
                           Câu {index + 1}
                         </NotebookBadge>
                         <NotebookBadge
-                          variant={index % 2 === 0 ? "success" : "warning"}
+                          variant={
+                            (question.content.type || question.q_type)?.toUpperCase() === "ESSAY"
+                              ? "warning"
+                              : (question.content.type || question.q_type)?.toUpperCase() === "TRUE_FALSE"
+                                ? "success"
+                                : "default"
+                          }
                           className="text-sm"
                         >
-                          {index % 2 === 0 ? "Trắc nghiệm" : "Tự luận"}
+                          {(question.content.type || question.q_type)?.toUpperCase() === "ESSAY"
+                            ? "Tự luận"
+                            : (question.content.type || question.q_type)?.toUpperCase() === "TRUE_FALSE"
+                              ? "Đúng/Sai"
+                              : "Trắc nghiệm"}
                         </NotebookBadge>
                         <NotebookBadge variant="danger" className="text-sm">
                           {question.points || 10} pts
                         </NotebookBadge>
                       </div>
-                      <span className="text-sm font-black text-blue-800 bg-blue-100 px-3 py-1 rounded border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] uppercase">
-                        Đáp án:{" "}
-                        {String.fromCharCode(
-                          65 + question.correct_option_index,
-                        )}
-                      </span>
+                      {(question.content.type || question.q_type)?.toUpperCase() !== "ESSAY" && (
+                        <span className="text-sm font-black text-blue-800 bg-blue-100 px-3 py-1 rounded border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] uppercase">
+                          Đáp án:{" "}
+                          {(question.content.type || question.q_type)?.toUpperCase() === "TRUE_FALSE"
+                            ? (question.correct_option_index === 0 ? "Đúng" : "Sai")
+                            : String.fromCharCode(65 + question.correct_option_index)}
+                        </span>
+                      )}
                     </div>
 
                     <div className="text-gray-900 mb-6 text-xl font-bold font-handwritten tracking-tight">
@@ -247,41 +259,42 @@ export default function TeacherTestDetailPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {question.content.options.map((option, optionIndex) => (
-                        <div
-                          key={optionIndex}
-                          className={`p-3 rounded-lg border-2 flex items-center gap-3 transition-colors ${
-                            optionIndex === question.correct_option_index
+                      {(question.content.options || []).map((option, optionIndex) => {
+                        const label = typeof option === "string"
+                          ? String.fromCharCode(65 + optionIndex)
+                          : option.label;
+                        const text = typeof option === "string"
+                          ? option
+                          : option.text;
+                        const isCorrect = optionIndex === question.correct_option_index;
+
+                        return (
+                          <div
+                            key={optionIndex}
+                            className={`p-3 rounded-lg border-2 flex items-center gap-3 transition-colors ${isCorrect
                               ? "border-green-600 bg-green-50 shadow-[2px_2px_0_0_rgba(22,163,74,1)]"
                               : "border-black bg-gray-50 hover:bg-white shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
-                          }`}
-                        >
-                          <span
-                            className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm border-2 ${
-                              optionIndex === question.correct_option_index
-                                ? "bg-green-500 text-white border-green-700"
-                                : "bg-white text-gray-900 border-black"
-                            }`}
+                              }`}
                           >
-                            {typeof option === "string"
-                              ? String.fromCharCode(65 + optionIndex)
-                              : (option as any)?.label ||
-                                String.fromCharCode(65 + optionIndex)}
-                          </span>
-                          <span
-                            className={`flex-1 font-bold ${optionIndex === question.correct_option_index ? "text-green-900" : "text-gray-800"}`}
-                          >
-                            {typeof option === "string"
-                              ? option
-                              : (option as any)?.text || ""}
-                          </span>
-                          {optionIndex === question.correct_option_index && (
-                            <span className="ml-2 text-green-700 font-black px-2 py-1 bg-white border-2 border-green-600 rounded-md shadow-[2px_2px_0_0_rgba(22,163,74,1)] text-xs uppercase transform rotate-2">
-                              ✓ Đúng
+                            <span className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm border-2 ${isCorrect
+                              ? "bg-green-500 text-white border-green-700"
+                              : "bg-white text-gray-900 border-black"
+                              }`}>
+                              {label}
                             </span>
-                          )}
-                        </div>
-                      ))}
+                            <span
+                              className={`flex-1 font-bold ${isCorrect ? "text-green-900" : "text-gray-800"}`}
+                            >
+                              {text}
+                            </span>
+                            {isCorrect && (
+                              <span className="ml-2 text-green-700 font-black px-2 py-1 bg-white border-2 border-green-600 rounded-md shadow-[2px_2px_0_0_rgba(22,163,74,1)] text-xs uppercase transform rotate-2">
+                                ✓ Đúng
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -388,11 +401,10 @@ export default function TeacherTestDetailPage() {
 
                 <NotebookButton
                   onClick={handlePublishTest}
-                  className={`w-full py-3 text-base flex justify-center ${
-                    test.is_published
-                      ? "bg-white text-green-700 border-green-700 shadow-none border-dashed"
-                      : "bg-green-100 text-green-900 border-green-900"
-                  }`}
+                  className={`w-full py-3 text-base flex justify-center ${test.is_published
+                    ? "bg-white text-green-700 border-green-700 shadow-none border-dashed"
+                    : "bg-green-100 text-green-900 border-green-900"
+                    }`}
                 >
                   <FileCheck className="w-5 h-5 mr-3" />
                   {test.is_published ? "Đang xuất bản (Hủy)" : "Xuất bản"}
