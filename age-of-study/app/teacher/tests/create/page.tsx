@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { NotebookCard, NotebookCardContent, NotebookButton } from "@/components/ui/notebook-card";
 import { QuizGeneratorForm } from "@/components/teacher/QuizGeneratorForm";
-import { QuizReviewList } from "@/components/teacher/QuizReviewList";
 import { QuestionBankTab } from "@/components/teacher/QuestionBankTab";
 import { ManualQuestionTab } from "@/components/teacher/ManualQuestionTab";
 import { TestDetailsForm } from "@/components/teacher/TestDetailsForm";
@@ -90,7 +89,7 @@ const prepareQuestionsToSave = (questions: Question[], testDetails: any, userId:
 
     let correctIndex = -1;
     if (q.type === "MULTIPLE_CHOICE") {
-      correctIndex = q.options.findIndex((opt) => opt.isCorrect);
+      correctIndex = (q.options || []).findIndex((opt) => opt.isCorrect);
     } else if (q.type === "TRUE_FALSE") {
       correctIndex = 0;
     }
@@ -100,7 +99,7 @@ const prepareQuestionsToSave = (questions: Question[], testDetails: any, userId:
       node_id: resolveNodeId(testDetails.subject, testDetails.node),
       content: {
         questionText: q.questionText,
-        options: q.options.map((opt) => ({
+        options: (q.options || []).map((opt) => ({
           label: opt.label,
           text: opt.text,
         })),
@@ -404,7 +403,7 @@ function CreateTestContent() {
                                 questions.map((q) => ({
                                   type: q.type,
                                   questionText: q.questionText,
-                                  options: q.options.map((opt) => ({
+                                  options: (q.options || []).map((opt) => ({
                                     label: opt.label,
                                     text: opt.text,
                                     isCorrect: opt.isCorrect,
@@ -478,7 +477,9 @@ function CreateTestContent() {
                               error,
                             );
                             alert(
-                              "Có lỗi xảy ra khi tạo câu hỏi bằng AI. Vui lòng thử lại sau.",
+                              error instanceof Error
+                                ? error.message
+                                : "Có lỗi xảy ra khi tạo câu hỏi bằng AI. Vui lòng thử lại sau."
                             );
                           } finally {
                             setIsGenerating(false);
