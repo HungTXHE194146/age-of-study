@@ -22,6 +22,7 @@ export interface CurriculumNode {
   page_start: number | null
   page_end: number | null
   description: string | null
+  volume_number: number | null
   children?: CurriculumNode[]
 }
 
@@ -39,18 +40,24 @@ class CurriculumService {
    * Fetch the full curriculum tree for a subject.
    * Returns a flat list that can be assembled into a tree on the client.
    */
-  async getCurriculumTree(subjectId: number): Promise<CurriculumNode[]> {
+  async getCurriculumTree(subjectId: number, volumeNumber?: number): Promise<CurriculumNode[]> {
     // Check cache first
-    if (this.cache.has(subjectId)) {
-      return this.cache.get(subjectId)!
+    const cacheKey = volumeNumber ? subjectId * 10 + volumeNumber : subjectId
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)!
     }
 
     try {
-      const { data, error } = await this.supabase
+      let query = this.supabase
         .from('nodes')
-        .select('id, title, node_type, parent_node_id, subject_id, week_number, lesson_number, content_label, order_index, page_start, page_end, description')
+        .select('id, title, node_type, parent_node_id, subject_id, week_number, lesson_number, content_label, order_index, page_start, page_end, description, volume_number')
         .eq('subject_id', subjectId)
-        .order('order_index', { ascending: true })
+
+      if (volumeNumber) {
+        query = query.eq('node_type', 'lesson').eq('volume_number', volumeNumber)
+      }
+
+      const { data, error } = await query.order('order_index', { ascending: true })
 
       if (error) {
         console.error('Error fetching curriculum tree:', error)
@@ -58,7 +65,7 @@ class CurriculumService {
       }
 
       const nodes = (data || []) as CurriculumNode[]
-      this.cache.set(subjectId, nodes)
+      this.cache.set(cacheKey, nodes)
       return nodes
     } catch (error) {
       console.error('Failed to fetch curriculum tree:', error)

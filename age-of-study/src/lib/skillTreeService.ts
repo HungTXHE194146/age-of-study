@@ -11,24 +11,33 @@ export interface Node {
   position_x?: number;
   position_y?: number;
   order_index: number;
+  volume_number?: number | null;
+  week_number?: number | null;
   children?: Node[];
 }
 
 /**
  * Client-side function: Lấy toàn bộ cây kỹ năng của một môn học
  * @param subjectId ID của môn học
+ * @param volumeNumber Optional volume number (1 or 2) for subjects with volumes
  * @returns Cấu trúc cây kỹ năng hoàn chỉnh
  */
 export async function fetchSubjectSkillTree(
   subjectId: number,
+  volumeNumber?: number,
 ): Promise<Node[]> {
   try {
     const supabase = getSupabaseBrowserClient();
 
     // Gọi RPC function get_skill_tree từ Supabase
-    const { data, error } = await supabase.rpc("get_skill_tree", {
+    const rpcParams: { p_subject_id: number; p_volume_number?: number } = {
       p_subject_id: subjectId,
-    });
+    };
+    if (volumeNumber) {
+      rpcParams.p_volume_number = volumeNumber;
+    }
+
+    const { data, error } = await supabase.rpc("get_skill_tree", rpcParams);
 
     if (error) {
       console.error("Error fetching skill tree:", error);

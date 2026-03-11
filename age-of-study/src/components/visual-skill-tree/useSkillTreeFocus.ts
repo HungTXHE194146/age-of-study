@@ -44,19 +44,17 @@ export const useSkillTreeFocus = (
           : n.position?.y ?? 0;
 
       // Extract node finding logic into distinct steps to avoid complex conditional expressions
-      let activeNode = nextNodeId
-        ? items.find((n: any) => getId(n) === nextNodeId)
-        : undefined;
+      let activeNode = undefined;
+      const sortedItems = [...items].sort((a: any, b: any) => {
+        const orderA = a.order_index ?? a.data?.order_index ?? getId(a);
+        const orderB = b.order_index ?? b.data?.order_index ?? getId(b);
+        return orderA - orderB;
+      });
 
-      if (!activeNode && maxCompletedId) {
-        activeNode = items.find((n: any) => getId(n) === maxCompletedId);
-      }
+      activeNode = sortedItems.find((n: any) => !currentCompletedIds.includes(getId(n)));
 
-      if (!activeNode) {
-        const sortedItems = [...items].sort(
-          (a: any, b: any) => getId(a) - getId(b),
-        );
-        activeNode = sortedItems[0];
+      if (!activeNode && sortedItems.length > 0) {
+        activeNode = sortedItems[sortedItems.length - 1];
       }
 
       if (activeNode) {

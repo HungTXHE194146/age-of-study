@@ -395,6 +395,13 @@ export default function StudentTestPage() {
                           </span>
                         </div>
 
+                        {/* Passage block in review section */}
+                        {question.content?.passage && (
+                          <blockquote className="mb-4 p-3 bg-amber-50 border-l-4 border-amber-400 rounded-r-xl text-slate-600 text-sm font-medium leading-relaxed italic">
+                            {question.content.passage}
+                          </blockquote>
+                        )}
+
                         <h4
                           className="text-xl font-bold text-slate-800 mb-6 leading-relaxed"
                           dangerouslySetInnerHTML={{
@@ -428,9 +435,16 @@ export default function StudentTestPage() {
                                       65 + userAnswer.selected_option_index,
                                     )}
                                     .{" "}
-                                    {(question.content.options || [])[
-                                      userAnswer.selected_option_index
-                                    ]?.text || "Lỗi dữ liệu"}
+                                    {(() => {
+                                      const errOption = (question.content
+                                        .options || [])[
+                                        userAnswer.selected_option_index
+                                      ];
+                                      return typeof errOption === "string"
+                                        ? errOption
+                                        : (errOption as any)?.text ||
+                                            "Lỗi dữ liệu";
+                                    })()}
                                   </>
                                 ) : (
                                   <span className="text-red-500 italic">
@@ -451,9 +465,15 @@ export default function StudentTestPage() {
                                   65 + question.correct_option_index,
                                 )}
                                 .{" "}
-                                {(question.content.options || [])[
-                                  question.correct_option_index
-                                ]?.text || ""}
+                                {(() => {
+                                  const correctOpt = (question.content
+                                    .options || [])[
+                                    question.correct_option_index
+                                  ];
+                                  return typeof correctOpt === "string"
+                                    ? correctOpt
+                                    : (correctOpt as any)?.text || "";
+                                })()}
                               </p>
                             </div>
                           )}
@@ -464,7 +484,13 @@ export default function StudentTestPage() {
                               </p>
                               <p className="font-bold text-lg text-green-900 whitespace-pre-wrap">
                                 {question.model_answer ||
-                                  (question.content.options || [])[0]?.text ||
+                                  (() => {
+                                    const firstOpt = (question.content
+                                      .options || [])[0];
+                                    return typeof firstOpt === "string"
+                                      ? firstOpt
+                                      : (firstOpt as any)?.text;
+                                  })() ||
                                   "Không có gợi ý"}
                               </p>
                             </div>
@@ -508,7 +534,9 @@ export default function StudentTestPage() {
                                         {String.fromCharCode(65 + optionIndex)}
                                       </span>
                                       <span className="flex-1">
-                                        {option.text}
+                                        {typeof option === "string"
+                                          ? option
+                                          : (option as any)?.text}
                                       </span>
                                       {isCorrectOption && (
                                         <span className="text-xl">🌟</span>
@@ -750,6 +778,13 @@ export default function StudentTestPage() {
                   {currentQuestionIndex + 1}
                 </div>
 
+                {/* Passage block — only for comprehension questions */}
+                {currentQuestion.content?.passage && (
+                  <blockquote className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-400 rounded-r-2xl text-slate-700 text-base font-medium leading-relaxed italic">
+                    {currentQuestion.content.passage}
+                  </blockquote>
+                )}
+
                 <h3
                   className="text-2xl font-black mb-8 border-b-2 border-dashed border-slate-300 pb-6 leading-relaxed text-slate-800"
                   dangerouslySetInnerHTML={{
@@ -819,7 +854,10 @@ export default function StudentTestPage() {
                               />
                             </div>
                             <span className="text-lg font-bold text-slate-800 leading-snug">
-                              {String.fromCharCode(65 + index)}. {option.text}
+                              {String.fromCharCode(65 + index)}.{" "}
+                              {typeof option === "string"
+                                ? option
+                                : (option as any)?.text}
                             </span>
                           </label>
                         );

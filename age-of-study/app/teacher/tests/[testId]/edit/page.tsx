@@ -1,6 +1,9 @@
 "use client";
 
-import { NotebookCard, NotebookCardContent } from "@/components/ui/notebook-card";
+import {
+  NotebookCard,
+  NotebookCardContent,
+} from "@/components/ui/notebook-card";
 import { NotebookButton } from "@/components/ui/notebook-card";
 
 import { useState, useEffect } from "react";
@@ -321,10 +324,15 @@ function TestEditContent() {
         node_id: testDetails.node ? parseInt(testDetails.node) : null,
         content: {
           questionText: q.questionText,
-          options: q.options.map((opt) => ({
-            label: opt.label,
-            text: opt.text,
-          })),
+          options: q.options.map((opt, optIndex) => {
+            const isString = typeof opt === "string";
+            return {
+              label: isString
+                ? String.fromCharCode(65 + optIndex)
+                : (opt as any)?.label || String.fromCharCode(65 + optIndex),
+              text: isString ? opt : (opt as any)?.text || "",
+            };
+          }),
         },
         correct_option_index:
           q.type === "MULTIPLE_CHOICE"
@@ -426,10 +434,15 @@ function TestEditContent() {
         node_id: testDetails.node ? parseInt(testDetails.node) : null,
         content: {
           questionText: q.questionText,
-          options: q.options.map((opt) => ({
-            label: opt.label,
-            text: opt.text,
-          })),
+          options: q.options.map((opt, optIndex) => {
+            const isString = typeof opt === "string";
+            return {
+              label: isString
+                ? String.fromCharCode(65 + optIndex)
+                : (opt as any)?.label || String.fromCharCode(65 + optIndex),
+              text: isString ? opt : (opt as any)?.text || "",
+            };
+          }),
         },
         correct_option_index:
           q.type === "MULTIPLE_CHOICE"
@@ -565,14 +578,17 @@ function TestEditContent() {
                     <h2 className="text-2xl font-black text-gray-900 font-handwritten tracking-tight">
                       Chi tiết bài kiểm tra
                     </h2>
-                    <p className="text-gray-700 font-bold text-sm">Cập nhật các thông số cơ bản</p>
+                    <p className="text-gray-700 font-bold text-sm">
+                      Cập nhật các thông số cơ bản
+                    </p>
                   </div>
                 </div>
 
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
-                      Tiêu đề bài kiểm tra <span className="text-red-500">*</span>
+                      Tiêu đề bài kiểm tra{" "}
+                      <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -668,7 +684,8 @@ function TestEditContent() {
                       )}
                     </select>
                     <p className="mt-2 text-sm text-gray-600 italic">
-                      Lưu ý: Nếu gán cho lớp, chỉ học sinh lớp đó mới thấy bài kiểm tra này.
+                      Lưu ý: Nếu gán cho lớp, chỉ học sinh lớp đó mới thấy bài
+                      kiểm tra này.
                     </p>
                   </div>
 
@@ -687,7 +704,9 @@ function TestEditContent() {
                       disabled={!testDetails.subject || isLoadingNodes}
                       className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 disabled:bg-gray-100 disabled:cursor-not-allowed appearance-none cursor-pointer"
                     >
-                      <option value="">Kiểm tra tổng hợp / Luyện tập chung</option>
+                      <option value="">
+                        Kiểm tra tổng hợp / Luyện tập chung
+                      </option>
                       {isLoadingNodes ? (
                         <option disabled>Đang tải bài học...</option>
                       ) : (
@@ -733,15 +752,21 @@ function TestEditContent() {
                       <Plus className="w-6 h-6 text-green-700" />
                     </div>
                     <div>
-                      <h2 className="text-3xl font-black text-gray-900 font-handwritten tracking-tight">Câu Hỏi</h2>
-                      <p className="text-gray-700 font-bold text-sm">Thêm, chỉnh sửa và quản lý câu hỏi</p>
+                      <h2 className="text-3xl font-black text-gray-900 font-handwritten tracking-tight">
+                        Câu Hỏi
+                      </h2>
+                      <p className="text-gray-700 font-bold text-sm">
+                        Thêm, chỉnh sửa và quản lý câu hỏi
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <span className="text-3xl font-black text-blue-700 font-handwritten drop-shadow-sm">
                       {questions.length}
                     </span>
-                    <p className="text-sm font-bold text-gray-600 uppercase">câu hỏi</p>
+                    <p className="text-sm font-bold text-gray-600 uppercase">
+                      câu hỏi
+                    </p>
                   </div>
                 </div>
 
@@ -750,30 +775,33 @@ function TestEditContent() {
                   <nav className="-mb-[2px] flex space-x-2">
                     <button
                       onClick={() => setActiveTab("manual")}
-                      className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${activeTab === "manual"
-                        ? "border-black border-b-white bg-white text-gray-900 z-10"
-                        : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                        }`}
+                      className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${
+                        activeTab === "manual"
+                          ? "border-black border-b-white bg-white text-gray-900 z-10"
+                          : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                      }`}
                     >
                       <FileText className="w-5 h-5" />
                       Nhập thủ công
                     </button>
                     <button
                       onClick={() => setActiveTab("ai")}
-                      className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${activeTab === "ai"
-                        ? "border-black border-b-white bg-white text-gray-900 z-10"
-                        : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                        }`}
+                      className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${
+                        activeTab === "ai"
+                          ? "border-black border-b-white bg-white text-gray-900 z-10"
+                          : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                      }`}
                     >
                       <LinkIcon className="w-5 h-5" />
                       AI Generator
                     </button>
                     <button
                       onClick={() => setActiveTab("bank")}
-                      className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${activeTab === "bank"
-                        ? "border-black border-b-white bg-white text-gray-900 z-10"
-                        : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                        }`}
+                      className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${
+                        activeTab === "bank"
+                          ? "border-black border-b-white bg-white text-gray-900 z-10"
+                          : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                      }`}
                     >
                       <Book className="w-5 h-5" />
                       Ngân hàng câu hỏi
@@ -802,7 +830,9 @@ function TestEditContent() {
                           <textarea
                             rows={3}
                             value={manualQuestionText}
-                            onChange={(e) => setManualQuestionText(e.target.value)}
+                            onChange={(e) =>
+                              setManualQuestionText(e.target.value)
+                            }
                             className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 border-dashed"
                             placeholder="Nhập nội dung câu hỏi..."
                           />
@@ -818,14 +848,16 @@ function TestEditContent() {
                               onChange={(e) =>
                                 setManualQuestionType(
                                   e.target.value as
-                                  | "MULTIPLE_CHOICE"
-                                  | "TRUE_FALSE"
-                                  | "ESSAY",
+                                    | "MULTIPLE_CHOICE"
+                                    | "TRUE_FALSE"
+                                    | "ESSAY",
                                 )
                               }
                               className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 cursor-pointer"
                             >
-                              <option value="MULTIPLE_CHOICE">Trắc nghiệm</option>
+                              <option value="MULTIPLE_CHOICE">
+                                Trắc nghiệm
+                              </option>
                               <option value="TRUE_FALSE">Đúng/Sai</option>
                               <option value="ESSAY">Tự luận</option>
                             </select>
@@ -863,7 +895,9 @@ function TestEditContent() {
                                   type="button"
                                   onClick={() => {
                                     if (manualOptions.length > 3) {
-                                      setManualOptions((prev) => prev.slice(0, -1));
+                                      setManualOptions((prev) =>
+                                        prev.slice(0, -1),
+                                      );
                                       if (
                                         manualCorrectAnswer ===
                                         String.fromCharCode(
@@ -888,7 +922,9 @@ function TestEditContent() {
                                   onClick={() => {
                                     if (manualOptions.length < 6) {
                                       const newOption = {
-                                        id: (manualOptions.length + 1).toString(),
+                                        id: (
+                                          manualOptions.length + 1
+                                        ).toString(),
                                         label: String.fromCharCode(
                                           65 + manualOptions.length,
                                         ),
@@ -984,7 +1020,9 @@ function TestEditContent() {
                             <textarea
                               rows={4}
                               value={manualEssayHint}
-                              onChange={(e) => setManualEssayHint(e.target.value)}
+                              onChange={(e) =>
+                                setManualEssayHint(e.target.value)
+                              }
                               className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 border-dashed"
                               placeholder="Nhập gợi ý trả lời hoặc hướng dẫn chấm điểm..."
                             />
@@ -1040,12 +1078,17 @@ function TestEditContent() {
                         {/* Explanation Field */}
                         <div>
                           <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
-                            Giải thích <span className="text-gray-500 font-normal normal-case">(không bắt buộc)</span>
+                            Giải thích{" "}
+                            <span className="text-gray-500 font-normal normal-case">
+                              (không bắt buộc)
+                            </span>
                           </label>
                           <textarea
                             rows={3}
                             value={manualExplanation}
-                            onChange={(e) => setManualExplanation(e.target.value)}
+                            onChange={(e) =>
+                              setManualExplanation(e.target.value)
+                            }
                             className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5 border-dashed"
                             placeholder="Nhập giải thích cho câu hỏi..."
                           />
@@ -1076,7 +1119,9 @@ function TestEditContent() {
                                 !manualTrueFalseContent.true.trim() ||
                                 !manualTrueFalseContent.false.trim()
                               ) {
-                                alert("Vui lòng nhập nội dung cho cả Đúng và Sai");
+                                alert(
+                                  "Vui lòng nhập nội dung cho cả Đúng và Sai",
+                                );
                                 return;
                               }
                             }
@@ -1100,28 +1145,29 @@ function TestEditContent() {
                               options:
                                 manualQuestionType === "MULTIPLE_CHOICE"
                                   ? manualOptions.map((option) => ({
-                                    ...option,
-                                    isCorrect:
-                                      option.label === manualCorrectAnswer,
-                                  }))
+                                      ...option,
+                                      isCorrect:
+                                        option.label === manualCorrectAnswer,
+                                    }))
                                   : manualQuestionType === "TRUE_FALSE"
                                     ? [
-                                      {
-                                        id: "1",
-                                        label: "A",
-                                        text: manualTrueFalseContent.true,
-                                        isCorrect:
-                                          manualTrueFalseCorrectAnswer === "TRUE",
-                                      },
-                                      {
-                                        id: "2",
-                                        label: "B",
-                                        text: manualTrueFalseContent.false,
-                                        isCorrect:
-                                          manualTrueFalseCorrectAnswer ===
-                                          "FALSE",
-                                      },
-                                    ]
+                                        {
+                                          id: "1",
+                                          label: "A",
+                                          text: manualTrueFalseContent.true,
+                                          isCorrect:
+                                            manualTrueFalseCorrectAnswer ===
+                                            "TRUE",
+                                        },
+                                        {
+                                          id: "2",
+                                          label: "B",
+                                          text: manualTrueFalseContent.false,
+                                          isCorrect:
+                                            manualTrueFalseCorrectAnswer ===
+                                            "FALSE",
+                                        },
+                                      ]
                                     : [],
                               difficulty:
                                 manualDifficulty.toLowerCase() as QuestionDifficulty,
@@ -1133,10 +1179,30 @@ function TestEditContent() {
                             // Reset form
                             setManualQuestionText("");
                             setManualOptions([
-                              { id: "1", label: "A", text: "", isCorrect: false },
-                              { id: "2", label: "B", text: "", isCorrect: false },
-                              { id: "3", label: "C", text: "", isCorrect: false },
-                              { id: "4", label: "D", text: "", isCorrect: false },
+                              {
+                                id: "1",
+                                label: "A",
+                                text: "",
+                                isCorrect: false,
+                              },
+                              {
+                                id: "2",
+                                label: "B",
+                                text: "",
+                                isCorrect: false,
+                              },
+                              {
+                                id: "3",
+                                label: "C",
+                                text: "",
+                                isCorrect: false,
+                              },
+                              {
+                                id: "4",
+                                label: "D",
+                                text: "",
+                                isCorrect: false,
+                              },
                             ]);
                             setManualCorrectAnswer("A");
                             setManualTrueFalseContent({ true: "", false: "" });
@@ -1172,7 +1238,10 @@ function TestEditContent() {
                               action: data.action,
                             };
 
-                            if (data.action === "edit" && questions.length > 0) {
+                            if (
+                              data.action === "edit" &&
+                              questions.length > 0
+                            ) {
                               requestPayload.existingQuestions = JSON.stringify(
                                 questions.map((q) => ({
                                   type: q.type,
@@ -1184,13 +1253,19 @@ function TestEditContent() {
                                   })),
                                   difficulty: q.difficulty,
                                   explanation: q.explanation,
-                                }))
+                                })),
                               );
                             }
 
-                            const result = await aiQuestionService.generateQuestions(requestPayload);
+                            const result =
+                              await aiQuestionService.generateQuestions(
+                                requestPayload,
+                              );
 
-                            if (result.questions && result.questions.length > 0) {
+                            if (
+                              result.questions &&
+                              result.questions.length > 0
+                            ) {
                               // Transform AI-generated questions to match the expected format
                               const transformedQuestions = result.questions.map(
                                 (
@@ -1210,25 +1285,37 @@ function TestEditContent() {
                                 ) => ({
                                   id: generateUUID(),
                                   createdAt: Date.now(),
-                                  number: (data.action === "replace" || data.action === "edit" ? 0 : questions.length) + index + 1,
+                                  number:
+                                    (data.action === "replace" ||
+                                    data.action === "edit"
+                                      ? 0
+                                      : questions.length) +
+                                    index +
+                                    1,
                                   type: q.type as
                                     | "MULTIPLE_CHOICE"
                                     | "TRUE_FALSE"
                                     | "ESSAY",
                                   questionText: q.questionText,
-                                  options: (q.options || []).map((opt, idx) => ({
-                                    id: opt.id || idx.toString(),
-                                    label: opt.label,
-                                    text: opt.text,
-                                    isCorrect: opt.isCorrect,
-                                  })),
-                                  difficulty: q.difficulty as QuestionDifficulty,
+                                  options: (q.options || []).map(
+                                    (opt, idx) => ({
+                                      id: opt.id || idx.toString(),
+                                      label: opt.label,
+                                      text: opt.text,
+                                      isCorrect: opt.isCorrect,
+                                    }),
+                                  ),
+                                  difficulty:
+                                    q.difficulty as QuestionDifficulty,
                                   topic: data.topic || "AI Generated",
                                   explanation: q.explanation || "",
                                 }),
                               );
 
-                              if (data.action === "replace" || data.action === "edit") {
+                              if (
+                                data.action === "replace" ||
+                                data.action === "edit"
+                              ) {
                                 setQuestions(transformedQuestions);
                               } else {
                                 transformedQuestions.forEach((q) =>
@@ -1287,7 +1374,9 @@ function TestEditContent() {
                             }),
                           );
 
-                          transformedQuestions.forEach((q) => handleAddQuestion(q));
+                          transformedQuestions.forEach((q) =>
+                            handleAddQuestion(q),
+                          );
 
                           if (uniqueQuestions.length < newQuestions.length) {
                             const duplicateCount =
@@ -1299,7 +1388,9 @@ function TestEditContent() {
                         }}
                         selectedSubjectId={testDetails.subject}
                         selectedNodeId={testDetails.node}
-                        existingQuestionIds={new Set(questions.map((q) => q.id))}
+                        existingQuestionIds={
+                          new Set(questions.map((q) => q.id))
+                        }
                       />
                     </div>
                   )}
@@ -1333,7 +1424,9 @@ function TestEditContent() {
                     <span className="text-3xl font-black text-blue-700 font-handwritten drop-shadow-sm">
                       {questions.length}
                     </span>
-                    <p className="text-sm font-bold text-gray-600 uppercase">câu hỏi</p>
+                    <p className="text-sm font-bold text-gray-600 uppercase">
+                      câu hỏi
+                    </p>
                   </div>
                 </div>
 
@@ -1352,13 +1445,17 @@ function TestEditContent() {
                         [questionId]: points,
                       }));
                     }}
-                    onNavigateToQuestion={(index) => setCurrentQuestionIndex(index)}
+                    onNavigateToQuestion={(index) =>
+                      setCurrentQuestionIndex(index)
+                    }
                     currentQuestionIndex={currentQuestionIndex}
                     points={points}
                   />
                 ) : (
                   <div className="text-center py-12 bg-white border-2 border-dashed border-gray-400 rounded-lg">
-                    <div className="text-gray-600 font-bold mb-2">Chưa có câu hỏi nào</div>
+                    <div className="text-gray-600 font-bold mb-2">
+                      Chưa có câu hỏi nào
+                    </div>
                     <p className="text-sm text-gray-500 font-bold">
                       Hãy thêm câu hỏi để thiết lập điểm số
                     </p>
@@ -1381,14 +1478,18 @@ function TestEditContent() {
                       <h2 className="text-3xl font-black text-gray-900 font-handwritten tracking-tight">
                         Xem trước câu hỏi
                       </h2>
-                      <p className="text-gray-700 font-bold text-sm">Xem chi tiết từng câu hỏi</p>
+                      <p className="text-gray-700 font-bold text-sm">
+                        Xem chi tiết từng câu hỏi
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <span className="text-3xl font-black text-blue-700 font-handwritten drop-shadow-sm">
                       {questions.length > 0 ? currentQuestionIndex + 1 : 0}
                     </span>
-                    <p className="text-sm font-bold text-gray-600 uppercase">câu hỏi hiện tại</p>
+                    <p className="text-sm font-bold text-gray-600 uppercase">
+                      câu hỏi hiện tại
+                    </p>
                   </div>
                 </div>
 
@@ -1403,7 +1504,9 @@ function TestEditContent() {
                   />
                 ) : (
                   <div className="text-center py-12 bg-white border-2 border-dashed border-gray-400 rounded-lg">
-                    <div className="text-gray-600 font-bold mb-2">Chưa có câu hỏi nào</div>
+                    <div className="text-gray-600 font-bold mb-2">
+                      Chưa có câu hỏi nào
+                    </div>
                     <p className="text-sm text-gray-500 font-bold">
                       Hãy thêm câu hỏi để xem trước
                     </p>

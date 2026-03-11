@@ -12,6 +12,7 @@ export const transformDBNodesToFlow = (
     position_x?: number; 
     position_y?: number; 
     order_index: number; 
+    week_number?: number | null;
     source_position?: 'top' | 'bottom' | 'left' | 'right' | null; 
     target_position?: 'top' | 'bottom' | 'left' | 'right' | null 
   }[], 
@@ -25,11 +26,10 @@ export const transformDBNodesToFlow = (
   const nodeMap = new Map();
   dbNodes.forEach(n => nodeMap.set(n.id, { ...n }));
 
-  // 2. Tìm các Chapter (Chủ điểm) và gán màu độc lập cho mỗi nhánh
+  // 2. Gán màu theo week_number hoặc chapter (fallback cho subjects không có week)
   let chapterIndex = 0;
   const chapterColors = new Map();
 
-  // Sắp xếp để đảm bảo thứ tự màu ổn định
   const sortedNodes = [...dbNodes].sort((a, b) => a.order_index - b.order_index);
   sortedNodes.forEach(n => {
     if (n.node_type === 'chapter' || n.node_type === 'subject') {
@@ -38,7 +38,7 @@ export const transformDBNodesToFlow = (
     }
   });
 
-  // 3. Hàm đệ quy để lấy màu của nhánh cha
+  // 3. Hàm lấy màu: ưu tiên week_number, fallback chapter cascade
   const colorCache = new Map<number, string>();
   const getBranchColor = (nodeId: number): string => {
     if (colorCache.has(nodeId)) return colorCache.get(nodeId)!;
@@ -47,7 +47,11 @@ export const transformDBNodesToFlow = (
     if (!node) return "#fbbf24";
     
     let color: string;
-    if (chapterColors.has(node.id)) {
+
+    // Week-based coloring: cùng tuần = cùng màu
+    if (node.week_number) {
+      color = BRANCH_COLORS[(node.week_number - 1) % BRANCH_COLORS.length];
+    } else if (chapterColors.has(node.id)) {
       color = chapterColors.get(node.id);
     } else if (node.parent_node_id) {
       color = getBranchColor(node.parent_node_id);
@@ -59,16 +63,25 @@ export const transformDBNodesToFlow = (
     return color;
   };
 
+  // Compute locks based on sequential order (Strict Sequential Locking)
+  let isAnyPreviousLockedOrUncompleted = false;
+
   // 4. Khởi tạo Nodes và Edges
-  dbNodes.forEach(node => {
+  sortedNodes.forEach(node => {
     const branchColor = getBranchColor(node.id);
     
-    // Logic Khóa Node:
+    const isCompleted = completedNodeIds.includes(Number(node.id));
+    
+    // Logic Khóa Node Mới:
     // - Luôn mở khóa nếu là giáo viên
-    // - Luôn mở khóa nếu là node gốc (parent_node_id null)
-    // - Mở khóa nếu node cha nằm trong danh sách completedNodeIds
-    const isParentCompleted = !node.parent_node_id || completedNodeIds.includes(Number(node.parent_node_id));
-    const isNodeLocked = isTeacherMode ? false : !isParentCompleted;
+    // - Cắt đứt chuỗi mở khóa nếu có MỘT node phía trước theo order_index chưa hoàn thành
+    // - Node đầu tiên luôn mở khóa (isAnyPreviousLockedOrUncompleted = false)
+    const isNodeLocked = isTeacherMode ? false : isAnyPreviousLockedOrUncompleted;
+
+    // Nếu node hiện tại chưa hoàn thành -> set flag để khóa toàn bộ các node phía sau
+    if (!isCompleted && node.node_type !== 'chapter' && node.node_type !== 'subject') {
+       isAnyPreviousLockedOrUncompleted = true;
+    }
 
     // Ensure unique ID by using the database node ID
     const nodeId = node.id.toString();
@@ -84,7 +97,7 @@ export const transformDBNodesToFlow = (
         color: branchColor,
         isLocked: isNodeLocked,
         isTeacherMode: isTeacherMode,
-        isCompleted: completedNodeIds.includes(Number(node.id))
+        isCompleted: isCompleted
       }
     });
 

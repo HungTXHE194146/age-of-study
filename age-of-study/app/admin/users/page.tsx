@@ -12,11 +12,14 @@ import {
   CheckCircle,
   ArrowUpDown,
   X,
+  FileSpreadsheet,
 } from "lucide-react";
 import UserAvatar from "@/components/admin/UserAvatar";
 import UserDetailModal from "@/components/admin/UserDetailModal";
 import UserEditModal from "@/components/admin/UserEditModal";
 import AddUserModal from "@/components/admin/AddUserModal";
+import TeacherImportModal from "@/components/admin/TeacherImportModal";
+import StudentImportModal from "@/components/admin/StudentImportModal";
 import Loading from "@/components/ui/loading";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Toast from "@/components/ui/Toast";
@@ -57,11 +60,15 @@ export default function UsersManagementPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "blocked">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "blocked"
+  >("all");
   const [gradeFilter, setGradeFilter] = useState<number | "all">("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [availableClasses, setAvailableClasses] = useState<ClassInfo[]>([]);
-  const [classStudentMap, setClassStudentMap] = useState<Record<string, number>>({});
+  const [classStudentMap, setClassStudentMap] = useState<
+    Record<string, number>
+  >({});
   const [classFilter, setClassFilter] = useState<number | "all">("all");
 
   // Modal states
@@ -69,19 +76,31 @@ export default function UsersManagementPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showStudentImportModal, setShowStudentImportModal] = useState(false);
 
   // Block confirmation dialog
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
-  const [userToBlock, setUserToBlock] = useState<{ id: string; isBlocked: boolean } | null>(null);
+  const [userToBlock, setUserToBlock] = useState<{
+    id: string;
+    isBlocked: boolean;
+  } | null>(null);
 
   // Toast notification
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "warning" | "info"; visible: boolean }>({
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "warning" | "info";
+    visible: boolean;
+  }>({
     message: "",
     type: "info",
     visible: false,
   });
 
-  const showToast = (message: string, type: "success" | "error" | "warning" | "info" = "info") => {
+  const showToast = (
+    message: string,
+    type: "success" | "error" | "warning" | "info" = "info",
+  ) => {
     setToast({ message, type, visible: true });
   };
 
@@ -91,7 +110,17 @@ export default function UsersManagementPage() {
 
   useEffect(() => {
     filterUsers();
-  }, [searchTerm, roleFilter, statusFilter, gradeFilter, classFilter, sortBy, users, classStudentMap, availableClasses]);
+  }, [
+    searchTerm,
+    roleFilter,
+    statusFilter,
+    gradeFilter,
+    classFilter,
+    sortBy,
+    users,
+    classStudentMap,
+    availableClasses,
+  ]);
 
   const loadUsers = async () => {
     try {
@@ -119,9 +148,11 @@ export default function UsersManagementPage() {
         .select("student_id, class_id")
         .eq("status", "active");
       const map: Record<string, number> = {};
-      (csData || []).forEach((row: { student_id: string; class_id: number }) => {
-        map[row.student_id] = row.class_id;
-      });
+      (csData || []).forEach(
+        (row: { student_id: string; class_id: number }) => {
+          map[row.student_id] = row.class_id;
+        },
+      );
       setClassStudentMap(map);
     } catch (error) {
       console.error("Error loading users:", error);
@@ -150,7 +181,7 @@ export default function UsersManagementPage() {
     if (gradeFilter !== "all") {
       filtered = filtered.filter((u) => {
         const enrolledClass = availableClasses.find(
-          (c) => c.id === classStudentMap[u.id]
+          (c) => c.id === classStudentMap[u.id],
         );
         const effectiveGrade = enrolledClass?.grade ?? u.grade;
         return effectiveGrade === gradeFilter;
@@ -176,7 +207,9 @@ export default function UsersManagementPage() {
     filtered = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case "oldest":
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          return (
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
         case "xp_high":
           return b.total_xp - a.total_xp;
         case "xp_low":
@@ -184,13 +217,15 @@ export default function UsersManagementPage() {
         case "name_asc":
           return (a.full_name || a.username || "").localeCompare(
             b.full_name || b.username || "",
-            "vi"
+            "vi",
           );
         case "streak_high":
           return b.current_streak - a.current_streak;
         case "newest":
         default:
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          return (
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
       }
     });
 
@@ -210,14 +245,19 @@ export default function UsersManagementPage() {
     if (!userToBlock) return;
 
     const { id: userId, isBlocked: currentBlockStatus } = userToBlock;
-    
+
     try {
       // Get session token for authorization
       const supabase = getSupabaseBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session) {
-        showToast("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", "error");
+        showToast(
+          "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+          "error",
+        );
         return;
       }
 
@@ -225,7 +265,7 @@ export default function UsersManagementPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           userId,
@@ -240,13 +280,19 @@ export default function UsersManagementPage() {
 
       const result = await response.json();
       const action = currentBlockStatus ? "bỏ chặn" : "chặn";
-      showToast(result.message || `Đã ${action} người dùng thành công`, "success");
+      showToast(
+        result.message || `Đã ${action} người dùng thành công`,
+        "success",
+      );
 
       // Reload users
       await loadUsers();
     } catch (error: any) {
       console.error("Error blocking/unblocking user:", error);
-      showToast(error.message || "Có lỗi xảy ra khi thực hiện thao tác", "error");
+      showToast(
+        error.message || "Có lỗi xảy ra khi thực hiện thao tác",
+        "error",
+      );
     } finally {
       setShowBlockConfirm(false);
       setUserToBlock(null);
@@ -271,12 +317,15 @@ export default function UsersManagementPage() {
   };
 
   // Stats derived from the full user list (not filtered)
-  const stats = useMemo(() => ({
-    total: users.length,
-    students: users.filter((u) => u.role === "student").length,
-    teachers: users.filter((u) => u.role === "teacher").length,
-    blocked: users.filter((u) => u.is_blocked).length,
-  }), [users]);
+  const stats = useMemo(
+    () => ({
+      total: users.length,
+      students: users.filter((u) => u.role === "student").length,
+      teachers: users.filter((u) => u.role === "teacher").length,
+      blocked: users.filter((u) => u.is_blocked).length,
+    }),
+    [users],
+  );
 
   // Classes filtered to the currently selected grade (for cascading dropdown)
   const classesForGrade = useMemo(() => {
@@ -320,7 +369,13 @@ export default function UsersManagementPage() {
   };
 
   if (loading) {
-    return <Loading message="Đang tải danh sách người dùng..." size="lg" fullScreen />;
+    return (
+      <Loading
+        message="Đang tải danh sách người dùng..."
+        size="lg"
+        fullScreen
+      />
+    );
   }
 
   return (
@@ -344,15 +399,21 @@ export default function UsersManagementPage() {
         </div>
         <div className="bg-white rounded-xl border-2 border-green-100 p-4">
           <p className="text-xs text-green-600 font-medium">Học sinh</p>
-          <p className="text-2xl font-bold text-green-700 mt-1">{stats.students}</p>
+          <p className="text-2xl font-bold text-green-700 mt-1">
+            {stats.students}
+          </p>
         </div>
         <div className="bg-white rounded-xl border-2 border-blue-100 p-4">
           <p className="text-xs text-blue-600 font-medium">Giáo viên</p>
-          <p className="text-2xl font-bold text-blue-700 mt-1">{stats.teachers}</p>
+          <p className="text-2xl font-bold text-blue-700 mt-1">
+            {stats.teachers}
+          </p>
         </div>
         <div className="bg-white rounded-xl border-2 border-red-100 p-4">
           <p className="text-xs text-red-600 font-medium">Bị chặn</p>
-          <p className="text-2xl font-bold text-red-700 mt-1">{stats.blocked}</p>
+          <p className="text-2xl font-bold text-red-700 mt-1">
+            {stats.blocked}
+          </p>
         </div>
       </div>
 
@@ -370,6 +431,22 @@ export default function UsersManagementPage() {
               className="w-full pl-9 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors text-sm"
             />
           </div>
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="px-4 py-2.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-semibold flex items-center gap-2 whitespace-nowrap text-sm"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden sm:inline">Nhập giáo viên từ Excel</span>
+            <span className="sm:hidden">Nhập GV</span>
+          </button>
+          <button
+            onClick={() => setShowStudentImportModal(true)}
+            className="px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold flex items-center gap-2 whitespace-nowrap text-sm"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden sm:inline">Nhập học sinh từ Excel</span>
+            <span className="sm:hidden">Nhập HS</span>
+          </button>
           <button
             onClick={() => setShowAddModal(true)}
             className="px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold flex items-center gap-2 whitespace-nowrap text-sm"
@@ -399,7 +476,9 @@ export default function UsersManagementPage() {
           {/* Status Filter */}
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "blocked")}
+            onChange={(e) =>
+              setStatusFilter(e.target.value as "all" | "active" | "blocked")
+            }
             className={`px-3 py-2 border-2 rounded-lg focus:outline-none text-sm bg-white cursor-pointer transition-colors ${
               statusFilter !== "all"
                 ? "border-orange-300 text-orange-700 focus:border-orange-400"
@@ -415,7 +494,9 @@ export default function UsersManagementPage() {
           <select
             value={gradeFilter}
             onChange={(e) => {
-              setGradeFilter(e.target.value === "all" ? "all" : parseInt(e.target.value));
+              setGradeFilter(
+                e.target.value === "all" ? "all" : parseInt(e.target.value),
+              );
               setClassFilter("all");
             }}
             className={`px-3 py-2 border-2 rounded-lg focus:outline-none text-sm bg-white cursor-pointer transition-colors ${
@@ -437,7 +518,9 @@ export default function UsersManagementPage() {
             <select
               value={classFilter}
               onChange={(e) =>
-                setClassFilter(e.target.value === "all" ? "all" : parseInt(e.target.value))
+                setClassFilter(
+                  e.target.value === "all" ? "all" : parseInt(e.target.value),
+                )
               }
               className={`px-3 py-2 border-2 rounded-lg focus:outline-none text-sm bg-white cursor-pointer transition-colors ${
                 classFilter !== "all"
@@ -553,20 +636,21 @@ export default function UsersManagementPage() {
                         >
                           {getRoleLabel(user.role)}
                         </span>
-                        {user.role === "student" && (() => {
-                          const userClass = availableClasses.find(
-                            (c) => c.id === classStudentMap[user.id]
-                          );
-                          return userClass ? (
-                            <span className="text-xs text-gray-500">
-                              {userClass.name}
-                            </span>
-                          ) : user.grade != null ? (
-                            <span className="text-xs text-gray-500">
-                              Khối {user.grade}
-                            </span>
-                          ) : null;
-                        })()}
+                        {user.role === "student" &&
+                          (() => {
+                            const userClass = availableClasses.find(
+                              (c) => c.id === classStudentMap[user.id],
+                            );
+                            return userClass ? (
+                              <span className="text-xs text-gray-500">
+                                {userClass.name}
+                              </span>
+                            ) : user.grade != null ? (
+                              <span className="text-xs text-gray-500">
+                                Khối {user.grade}
+                              </span>
+                            ) : null;
+                          })()}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -645,7 +729,9 @@ export default function UsersManagementPage() {
       {/* Confirmation Dialog */}
       <ConfirmDialog
         isOpen={showBlockConfirm}
-        title={userToBlock?.isBlocked ? "Bỏ chặn người dùng" : "Chặn người dùng"}
+        title={
+          userToBlock?.isBlocked ? "Bỏ chặn người dùng" : "Chặn người dùng"
+        }
         message={
           userToBlock?.isBlocked
             ? "Người dùng này sẽ có thể đăng nhập và sử dụng hệ thống trở lại. Bạn có chắc chắn muốn bỏ chặn?"
@@ -675,7 +761,7 @@ export default function UsersManagementPage() {
           user={selectedUser}
           className={
             availableClasses.find(
-              (c) => c.id === classStudentMap[selectedUser.id]
+              (c) => c.id === classStudentMap[selectedUser.id],
             )?.name ?? null
           }
           onClose={() => {
@@ -705,6 +791,26 @@ export default function UsersManagementPage() {
           onSuccess={() => {
             loadUsers();
           }}
+        />
+      )}
+
+      {showImportModal && (
+        <TeacherImportModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => {
+            loadUsers();
+          }}
+          showToast={showToast}
+        />
+      )}
+
+      {showStudentImportModal && (
+        <StudentImportModal
+          onClose={() => setShowStudentImportModal(false)}
+          onSuccess={() => {
+            loadUsers();
+          }}
+          classes={availableClasses}
         />
       )}
     </div>

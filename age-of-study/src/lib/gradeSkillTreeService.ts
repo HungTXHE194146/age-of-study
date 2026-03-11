@@ -11,6 +11,8 @@ export interface Node {
   position_x?: number;
   position_y?: number;
   order_index: number;
+  volume_number?: number | null;
+  week_number?: number | null;
   children?: Node[];
 }
 
@@ -132,8 +134,9 @@ export async function fetchGradeSkillTree(gradeCode: string): Promise<{
 /**
  * Server-side function: Lấy toàn bộ cây kỹ năng của một môn học
  * @param subjectId ID của môn học
+ * @param volumeNumber Optional volume number (1 or 2) for subjects with volumes
  */
-export async function fetchSubjectSkillTree(subjectId: number): Promise<{
+export async function fetchSubjectSkillTree(subjectId: number, volumeNumber?: number): Promise<{
   subject: Subject | null;
   nodes: Node[];
 }> {
@@ -153,10 +156,17 @@ export async function fetchSubjectSkillTree(subjectId: number): Promise<{
     }
 
     // Lấy danh sách tất cả các nodes thuộc môn học đó
-    const { data: nodes, error: nodesError } = await supabase
+    let query = supabase
       .from('nodes')
       .select('*')
-      .eq('subject_id', subjectId)
+      .eq('subject_id', subjectId);
+
+    // Filter by volume and lesson type when volume is specified
+    if (volumeNumber) {
+      query = query.eq('node_type', 'lesson').eq('volume_number', volumeNumber);
+    }
+
+    const { data: nodes, error: nodesError } = await query
       .order('order_index', { ascending: true });
 
     if (nodesError) {
