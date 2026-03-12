@@ -215,7 +215,7 @@ export function QuestionEditor({ question, onSave, onCancel }: QuestionEditorPro
             {/* Question Content */}
             <div className="bg-white p-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               <label className="text-lg font-black text-gray-900 mb-3 block uppercase tracking-tight">
-                Nội dung câu hỏi
+                Lời dẫn / Hướng dẫn làm bài
               </label>
               <textarea
                 value={editedQuestion.questionText}
@@ -401,26 +401,51 @@ export function QuestionEditor({ question, onSave, onCancel }: QuestionEditorPro
 
             {editedQuestion.type === 'FIND_ERROR' && (
               <div className="bg-white p-6 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] space-y-4">
-                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight pb-4 border-b-2 border-dashed border-gray-300">Thông tin lỗi sai</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold uppercase text-gray-500">Bắt đầu (index)</label>
-                    <input
-                      type="number"
-                      value={editedQuestion.metadata?.errorPosition?.startIndex || 0}
-                      onChange={(e) => handleMetadataChange('errorPosition', { ...editedQuestion.metadata?.errorPosition, startIndex: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border-2 border-dashed border-gray-400 rounded-lg"
-                    />
+                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight pb-4 border-b-2 border-dashed border-gray-400">Nội dung làm bài (Câu chứa lỗi)</h3>
+                <textarea
+                  value={(editedQuestion.metadata as any)?.sentence || ''}
+                  onChange={(e) => handleMetadataChange('sentence', e.target.value)}
+                  rows={2}
+                  className="w-full px-4 py-3 border-2 border-dashed border-gray-400 rounded-lg focus:outline-none focus:border-black font-medium transition-colors bg-white"
+                  placeholder="Nhập câu văn chứa lỗi sai tại đây..."
+                />
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase text-gray-500">Chọn từ sai trong câu dưới đây:</label>
+                  <div className="p-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-wrap gap-2">
+                    {((editedQuestion.metadata as any)?.sentence || '').split(/(\s+)/).map((part: string, idx: number, arr: string[]) => {
+                      if (part.trim().length === 0) return null;
+
+                      // Tính toán index thực tế của từ này trong chuỗi gốc
+                      let currentPos = 0;
+                      for (let i = 0; i < idx; i++) {
+                        currentPos += arr[i].length;
+                      }
+
+                      const isSelected =
+                        editedQuestion.metadata?.errorPosition?.startIndex === currentPos &&
+                        editedQuestion.metadata?.errorPosition?.endIndex === (currentPos + part.length - 1);
+
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            handleMetadataChange('errorPosition', {
+                              ...editedQuestion.metadata?.errorPosition,
+                              startIndex: currentPos,
+                              endIndex: currentPos + part.length - 1
+                            });
+                          }}
+                          className={`px-2 py-1 rounded-md border-2 font-bold transition-all ${isSelected
+                              ? "bg-red-500 text-white border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+                              : "bg-white border-gray-300 hover:border-black"
+                            }`}
+                        >
+                          {part}
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div>
-                    <label className="text-xs font-bold uppercase text-gray-500">Kết thúc (index)</label>
-                    <input
-                      type="number"
-                      value={editedQuestion.metadata?.errorPosition?.endIndex || 0}
-                      onChange={(e) => handleMetadataChange('errorPosition', { ...editedQuestion.metadata?.errorPosition, endIndex: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border-2 border-dashed border-gray-400 rounded-lg"
-                    />
-                  </div>
+                  <p className="text-[10px] text-gray-500 italic">* Nhấn vào từ chứa lỗi sai để đánh dấu</p>
                 </div>
                 <div>
                   <label className="text-xs font-bold uppercase text-gray-500">Nội dung sửa lại đúng</label>
@@ -436,10 +461,19 @@ export function QuestionEditor({ question, onSave, onCancel }: QuestionEditorPro
 
             {editedQuestion.type === 'FILL_IN_BLANKS' && (
               <div className="bg-white p-6 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] space-y-4">
-                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight pb-4 border-b-2 border-dashed border-gray-300">Đáp án các ô trống</h3>
+                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight pb-4 border-b-2 border-dashed border-gray-400">Nội dung làm bài (Chứa ___)</h3>
+                <textarea
+                  value={(editedQuestion.metadata as any)?.sentence || ''}
+                  onChange={(e) => handleMetadataChange('sentence', e.target.value)}
+                  rows={2}
+                  className="w-full px-4 py-3 border-2 border-dashed border-gray-400 rounded-lg focus:outline-none focus:border-black font-medium transition-colors bg-white"
+                  placeholder="Nhập văn bản với các dấu gạch dưới (VD: Tôi ___ đi học)..."
+                />
+
+                <h3 className="text-lg font-black text-gray-800 pt-4">Đáp án các ô trống</h3>
                 {(editedQuestion.metadata?.blanks || []).map((blank: any, idx: number) => (
                   <div key={idx} className="flex gap-4 items-center">
-                    <span className="font-black">Ô {blank.index + 1}</span>
+                    <span className="font-black text-blue-600">Ô {blank.index + 1}</span>
                     <input
                       value={blank.answer}
                       onChange={(e) => {
@@ -450,8 +484,28 @@ export function QuestionEditor({ question, onSave, onCancel }: QuestionEditorPro
                       className="flex-1 px-3 py-2 border-2 border-dashed border-gray-400 rounded-lg"
                       placeholder="Đáp án đúng..."
                     />
+                    <button
+                      onClick={() => {
+                        const newBlanks = (editedQuestion.metadata?.blanks || []).filter((_: any, i: number) => i !== idx);
+                        handleMetadataChange('blanks', newBlanks);
+                      }}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
                   </div>
                 ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const nextIndex = (editedQuestion.metadata?.blanks || []).length;
+                    handleMetadataChange('blanks', [...(editedQuestion.metadata?.blanks || []), { index: nextIndex, answer: '' }]);
+                  }}
+                  className="w-full border-2 border-black font-bold"
+                >
+                  Thêm ô trống
+                </Button>
               </div>
             )}
 

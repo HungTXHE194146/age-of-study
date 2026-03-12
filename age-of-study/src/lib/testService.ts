@@ -359,8 +359,9 @@ export class TestService {
           }
           case "FIND_ERROR": {
             const errorPos = question?.content.metadata?.errorPosition;
-            if (errorPos) {
-              const errorText = question?.content.questionText.substring(errorPos.startIndex, errorPos.endIndex);
+            const fullText = (question?.content.questionText || question?.content.question || (question?.content as any)?.text || "");
+            if (errorPos && fullText) {
+              const errorText = fullText.substring(errorPos.startIndex, errorPos.endIndex);
               isCorrect = errorText.includes(answer.text_answer || "");
             }
             break;

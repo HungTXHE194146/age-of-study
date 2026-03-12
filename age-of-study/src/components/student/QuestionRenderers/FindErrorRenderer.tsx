@@ -84,9 +84,9 @@ export default function FindErrorRenderer({
     const handleChunkClick = (index: number, chunk: any) => {
         setSelectedWordIndex(index);
 
-        if (chunk.isErrorPart) {
-            onComplete(true, chunk.text);
-        } else {
+        onComplete(chunk.isErrorPart, chunk.text);
+
+        if (!chunk.isErrorPart) {
             setIsWobbling(true);
             setTimeout(() => setIsWobbling(false), 500);
             if (supportMode) setShowHint(true);

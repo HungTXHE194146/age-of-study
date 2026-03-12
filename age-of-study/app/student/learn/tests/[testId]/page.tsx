@@ -477,122 +477,286 @@ export default function StudentTestPage() {
                           }}
                         />
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                          <div className="bg-white p-5 rounded-2xl border-2 border-slate-300">
-                            <p className="text-sm font-bold uppercase text-slate-500 mb-2">
-                              Câu trả lời của bạn:
-                            </p>
-                            {isEssay ? (
-                              <div className="p-3 bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg whitespace-pre-wrap font-bold text-lg text-slate-800">
-                                {userAnswer?.text_answer || (
-                                  <span className="text-red-500 italic">
-                                    Em đã không để lại câu trả lời
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="font-bold text-lg text-slate-800">
-                                {userAnswer?.selected_option_index !==
-                                  undefined ? (
-                                  <>
-                                    {String.fromCharCode(
-                                      65 + userAnswer.selected_option_index,
+                        <div className="grid grid-cols-1 gap-6 mb-6">
+                          {(() => {
+                            const qType = (question.content?.type || question.q_type || "").toUpperCase();
+                            const currentQAnswer = userAnswer;
+
+                            switch (qType) {
+                              case "WORD_ORDERING":
+                                const studentWords = currentQAnswer?.text_answer?.split(" ") || [];
+                                const correctWords = question.content?.metadata?.orderedWords || [];
+                                return (
+                                  <div className="space-y-4">
+                                    <div className="bg-white p-5 rounded-2xl border-2 border-slate-300">
+                                      <p className="text-sm font-bold uppercase text-slate-500 mb-2">Câu trả lời của bạn:</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {studentWords.length > 0 ? studentWords.map((word, i) => (
+                                          <span key={i} className={`px-3 py-1 rounded-lg border-2 font-bold ${word === correctWords[i] ? "bg-green-100 border-green-400 text-green-700" : "bg-red-100 border-red-400 text-red-700"}`}>
+                                            {word}
+                                          </span>
+                                        )) : <span className="text-red-500 italic">Em chưa sắp xếp câu này</span>}
+                                      </div>
+                                    </div>
+                                    {!isCorrect && (
+                                      <div className="bg-green-50 p-5 rounded-2xl border-2 border-green-400">
+                                        <p className="text-sm font-bold uppercase text-green-700 mb-2">Đáp án đúng:</p>
+                                        <div className="flex flex-wrap gap-2">
+                                          {correctWords.map((word, i) => (
+                                            <span key={i} className="px-3 py-1 bg-white rounded-lg border-2 border-green-200 text-green-800 font-bold">
+                                              {word}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
                                     )}
-                                    .{" "}
-                                    {(() => { const opt = (question.content.options || [])[userAnswer.selected_option_index]; return typeof opt === 'string' ? opt : opt?.text; })() || "Lỗi dữ liệu"}
-                                  </>
-                                ) : (
-                                  <span className="text-red-500 italic">
-                                    Em đã không chọn đáp án
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                                  </div>
+                                );
 
-                          {!isCorrect && !isEssay && (
-                            <div className="bg-green-100 p-5 rounded-2xl border-2 border-green-400">
-                              <p className="text-sm font-bold uppercase text-green-700 mb-2">
-                                Đáp án đúng:
-                              </p>
-                              <p className="font-bold text-lg text-green-900">
-                                {String.fromCharCode(
-                                  65 + question.correct_option_index,
-                                )}
-                                .{" "}
-                                {(() => { const opt = (question.content.options || [])[question.correct_option_index]; return typeof opt === 'string' ? opt : opt?.text; })() || ""}
-                              </p>
-                            </div>
-                          )}
-                          {!isCorrect && isEssay && (
-                            <div className="bg-green-100 p-5 rounded-2xl border-2 border-green-400">
-                              <p className="text-sm font-bold uppercase text-green-700 mb-2">
-                                Gợi ý / Đáp án mẫu:
-                              </p>
-                              <p className="font-bold text-lg text-green-900 whitespace-pre-wrap">
-                                {question.model_answer ||
-                                  (() => { const opt = (question.content.options || [])[0]; return typeof opt === 'string' ? opt : opt?.text; })() ||
-                                  "Không có gợi ý"}
-                              </p>
-                            </div>
-                          )}
-                        </div>
+                              case "MATCHING":
+                                const studentPairs = currentQAnswer?.text_answer ? JSON.parse(currentQAnswer.text_answer) as Array<{ left: string; right: string }> : [];
+                                const correctPairs = question.content?.metadata?.matchingPairs || [];
+                                return (
+                                  <div className="space-y-4">
+                                    <div className="bg-white p-5 rounded-2xl border-2 border-slate-300">
+                                      <p className="text-sm font-bold uppercase text-slate-500 mb-2">Các cặp em đã nối:</p>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {studentPairs.length > 0 ? studentPairs.map((pair, i) => {
+                                          const isMatchCorrect = correctPairs.some(cp => cp.left === pair.left && cp.right === pair.right);
+                                          return (
+                                            <div key={i} className={`p-3 rounded-xl border-2 flex items-center justify-between gap-2 font-bold ${isMatchCorrect ? "bg-green-50 border-green-300 text-green-700" : "bg-red-50 border-red-300 text-red-700"}`}>
+                                              <span>{pair.left}</span>
+                                              <span>↔</span>
+                                              <span>{pair.right}</span>
+                                            </div>
+                                          );
+                                        }) : <span className="text-red-500 italic">Em chưa nối cặp nào</span>}
+                                      </div>
+                                    </div>
+                                    {!isCorrect && (
+                                      <div className="bg-green-50 p-5 rounded-2xl border-2 border-green-400">
+                                        <p className="text-sm font-bold uppercase text-green-700 mb-2">Đáp án đúng:</p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                          {correctPairs.map((pair, i) => (
+                                            <div key={i} className="p-3 bg-white rounded-xl border-2 border-green-200 text-green-800 font-bold flex items-center justify-between gap-2">
+                                              <span>{pair.left}</span>
+                                              <span>↔</span>
+                                              <span>{pair.right}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
 
-                        {!isEssay && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 pt-4 border-t-2 border-dashed border-slate-300">
-                            {(question.content.options || []).map(
-                              (option, optionIndex) => {
-                                const isUserAnswer =
-                                  optionIndex ===
-                                  (userAnswer?.selected_option_index ?? -1);
-                                const isCorrectOption =
-                                  optionIndex === question.correct_option_index;
+                              case "FILL_IN_BLANKS":
+                                const studentBlanks = currentQAnswer?.text_answer?.split("|") || [];
+                                const correctBlanks = question.content?.metadata?.blanks || [];
+                                const textSegments = (question.content?.metadata?.sentence || question.content?.questionText || question.content?.question || "").split(/_{3,}/);
+                                return (
+                                  <div className="space-y-4">
+                                    <div className="bg-white p-6 rounded-2xl border-2 border-slate-300 leading-loose text-lg font-medium">
+                                      <p className="text-sm font-bold uppercase text-slate-500 mb-4">Bài làm của em:</p>
+                                      {textSegments.map((segment, i) => (
+                                        <span key={i}>
+                                          {segment}
+                                          {i < textSegments.length - 1 && (
+                                            <span className={`mx-1 px-2 py-0.5 rounded border-b-2 font-bold ${studentBlanks[i]?.trim().toLowerCase() === correctBlanks[i]?.answer.trim().toLowerCase() ? "bg-green-100 border-green-500 text-green-700" : "bg-red-100 border-red-500 text-red-700"}`}>
+                                              {studentBlanks[i] || "..."}
+                                            </span>
+                                          )}
+                                        </span>
+                                      ))}
+                                    </div>
+                                    {!isCorrect && (
+                                      <div className="bg-green-50 p-5 rounded-2xl border-2 border-green-400">
+                                        <p className="text-sm font-bold uppercase text-green-700 mb-2">Đáp án đúng:</p>
+                                        <div className="flex flex-wrap gap-4">
+                                          {correctBlanks.map((blank, i) => (
+                                            <span key={i} className="font-bold text-green-800">
+                                              Ô {i + 1}: <span className="bg-white px-2 py-1 rounded border border-green-300">{blank.answer}</span>
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
 
-                                let optionClasses =
-                                  "border-slate-300 bg-white text-slate-500";
-                                if (isCorrectOption)
-                                  optionClasses =
-                                    "border-green-500 bg-green-100 text-green-900 shadow-[2px_2px_0_0_rgba(34,197,94,1)]";
-                                else if (isUserAnswer && !isCorrectOption)
-                                  optionClasses =
-                                    "border-red-500 bg-red-100 text-red-900 shadow-[2px_2px_0_0_rgba(239,68,68,1)]";
-                                const optionText =
-                                  typeof option === "string"
-                                    ? option
-                                    : option?.text || "";
+                              case "CATEGORIZATION":
+                                const studentCats = currentQAnswer?.text_answer ? JSON.parse(currentQAnswer.text_answer) as Array<{ name: string; items: string[] }> : [];
+                                const correctCats = question.content?.metadata?.categories || [];
+                                return (
+                                  <div className="space-y-4">
+                                    <div className="bg-white p-5 rounded-2xl border-2 border-slate-300">
+                                      <p className="text-sm font-bold uppercase text-slate-500 mb-4">Phân loại của em:</p>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {studentCats.length > 0 ? studentCats.map((cat, i) => {
+                                          const correctCat = correctCats.find(cc => cc.name === cat.name);
+                                          return (
+                                            <div key={i} className="p-4 rounded-xl border-2 border-slate-200">
+                                              <p className="font-black text-slate-700 mb-2 uppercase text-xs">{cat.name}</p>
+                                              <div className="flex flex-wrap gap-2">
+                                                {cat.items.map((item, j) => {
+                                                  const isItemInCat = correctCat?.items.includes(item);
+                                                  return (
+                                                    <span key={j} className={`px-2 py-1 rounded-lg border font-bold text-sm ${isItemInCat ? "bg-green-100 border-green-400 text-green-700" : "bg-red-100 border-red-400 text-red-700"}`}>
+                                                      {item}
+                                                    </span>
+                                                  );
+                                                })}
+                                              </div>
+                                            </div>
+                                          );
+                                        }) : <span className="text-red-500 italic">Em chưa phân loại</span>}
+                                      </div>
+                                    </div>
+                                    {!isCorrect && (
+                                      <div className="bg-green-50 p-5 rounded-2xl border-2 border-green-400">
+                                        <p className="text-sm font-bold uppercase text-green-700 mb-2">Đáp án đúng:</p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          {correctCats.map((cat, i) => (
+                                            <div key={i} className="p-4 bg-white rounded-xl border-2 border-green-200">
+                                              <p className="font-black text-green-800 mb-2 uppercase text-xs">{cat.name}</p>
+                                              <p className="text-green-900 font-bold">{cat.items.join(", ")}</p>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+
+                              case "FIND_ERROR":
+                                const studentError = currentQAnswer?.text_answer || "";
+                                const errorInfo = question.content?.metadata?.errorPosition;
+                                const fullText = question.content?.metadata?.sentence || question.content?.questionText || question.content?.question || "";
+
+                                // Snapping logic to find the full word
+                                let snappedStart = errorInfo?.startIndex || 0;
+                                while (snappedStart > 0 && fullText[snappedStart - 1] !== ' ' && fullText[snappedStart - 1] !== '\n') {
+                                  snappedStart--;
+                                }
+                                let snappedEnd = errorInfo?.endIndex || 0;
+                                while (snappedEnd < fullText.length - 1 && fullText[snappedEnd + 1] !== ' ' && fullText[snappedEnd + 1] !== '\n') {
+                                  snappedEnd++;
+                                }
+                                const correctErrorPart = fullText.substring(snappedStart, snappedEnd + 1);
 
                                 return (
-                                  <div
-                                    key={optionIndex}
-                                    className={`p-4 rounded-xl border-2 font-bold ${optionClasses} transition-all`}
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <span
-                                        className={`w-8 h-8 rounded-lg flex items-center justify-center font-black border-2 border-slate-800 ${isCorrectOption
-                                          ? "bg-green-400 text-slate-900"
-                                          : isUserAnswer && !isCorrectOption
-                                            ? "bg-red-400 text-white"
-                                            : "bg-slate-200 text-slate-700"
-                                          }`}
-                                      >
-                                        {String.fromCharCode(65 + optionIndex)}
-                                      </span>
-                                      <span className="flex-1">
-                                        {optionText}
-                                      </span>
-                                      {isCorrectOption && (
-                                        <span className="text-xl">🌟</span>
-                                      )}
-                                      {isUserAnswer && !isCorrectOption && (
-                                        <span className="text-xl">❌</span>
-                                      )}
+                                  <div className="space-y-4">
+                                    <div className="bg-white p-5 rounded-2xl border-2 border-slate-300">
+                                      <p className="text-sm font-bold uppercase text-slate-500 mb-2">Lỗi em đã chọn:</p>
+                                      {studentError ? (
+                                        <p className="text-lg font-bold">
+                                          <span className={`px-2 py-1 rounded border-2 ${isCorrect ? "bg-green-100 border-green-400 text-green-700" : "bg-red-100 border-red-400 text-red-700"}`}>
+                                            {studentError}
+                                          </span>
+                                        </p>
+                                      ) : <span className="text-red-500 italic">Em chưa chọn lỗi nào</span>}
+                                    </div>
+                                    {!isCorrect && (
+                                      <div className="bg-green-50 p-5 rounded-2xl border-2 border-green-400">
+                                        <p className="text-sm font-bold uppercase text-green-700 mb-2">Đáp án đúng:</p>
+                                        <p className="text-lg font-bold">
+                                          Sửa lỗi: <span className="text-red-600 line-through">
+                                            {correctErrorPart || "..."}
+                                          </span>
+                                          {" → "}
+                                          <span className="text-green-700">{errorInfo?.correctText}</span>
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+
+                              case "ESSAY":
+                                return (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="bg-white p-5 rounded-2xl border-2 border-slate-300">
+                                      <p className="text-sm font-bold uppercase text-slate-500 mb-2">Câu trả lời của bạn:</p>
+                                      <div className="p-3 bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg whitespace-pre-wrap font-bold text-lg text-slate-800">
+                                        {userAnswer?.text_answer || (
+                                          <span className="text-red-500 italic">Em đã không để lại câu trả lời</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="bg-green-100 p-5 rounded-2xl border-2 border-green-400">
+                                      <p className="text-sm font-bold uppercase text-green-700 mb-2">Gợi ý / Đáp án mẫu:</p>
+                                      <p className="font-bold text-lg text-green-900 whitespace-pre-wrap">
+                                        {question.model_answer || "Không có gợi ý"}
+                                      </p>
                                     </div>
                                   </div>
                                 );
-                              },
-                            )}
-                          </div>
-                        )}
+
+                              default: // MULTIPLE_CHOICE or TRUE_FALSE
+                                return (
+                                  <div className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                      <div className="bg-white p-5 rounded-2xl border-2 border-slate-300">
+                                        <p className="text-sm font-bold uppercase text-slate-500 mb-2">Câu trả lời của bạn:</p>
+                                        <div className="font-bold text-lg text-slate-800">
+                                          {userAnswer?.selected_option_index !== undefined ? (
+                                            <>
+                                              {String.fromCharCode(65 + userAnswer.selected_option_index)}.{" "}
+                                              {(() => {
+                                                const opt = (question.content.options || [])[userAnswer.selected_option_index];
+                                                return typeof opt === 'string' ? opt : opt?.text;
+                                              })() || "Lỗi dữ liệu"}
+                                            </>
+                                          ) : (
+                                            <span className="text-red-500 italic">Em đã không chọn đáp án</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {!isCorrect && (
+                                        <div className="bg-green-100 p-5 rounded-2xl border-2 border-green-400">
+                                          <p className="text-sm font-bold uppercase text-green-700 mb-2">Đáp án đúng:</p>
+                                          <p className="font-bold text-lg text-green-900">
+                                            {String.fromCharCode(65 + question.correct_option_index)}.{" "}
+                                            {(() => {
+                                              const opt = (question.content.options || [])[question.correct_option_index];
+                                              return typeof opt === 'string' ? opt : opt?.text;
+                                            })() || ""}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 pt-4 border-t-2 border-dashed border-slate-300">
+                                      {(question.content.options || []).map((option, optionIndex) => {
+                                        const isUserAnswer = optionIndex === (userAnswer?.selected_option_index ?? -1);
+                                        const isCorrectOption = optionIndex === question.correct_option_index;
+
+                                        let optionClasses = "border-slate-300 bg-white text-slate-500";
+                                        if (isCorrectOption)
+                                          optionClasses = "border-green-500 bg-green-100 text-green-900 shadow-[2px_2px_0_0_rgba(34,197,94,1)]";
+                                        else if (isUserAnswer && !isCorrectOption)
+                                          optionClasses = "border-red-500 bg-red-100 text-red-900 shadow-[2px_2px_0_0_rgba(239,68,68,1)]";
+
+                                        const optionText = typeof option === "string" ? option : option?.text || "";
+
+                                        return (
+                                          <div key={optionIndex} className={`p-4 rounded-xl border-2 font-bold ${optionClasses} transition-all`}>
+                                            <div className="flex items-center gap-3">
+                                              <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-black border-2 border-slate-800 ${isCorrectOption ? "bg-green-400 text-slate-900" : isUserAnswer && !isCorrectOption ? "bg-red-400 text-white" : "bg-slate-200 text-slate-700"}`}>
+                                                {String.fromCharCode(65 + optionIndex)}
+                                              </span>
+                                              <span className="flex-1">{optionText}</span>
+                                              {isCorrectOption && <span className="text-xl">🌟</span>}
+                                              {isUserAnswer && !isCorrectOption && <span className="text-xl">❌</span>}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                            }
+                          })()}
+                        </div>
 
                         {(question.explanation ||
                           question.content?.explanation) && (
@@ -841,7 +1005,7 @@ export default function StudentTestPage() {
                   className="space-y-4 mb-10"
                 >
                   {(() => {
-                    const qType = currentQuestion.q_type?.toUpperCase() || currentQuestion.content?.type;
+                    const qType = (currentQuestion.content?.type || currentQuestion.q_type || "").toUpperCase();
 
                     switch (qType) {
                       case "WORD_ORDERING":
@@ -876,7 +1040,7 @@ export default function StudentTestPage() {
                       case "FILL_IN_BLANKS":
                         return (
                           <FillInBlanksRenderer
-                            questionText={currentQuestion.content?.questionText || currentQuestion.content?.question || ""}
+                            questionText={currentQuestion.content?.metadata?.sentence || currentQuestion.content?.questionText || currentQuestion.content?.question || ""}
                             blanks={currentQuestion.content?.metadata?.blanks || []}
                             onComplete={(isCorrect, answers) => {
                               handleAnswerChange(currentQuestion.id, answers.join("|"));
@@ -905,7 +1069,7 @@ export default function StudentTestPage() {
                       case "FIND_ERROR":
                         return (
                           <FindErrorRenderer
-                            questionText={currentQuestion.content?.questionText || currentQuestion.content?.question || ""}
+                            questionText={currentQuestion.content?.metadata?.sentence || currentQuestion.content?.questionText || currentQuestion.content?.question || ""}
                             errorPosition={(currentQuestion.content?.metadata?.errorPosition as any) || { startIndex: 0, endIndex: 0, correctText: "" }}
                             onComplete={(isCorrect, selectedText) => {
                               handleAnswerChange(currentQuestion.id, selectedText);

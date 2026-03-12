@@ -88,9 +88,10 @@ export default function CategorizationRenderer({
                     assigned.every(item => cat.items.includes(item));
             });
 
-            if (isAllCorrect) {
-                onComplete(true, currentAssigned as any);
-            } else {
+            const categoriesArray = Object.entries(currentAssigned).map(([name, items]) => ({ name, items }));
+            onComplete(isAllCorrect, categoriesArray);
+
+            if (!isAllCorrect) {
                 setIsWobbling(true);
                 setTimeout(() => setIsWobbling(false), 500);
                 if (supportMode) setShowHint(true);

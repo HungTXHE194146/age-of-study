@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { formatBirthdayToPassword } from "@/lib/utils";
 
 // Init Supabase Client with Service Role Key to bypass RLS and create users directly
 const supabaseAdmin = createClient(
@@ -26,7 +27,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const defaultPassword = "12345678";
     const results = {
       successCount: 0,
       failedCount: 0,
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         // 1. Create Auth User
         const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email: dummyEmail,
-          password: defaultPassword,
+          password: formatBirthdayToPassword(dob),
           email_confirm: true,
           user_metadata: {
             username: cleanUsername,

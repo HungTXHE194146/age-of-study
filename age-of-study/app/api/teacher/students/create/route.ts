@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createAuditLog } from "@/lib/auditService";
 import { verifyTeacher } from "@/lib/adminAuth";
+import { formatBirthdayToPassword } from "@/lib/utils";
 
 // Init Supabase Client with Service Role Key to bypass RLS and create users directly
 const supabaseAdmin = createClient(
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
     // We use a dummy email because Supabase Auth requires an email.
     // Students will login via username/password custom logic.
     const dummyEmail = `${username.toLowerCase().trim()}@ageofstudy.local`;
-    const defaultPassword = "12345678";
+    const defaultPassword = formatBirthdayToPassword(dob);
 
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: dummyEmail,

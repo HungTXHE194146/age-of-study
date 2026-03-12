@@ -43,9 +43,8 @@ export default function WordOrderingRenderer({
             // Kiểm tra nếu đã chọn hết từ
             if (newSelected.length === orderedWords.length) {
                 const isCorrect = JSON.stringify(newSelected) === JSON.stringify(orderedWords);
-                if (isCorrect) {
-                    onComplete(true, newSelected);
-                } else {
+                onComplete(isCorrect, newSelected);
+                if (!isCorrect) {
                     setIsWobbling(true);
                     setTimeout(() => setIsWobbling(false), 500);
                     if (supportMode) {
