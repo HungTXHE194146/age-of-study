@@ -1343,7 +1343,9 @@ function TestEditContent() {
                               error,
                             );
                             alert(
-                              "Có lỗi xảy ra khi tạo câu hỏi bằng AI. Vui lòng thử lại sau.",
+                              error instanceof Error
+                                ? error.message
+                                : "Có lỗi xảy ra khi tạo câu hỏi bằng AI. Vui lòng thử lại sau."
                             );
                           }
                         }}

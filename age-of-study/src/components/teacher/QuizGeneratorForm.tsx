@@ -210,7 +210,7 @@ export function QuizGeneratorForm({
             htmlFor="topic"
             className="block text-xl font-black text-gray-800 font-handwritten tracking-tight"
           >
-            Chủ đề & Yêu cầu cụ thể
+            Chủ đề & Yêu cầu cụ thể {!formData.file && !formData.fromKnowledgeBase && !formData.fromQuestionBank && <span className="text-red-500">*</span>}
           </label>
           <textarea
             id="topic"
@@ -292,7 +292,7 @@ export function QuizGeneratorForm({
               htmlFor="subject"
               className="block text-xl font-black text-gray-800 font-handwritten tracking-tight"
             >
-              Môn học
+              Môn học <span className="text-red-500">*</span>
             </label>
             <select
               id="subject"
