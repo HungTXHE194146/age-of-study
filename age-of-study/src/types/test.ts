@@ -1,6 +1,6 @@
 import { User } from "@supabase/supabase-js";
 
-export type TestType = "practice" | "skill_check";
+export type TestType = "practice" | "skill_check" | "homework" | "review" | "node_exercise" | "exam";
 export type TestStatus = "in_progress" | "completed";
 export type QuestionDifficulty = "easy" | "medium" | "hard";
 
@@ -30,7 +30,8 @@ export interface QuestionOption {
 }
 
 export interface QuestionContent {
-  type: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'ESSAY';
+  type: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'ESSAY' | 'WORD_ORDERING' | 'MATCHING' | 'FILL_IN_BLANKS' | 'CATEGORIZATION' | 'FIND_ERROR';
+
   options: QuestionOption[] | string[];
   difficulty: string;
   explanation?: string;
@@ -38,7 +39,20 @@ export interface QuestionContent {
   question: string;
   passage?: string | null;          // Trích đoạn 2-3 câu (comprehension questions)
   question_type?: 'comprehension' | 'grammar' | 'vocabulary';
+  metadata?: {
+    orderedWords?: string[];
+    matchingPairs?: Array<{ left: string; right: string }>;
+    blanks?: Array<{ index: number; answer: string }>;
+    categories?: Array<{ name: string; items: string[] }>;
+    errorPosition?: {
+      startIndex: number;
+      endIndex: number;
+      correctText: string;
+    };
+
+  };
 }
+
 
 export interface Question {
   id: string;

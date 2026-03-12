@@ -121,6 +121,11 @@ export class QuestionBankService {
           MULTIPLE_CHOICE: "multiple_choice",
           TRUE_FALSE: "true_false",
           ESSAY: "essay",
+          WORD_ORDERING: "word_ordering",
+          MATCHING: "matching",
+          FILL_IN_BLANKS: "fill_in_blanks",
+          CATEGORIZATION: "categorization",
+          FIND_ERROR: "find_error",
         };
         const dbQuestionType = qTypeMap[filter.type];
         if (dbQuestionType) {
@@ -130,7 +135,7 @@ export class QuestionBankService {
 
       if (filter.search) {
         // Search specifically in the question text within the content JSON field
-        query = query.ilike("content->>question", `%${filter.search}%`);
+        query = query.ilike("content->>questionText", `%${filter.search}%`);
       }
 
       // Apply pagination
@@ -138,10 +143,10 @@ export class QuestionBankService {
         query = query.limit(filter.limit);
       }
 
-      if (filter.offset) {
+      if (filter.offset !== undefined) {
         query = query.range(
           filter.offset,
-          (filter.offset || 0) + (filter.limit || 20),
+          filter.offset + (filter.limit || 20) - 1,
         );
       }
 
@@ -165,7 +170,7 @@ export class QuestionBankService {
         options: this.parseOptions(q.content.options || []),
         difficulty: this.mapDifficulty(q.difficulty),
         topic: q.nodes?.title || "Chưa xác định",
-        subject_name: q.nodes?.subjects?.name,
+        subject_name: (q.nodes as any)?.subjects?.name,
         node_title: q.nodes?.title,
         created_at_formatted: new Date(q.created_at).toLocaleDateString(
           "vi-VN",
@@ -206,6 +211,11 @@ export class QuestionBankService {
           MULTIPLE_CHOICE: "multiple_choice",
           TRUE_FALSE: "true_false",
           ESSAY: "essay",
+          WORD_ORDERING: "word_ordering",
+          MATCHING: "matching",
+          FILL_IN_BLANKS: "fill_in_blanks",
+          CATEGORIZATION: "categorization",
+          FIND_ERROR: "find_error",
         };
         const dbQuestionType = qTypeMap[filter.type];
         if (dbQuestionType) {
@@ -216,7 +226,7 @@ export class QuestionBankService {
       if (filter.search) {
         const searchPattern = `%${filter.search}%`;
         // Search specifically in the question text within the content JSON field
-        query = query.ilike("content->>question", searchPattern);
+        query = query.ilike("content->>questionText", searchPattern);
       }
 
       const { count, error } = await query;

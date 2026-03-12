@@ -5,7 +5,7 @@ import { extractTextFromFile } from '@/lib/fileParser'
 
 // Define TypeScript interface for question structure
 interface QuestionType {
-  type: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'ESSAY'
+  type: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'ESSAY' | 'WORD_ORDERING' | 'MATCHING' | 'FILL_IN_BLANKS' | 'CATEGORIZATION' | 'FIND_ERROR'
   questionText: string
   options?: Array<{
     label: string
@@ -14,7 +14,16 @@ interface QuestionType {
   }>
   difficulty: 'Easy' | 'Medium' | 'Hard' | 'Mixed'
   explanation: string
+  metadata?: {
+    orderedWords?: string[]
+    matchingPairs?: Array<{ left: string; right: string }>
+    blanks?: Array<{ index: number; answer: string }>
+    categories?: Array<{ name: string; items: string[] }>;
+    errorPosition?: { startIndex: number; endIndex: number; correctText: string };
+  }
+
 }
+
 
 // ============================================================================ 
 // API Route: POST /api/generate-questions
@@ -63,42 +72,55 @@ async function getAIQuestionSettings(supabase: SupabaseClient) {
   }
 }
 
-// --- System Prompt for Vietnamese Educational Context ---
-const SYSTEM_PROMPT = `Bạn là Giáo sư Cú, một chuyên gia giáo dục tiểu học tại Việt Nam. Nhiệm vụ của bạn là tạo câu hỏi trắc nghiệm dựa trên tài liệu được cung cấp.
+const SYSTEM_PROMPT = `Bạn là Giáo sư Cú, một chuyên gia giáo dục tiểu học tại Việt Nam, cực kỳ yêu mến trẻ em. Nhiệm vụ của bạn là tạo các câu hỏi Tiếng Việt thú vị dựa trên tài liệu được cung cấp.
 
-**QUAN TRỌNG NHẤT:** Tài liệu đầu vào có thể chứa sẵn các 'Kịch bản AI Giải thích' hoặc 'Logic phản hồi'. 
-1. Bạn phải TẬN DỤNG TỐI ĐA các kịch bản giải thích này. 
-2. Trong chuỗi JSON trả về, trường \`explanation\` BẮT BUỘC phải viết theo phong cách vui vẻ, khích lệ (gọi học sinh là 'Hiệp sĩ ơi').
-3. Lời giải thích phải đi sâu vào việc chỉ ra tại sao đáp án kia sai (nhầm lẫn phổ biến), và hướng dẫn học sinh dùng các 'phép thử' (như thêm từ đang/đã/sẽ, hoặc thêm từ rất/quá) đúng như tài liệu hướng dẫn.
+**PHONG CÁCH GIAO TIẾP:**
+- Khi viết trường \`explanation\`, hãy dùng giọng văn ngọt ngào, khích lệ. Gọi học sinh là "Hiệp sĩ nhỏ", "Bạn nhỏ ơi", "Nhà thông thái nhí". (Gợi ý: Tối đa 2 câu để tránh phản hồi quá dài).
+- Nếu học sinh trả lời sai, lời giải thích không được phê bình mà phải gợi mở: "Ôi gần đúng rồi đấy! Hiệp sĩ thử nhớ lại xem...", "Nhà thông thái ơi, mình hãy nhìn kỹ từ này nhé...".
 
-YÊU CẦU BẮT BUỘC:
-1. Trả về kết quả CHỈ DƯỚI DẠNG MỘT MẢNG JSON, không kèm markdown code block.
-2. Cấu trúc JSON phải chính xác theo schema được cung cấp.
-3. Nội dung câu hỏi phải phù hợp với học sinh tiểu học (6-10 tuổi).
-4. Đảm bảo tính giáo dục, không có nội dung bạo lực, người lớn, hoặc không phù hợp lứa tuổi.
-5. Câu hỏi phải rõ ràng, dễ hiểu, không gây nhầm lẫn.
+**CÁC LOẠI CÂU HỎI BẠN CÓ THỂ TẠO:**
+1. MULTIPLE_CHOICE: Trắc nghiệm truyền thống.
+2. TRUE_FALSE: Đúng hoặc Sai.
+3. ESSAY: Tự luận ngắn.
+4. WORD_ORDERING: Sắp xếp các từ thành câu hoàn chỉnh. Yêu cầu có mảng \`metadata.orderedWords\`.
+5. MATCHING: Nối các cặp từ (ví dụ: từ đồng nghĩa, từ trái nghĩa, tên con vật - tiếng kêu). Yêu cầu có mảng \`metadata.matchingPairs\`.
+6. FILL_IN_BLANKS: Điền từ vào chỗ trống. Yêu cầu có \`metadata.blanks\`. LƯU Ý: Trường \`questionText\` CHỈ được chứa đoạn văn có các ô trống (___), KHÔNG bao gồm lời dẫn như "Hãy điền từ...".
+7. CATEGORIZATION: Phân loại từ vào các nhóm (ví dụ: nhóm từ chỉ người, nhóm từ chỉ vật). Yêu cầu có \`metadata.categories\`.
+8. FIND_ERROR: Tìm một lỗi sai. Yêu cầu có \`metadata.errorPosition\` chứa \`startIndex\`, \`endIndex\` (vị trí ký tự CHÍNH XÁC trong chuỗi, bắt đầu từ 0, trong đó \`endIndex\` là vị trí ký tự cuối cùng của lỗi - inclusive) và \`correctText\` (từ/cụm từ đúng). LƯU Ý: Trường \`questionText\` CHỈ được chứa câu văn cần tìm lỗi, KHÔNG bao gồm lời dẫn.
 
-Nếu tài liệu không phù hợp hoặc không thể tạo câu hỏi, hãy trả về mảng rỗng [].
+**YÊU CẦU BẮT BUỘC:**
+1. Trả về kết quả CHỈ DƯỚI DẠNG MỘT MẢNG JSON.
+2. Cấu trúc JSON phải chính xác theo schema, đặc biệt là phần \`metadata\` cho các loại câu hỏi mới.
+3. Nội dung phải thuần Việt, phù hợp tâm lý và trình độ tiểu học.
+`
 
-Hãy suy nghĩ kỹ và tạo ra các câu hỏi chất lượng cao.`
+
 
 // --- Expected JSON Schema ---
 const JSON_SCHEMA = `
 [
   {
-    "type": "MULTIPLE_CHOICE | TRUE_FALSE | ESSAY",
+    "type": "MULTIPLE_CHOICE | TRUE_FALSE | ESSAY | WORD_ORDERING | MATCHING | FILL_IN_BLANKS | CATEGORIZATION | FIND_ERROR",
+
     "questionText": "Nội dung câu hỏi...",
+    "difficulty": "Easy | Medium | Hard | Mixed",
+    "explanation": "Lời nhắn nhủ thân thiện và giải thích kiến thức từ Giáo sư Cú...",
     "options": [
       {"label": "A", "text": "...", "isCorrect": true},
-      {"label": "B", "text": "...", "isCorrect": false},
-      {"label": "C", "text": "...", "isCorrect": false},
-      {"label": "D", "text": "...", "isCorrect": false}
+      ...
     ],
-    "difficulty": "Easy | Medium | Hard | Mixed",
-    "explanation": "Giải thích chi tiết vì sao đáp án đúng..."
+    "metadata": {
+      "orderedWords": ["Từ 1", "Từ 2", ...],
+      "matchingPairs": [{"left": "Từ A", "right": "Nghĩa A"}, ...],
+      "blanks": [{"index": 0, "answer": "từ đúng"}],
+      "categories": [{"name": "Nhóm 1", "items": ["Từ X", "Từ Y"]}],
+      "errorPosition": {"startIndex": 10, "endIndex": 15, "correctText": "từ đúng"}
+    }
+
   }
 ]
 `
+
 
 // ============================================================================ 
 // REQUEST HANDLER
@@ -310,9 +332,17 @@ export async function POST(request: NextRequest) {
             console.log('No fallback sections found for this subject at all.')
         }
       }
+      // Final safety check: Limit KB content length to prevent context overflow while keeping useful info
+      const MAX_KB_LENGTH = 30000;
+      if (knowledgeBaseContent.length > MAX_KB_LENGTH) {
+        console.log(`>>> [API] Truncating KB content from ${knowledgeBaseContent.length} to ${MAX_KB_LENGTH}`);
+        knowledgeBaseContent = knowledgeBaseContent.substring(0, MAX_KB_LENGTH) + '... [Nội dung lược bớt]';
+      }
+
       console.log('Total KB Content Length:', knowledgeBaseContent.length)
       console.log('--- End Knowledge Base Retrieval ---')
     }
+
 
     let questionBankContent = ''
     if (fromQuestionBank && subject) {
@@ -453,8 +483,9 @@ Hãy trả về JSON theo đúng schema trên, không thêm bất kỳ nội dun
       generationConfig: {
         responseMimeType: "application/json",
         temperature: aiSettings.temperature,
-        maxOutputTokens: Math.max(aiSettings.maxTokens, 8192), // Ensure enough tokens for long JSON
+        maxOutputTokens: 16000, // Significantly increased to handle 20 complex questions
       },
+
     })
 
     // 9. Generate response
@@ -484,18 +515,32 @@ Hãy trả về JSON theo đúng schema trên, không thêm bất kỳ nội dun
       console.error('Raw response:', text)
       
       // Attempt to fix truncated JSON if it looks like it's cut off
-      let repairedText = text;
+      let repairedText = text.trim();
+      
       if (!repairedText.endsWith(']')) {
           // If it started as an array but didn't finish
           if (repairedText.startsWith('[')) {
-              // Find the last complete object
+              // Strategy 1: Find the last complete object bracket
               const lastFullObjectMatch = repairedText.lastIndexOf('}');
               if (lastFullObjectMatch !== -1) {
-                  repairedText = repairedText.substring(0, lastFullObjectMatch + 1) + ']';
-                  console.log('>>> [API] Attempted to repair truncated JSON');
+                  // Basic closing
+                  repairedText = repairedText.substring(0, lastFullObjectMatch + 1);
+                  
+                  // Ensure it's not trailing by a comma
+                  if (repairedText.endsWith(',')) {
+                      repairedText = repairedText.slice(0, -1);
+                  }
+                  
+                  repairedText += ']';
+                  console.log('>>> [API] Repaired truncated JSON (Strategy 1: Object Closing)');
+              } else {
+                  // Strategy 2: If no objects finished at all, just close the array
+                  repairedText += ']';
+                  console.log('>>> [API] Repaired truncated JSON (Strategy 2: Array Closing only)');
               }
           }
       }
+
 
       try {
         questions = JSON.parse(repairedText)
@@ -534,8 +579,10 @@ Hãy trả về JSON theo đúng schema trên, không thêm bất kỳ nội dun
              typeof q.type === 'string' && 
              typeof q.questionText === 'string' && 
              q.questionText.trim().length > 0 &&
-             ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'ESSAY'].includes(q.type)
+             ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'ESSAY', 'WORD_ORDERING', 'MATCHING', 'FILL_IN_BLANKS', 'CATEGORIZATION', 'FIND_ERROR'].includes(q.type)
+
     })
+
 
     // 14. Return response
     return NextResponse.json({
