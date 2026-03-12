@@ -255,7 +255,8 @@ export default function TeacherTestDetailPage() {
                     </div>
 
                     <div className="text-gray-900 mb-6 text-xl font-bold font-handwritten tracking-tight">
-                      {question.content.questionText}
+                      {question.content.questionText ||
+                        question.content.question}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

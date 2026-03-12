@@ -212,7 +212,7 @@ export default function HomePage() {
                 <FileText className="w-12 h-12" />
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-3">
-                Tải lên tài liệu
+                Tải lên giáo trình
               </h3>
               <p className="text-slate-600 text-lg">
                 Upload giáo án hoặc file PDF lý thuyết. Hệ thống sẽ bóc tách dữ
@@ -358,9 +358,7 @@ export default function HomePage() {
         <div className="absolute top-0 inset-x-0 h-24 md:h-40 bg-gradient-to-b from-slate-50 to-transparent z-0 pointer-events-none"></div>
 
         <div className="absolute inset-0 opacity-[0.03] outline-none z-0">
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            {" "}
-            <defs>
+          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">            <defs>
               <pattern
                 id="smallGrid"
                 width="40"

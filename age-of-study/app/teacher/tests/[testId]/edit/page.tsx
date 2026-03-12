@@ -187,31 +187,35 @@ function TestEditContent() {
       }
 
       // Initialize questions with points
-      const mappedQuestions = testWithQuestions.questions.map((q, index) => {
-        // Map type correctly from DB q_type or content.type
-        const rawType = q.content.type || q.q_type || "MULTIPLE_CHOICE";
-        let qType: "MULTIPLE_CHOICE" | "TRUE_FALSE" | "ESSAY" = "MULTIPLE_CHOICE";
-
-        if (rawType.toUpperCase() === "ESSAY") qType = "ESSAY";
-        else if (rawType.toUpperCase() === "TRUE_FALSE") qType = "TRUE_FALSE";
-
-        return {
-          id: q.id,
-          createdAt: Date.now(),
-          number: index + 1,
-          type: qType,
-          questionText: q.content.questionText || q.content.question || "",
-          options: (q.content.options || []).map((opt: any, optIndex: number) => ({
-            id: optIndex.toString(),
-            label: opt.label || "",
-            text: opt.text || "",
-            isCorrect: optIndex === q.correct_option_index,
-          })),
-          difficulty: (q.difficulty?.toLowerCase() || "medium") as QuestionDifficulty,
-          topic: "Existing",
-          points: q.points || 10, // Use existing points or default to 10
-        };
-      });
+      const mappedQuestions = testWithQuestions.questions.map((q, index) => ({
+        id: q.id,
+        createdAt: Date.now(),
+        number: index + 1,
+        type: (q.content.type || "MULTIPLE_CHOICE") as any,
+        questionText:
+          q.content.questionText || (q.content as any).question || "",
+        options: Array.isArray(q.content.options)
+          ? q.content.options.map((opt, optIndex) => {
+              const isString = typeof opt === "string";
+              return {
+                id: optIndex.toString(),
+                label: isString
+                  ? String.fromCharCode(65 + optIndex)
+                  : (opt as any)?.label || String.fromCharCode(65 + optIndex),
+                text: isString ? opt : (opt as any)?.text || "",
+                isCorrect: optIndex === q.correct_option_index,
+              };
+            })
+          : [],
+        difficulty: (q.difficulty
+          ? q.difficulty.charAt(0).toUpperCase() +
+            q.difficulty.slice(1).toLowerCase()
+          : "Medium") as QuestionDifficulty,
+        topic: "Existing",
+        points: q.points || 10,
+        explanation: q.explanation || q.content.explanation || "",
+        model_answer: q.model_answer || "",
+      }));
       setQuestions(mappedQuestions);
 
       // Initialize points state with existing points

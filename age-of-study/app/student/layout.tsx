@@ -29,7 +29,10 @@ export default function DashboardLayout({
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
       // Force password change if flagged (e.g. after teacher magic login)
-      if (user.must_change_password && pathname !== "/student/change-password") {
+      if (
+        user.must_change_password &&
+        pathname !== "/student/change-password"
+      ) {
         router.push("/student/change-password");
         return;
       }
@@ -47,12 +50,14 @@ export default function DashboardLayout({
         return;
       }
 
-      // Auto-redirect based on user role when accessing dashboard
-      if (
-        user.role === "teacher" &&
-        (currentPath === "/" || currentPath === "/dashboard")
-      ) {
-        router.push("/teacher/dashboard");
+      // STRICT ROLE GUARD: Ensure only students can access /student routes
+      if (user.role !== "student") {
+        if (user.role === "teacher" || user.role === "system_admin") {
+          router.push("/teacher/dashboard");
+        } else {
+          router.push("/login");
+        }
+        return;
       }
     } else if (!isLoading && !isAuthenticated) {
       router.push("/login");

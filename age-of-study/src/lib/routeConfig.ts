@@ -25,21 +25,22 @@ export const routeConfig: RouteConfig[] = [
     path: "/staff/login",
     allowedRoles: ["system_admin"],
   },
+  // Base routes for prefix matching
   {
     path: "/student",
     allowedRoles: ["student"],
   },
   {
-    path: "/student/tests",
-    allowedRoles: ["student"],
+    path: "/teacher",
+    allowedRoles: ["teacher", "system_admin"],
   },
   {
-    path: "/student/tests/[testId]",
-    allowedRoles: ["student"],
+    path: "/admin",
+    allowedRoles: ["system_admin"],
   },
   {
     path: "/leaderboard",
-    allowedRoles: ["student"],
+    allowedRoles: ["student", "teacher", "system_admin"],
   },
   {
     path: "/settings",
@@ -48,56 +49,6 @@ export const routeConfig: RouteConfig[] = [
   {
     path: "/backpack",
     allowedRoles: ["student"],
-    redirectTo: "/student",
-  },
-  {
-    path: "/teacher",
-    allowedRoles: ["teacher", "system_admin"],
-    redirectTo: "/student",
-  },
-  {
-    path: "/teacher/dashboard",
-    allowedRoles: ["teacher", "system_admin"],
-    redirectTo: "/student",
-  },
-  {
-    path: "/teacher/tests",
-    allowedRoles: ["teacher", "system_admin"],
-    redirectTo: "/student",
-  },
-  {
-    path: "/teacher/tests/create",
-    allowedRoles: ["teacher", "system_admin"],
-    redirectTo: "/student",
-  },
-  {
-    path: "/teacher/tests/[testId]",
-    allowedRoles: ["teacher", "system_admin"],
-    redirectTo: "/student",
-  },
-  {
-    path: "/admin",
-    allowedRoles: ["system_admin"],
-    redirectTo: "/student",
-  },
-  {
-    path: "/admin/dashboard",
-    allowedRoles: ["system_admin"],
-    redirectTo: "/student",
-  },
-  {
-    path: "/admin/users",
-    allowedRoles: ["system_admin"],
-    redirectTo: "/student",
-  },
-  {
-    path: "/admin/classes",
-    allowedRoles: ["system_admin"],
-    redirectTo: "/student",
-  },
-  {
-    path: "/admin/settings",
-    allowedRoles: ["system_admin"],
     redirectTo: "/student",
   },
 ];
@@ -132,28 +83,60 @@ export function getRedirectPath(
 
   // Smart redirect based on role to prevent redirect loops
   if (userRole === "teacher") {
+    // If a teacher tries to access /student/* or /admin/*, send them to their dashboard
+    if (routePath.startsWith("/student") || routePath.startsWith("/admin")) {
+      return "/teacher/dashboard";
+    }
     return "/teacher/dashboard";
   } else if (userRole === "system_admin") {
     return "/admin/dashboard";
+  } else if (userRole === "student") {
+    // If a student tries to access /teacher/* or /admin/*, send them to their dashboard
+    if (routePath.startsWith("/teacher") || routePath.startsWith("/admin")) {
+      return "/student";
+    }
   }
 
   return route.redirectTo || "/student";
 }
 
-// Helper function to find a route configuration by path
+/**
+ * Helper function to find a route configuration by path
+ * Supports prefix-based matching (e.g., /student/settings matches /student)
+ * Matches the MOST SPECIFIC route (longest path)
+ */
 function findRoute(routes: RouteConfig[], path: string): RouteConfig | null {
+  let bestMatch: RouteConfig | null = null;
+
   for (const route of routes) {
+    // Exact match is always priority
     if (route.path === path) {
       return route;
     }
+
+    // Prefix match - check if current route path is a prefix of the target path
+    // and if it's more specific than what we've found so far
+    if (
+      path.startsWith(route.path) &&
+      (!bestMatch || route.path.length > bestMatch.path.length)
+    ) {
+      // Ensure prefix match adheres to path boundaries (e.g., /student matches /student/shop but not /student-info)
+      const nextChar = path[route.path.length];
+      if (!nextChar || nextChar === "/" || nextChar === "?" || nextChar === "#") {
+        bestMatch = route;
+      }
+    }
+
+    // Recursively check children if any
     if (route.children) {
       const found = findRoute(route.children, path);
-      if (found) {
-        return found;
+      if (found && (!bestMatch || found.path.length > bestMatch.path.length)) {
+        bestMatch = found;
       }
     }
   }
-  return null;
+
+  return bestMatch;
 }
 
 // Helper function to check if a path is a protected route
