@@ -474,9 +474,7 @@ export default function StudentTestPage() {
                                       65 + userAnswer.selected_option_index,
                                     )}
                                     .{" "}
-                                    {(question.content.options || [])[
-                                      userAnswer.selected_option_index
-                                    ]?.text || "Lỗi dữ liệu"}
+                                    {(() => { const opt = (question.content.options || [])[userAnswer.selected_option_index]; return typeof opt === 'string' ? opt : opt?.text; })() || "Lỗi dữ liệu"}
                                   </>
                                 ) : (
                                   <span className="text-red-500 italic">
@@ -497,9 +495,7 @@ export default function StudentTestPage() {
                                   65 + question.correct_option_index,
                                 )}
                                 .{" "}
-                                {(question.content.options || [])[
-                                  question.correct_option_index
-                                ]?.text || ""}
+                                {(() => { const opt = (question.content.options || [])[question.correct_option_index]; return typeof opt === 'string' ? opt : opt?.text; })() || ""}
                               </p>
                             </div>
                           )}
@@ -510,7 +506,7 @@ export default function StudentTestPage() {
                               </p>
                               <p className="font-bold text-lg text-green-900 whitespace-pre-wrap">
                                 {question.model_answer ||
-                                  (question.content.options || [])[0]?.text ||
+                                  (() => { const opt = (question.content.options || [])[0]; return typeof opt === 'string' ? opt : opt?.text; })() ||
                                   "Không có gợi ý"}
                               </p>
                             </div>
@@ -535,6 +531,10 @@ export default function StudentTestPage() {
                                 else if (isUserAnswer && !isCorrectOption)
                                   optionClasses =
                                     "border-red-500 bg-red-100 text-red-900 shadow-[2px_2px_0_0_rgba(239,68,68,1)]";
+                                const optionText =
+                                  typeof option === "string"
+                                    ? option
+                                    : option?.text || "";
 
                                 return (
                                   <div
@@ -554,7 +554,7 @@ export default function StudentTestPage() {
                                         {String.fromCharCode(65 + optionIndex)}
                                       </span>
                                       <span className="flex-1">
-                                        {option.text}
+                                        {optionText}
                                       </span>
                                       {isCorrectOption && (
                                         <span className="text-xl">🌟</span>
@@ -847,6 +847,10 @@ export default function StudentTestPage() {
                       (option, index) => {
                         const isSelected =
                           answers[currentQuestion.id] === index;
+                          const optionText =
+                            typeof option === "string"
+                              ? option
+                              : option?.text || "";
                         return (
                           <label
                             key={index}
@@ -872,7 +876,7 @@ export default function StudentTestPage() {
                               />
                             </div>
                             <span className="text-lg font-bold text-slate-800 leading-snug">
-                              {String.fromCharCode(65 + index)}. {option.text}
+                              {String.fromCharCode(65 + index)}. {optionText}
                             </span>
                           </label>
                         );
