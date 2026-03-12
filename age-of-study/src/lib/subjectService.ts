@@ -3,10 +3,17 @@ import { Subject } from '@/types/teacher'
 
 export class SubjectService {
   private supabase = getSupabaseBrowserClient()
+  private _subjectsCache: Subject[] | null = null
 
   async getSubjects(): Promise<Subject[]> {
+    // Return cached data if available
+    if (this._subjectsCache) {
+      return this._subjectsCache
+    }
+
     try {
       const { data, error } = await this.supabase
+
         .from('subjects')
         .select('*')
         .order('name', { ascending: true })
@@ -16,7 +23,9 @@ export class SubjectService {
         throw error
       }
 
+      this._subjectsCache = data || []
       return data || []
+
     } catch (error) {
       console.error('Failed to fetch subjects:', error)
       return []

@@ -487,6 +487,15 @@ export default function TeacherClassesPage() {
                       </NotebookButton>
                     </Link>
                   )}
+                  <Link
+                    href={`/teacher/tests/create?classId=${classData.id}&type=homework`}
+                    className="flex-1 w-full mt-4"
+                  >
+                    <NotebookButton className="w-full bg-yellow-100 text-yellow-900 border-yellow-900 hover:bg-yellow-200 text-lg">
+                      <Plus className="w-5 h-5 mr-2" />
+                      Giao bài tập
+                    </NotebookButton>
+                  </Link>
                 </div>
               </NotebookCard>
             ))

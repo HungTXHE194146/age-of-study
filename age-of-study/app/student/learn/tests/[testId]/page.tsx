@@ -15,6 +15,13 @@ import {
   calculateRemainingSeconds,
   shouldTriggerOneMinuteWarning,
 } from "@/utils/testTimer";
+import WordOrderingRenderer from "@/components/student/QuestionRenderers/WordOrderingRenderer";
+import MatchingRenderer from "@/components/student/QuestionRenderers/MatchingRenderer";
+import FillInBlanksRenderer from "@/components/student/QuestionRenderers/FillInBlanksRenderer";
+import CategorizationRenderer from "@/components/student/QuestionRenderers/CategorizationRenderer";
+import FindErrorRenderer from "@/components/student/QuestionRenderers/FindErrorRenderer";
+
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,6 +60,10 @@ export default function StudentTestPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] =
     useState<SubmissionResult | null>(null);
+  const [isQuestionComplete, setIsQuestionComplete] = useState(false);
+  const [friendlyMessage, setFriendlyMessage] = useState<string | null>(null);
+  const [isWobbling, setIsWobbling] = useState(false);
+
 
   // Notification states
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -107,13 +118,29 @@ export default function StudentTestPage() {
   };
 
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < (test?.questions?.length || 0) - 1)
+    if (!isQuestionComplete && !answers[currentQuestion?.id]) {
+      setIsWobbling(true);
+      setFriendlyMessage("Ôi, hiệp sĩ ơi! Còn một chút xíu nữa thôi, mình hoàn thành nốt nhé!");
+      setTimeout(() => {
+        setIsWobbling(false);
+        setFriendlyMessage(null);
+      }, 3000);
+      return;
+    }
+
+    if (currentQuestionIndex < (test?.questions?.length || 0) - 1) {
       setCurrentQuestionIndex((p) => p + 1);
+      setIsQuestionComplete(false); // Reset cho câu mới
+    }
   };
 
   const handlePrevQuestion = () => {
-    if (currentQuestionIndex > 0) setCurrentQuestionIndex((p) => p - 1);
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex((p) => p - 1);
+      setIsQuestionComplete(true); // Quay lại câu cũ thì coi như đã xong
+    }
   };
+
 
   const handleSubmitClick = () => {
     setSubmitError(null);
@@ -286,24 +313,24 @@ export default function StudentTestPage() {
     const grade =
       score >= 80
         ? {
-            label: "🎉 Xuất sắc!",
-            color: "text-green-600",
-            bg: "from-green-50 to-emerald-50",
-            border: "border-green-400",
-          }
+          label: "🎉 Xuất sắc!",
+          color: "text-green-600",
+          bg: "from-green-50 to-emerald-50",
+          border: "border-green-400",
+        }
         : score >= 50
           ? {
-              label: "👍 Tốt lắm!",
-              color: "text-amber-600",
-              bg: "from-amber-50 to-yellow-50",
-              border: "border-amber-400",
-            }
+            label: "👍 Tốt lắm!",
+            color: "text-amber-600",
+            bg: "from-amber-50 to-yellow-50",
+            border: "border-amber-400",
+          }
           : {
-              label: "💪 Cố lên nhé!",
-              color: "text-red-600",
-              bg: "from-red-50 to-rose-50",
-              border: "border-red-400",
-            };
+            label: "💪 Cố lên nhé!",
+            color: "text-red-600",
+            bg: "from-red-50 to-rose-50",
+            border: "border-red-400",
+          };
 
     return (
       <div className="min-h-screen notebook-paper-bg bg-repeat text-slate-800 p-4 md:p-8">
@@ -411,11 +438,10 @@ export default function StudentTestPage() {
                 return (
                   <div
                     key={question.id}
-                    className={`p-6 md:p-8 rounded-3xl border-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] ${
-                      isCorrect
-                        ? "border-green-400 bg-green-50/50"
-                        : "border-red-400 bg-red-50/50"
-                    }`}
+                    className={`p-6 md:p-8 rounded-3xl border-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] ${isCorrect
+                      ? "border-green-400 bg-green-50/50"
+                      : "border-red-400 bg-red-50/50"
+                      }`}
                   >
                     <div className="flex items-start justify-between mb-6">
                       <div className="flex-1">
@@ -424,11 +450,10 @@ export default function StudentTestPage() {
                             Câu {index + 1}
                           </span>
                           <span
-                            className={`px-4 py-1.5 rounded-xl border-2 border-slate-800 font-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] transform rotate-2 ${
-                              isCorrect
-                                ? "bg-green-400 text-slate-900"
-                                : "bg-red-400 text-white"
-                            }`}
+                            className={`px-4 py-1.5 rounded-xl border-2 border-slate-800 font-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] transform rotate-2 ${isCorrect
+                              ? "bg-green-400 text-slate-900"
+                              : "bg-red-400 text-white"
+                              }`}
                           >
                             {isCorrect ? "Tuyệt vời ✓" : "Cần cố gắng ✗"}
                           </span>
@@ -468,7 +493,7 @@ export default function StudentTestPage() {
                             ) : (
                               <div className="font-bold text-lg text-slate-800">
                                 {userAnswer?.selected_option_index !==
-                                undefined ? (
+                                  undefined ? (
                                   <>
                                     {String.fromCharCode(
                                       65 + userAnswer.selected_option_index,
@@ -543,13 +568,12 @@ export default function StudentTestPage() {
                                   >
                                     <div className="flex items-center gap-3">
                                       <span
-                                        className={`w-8 h-8 rounded-lg flex items-center justify-center font-black border-2 border-slate-800 ${
-                                          isCorrectOption
-                                            ? "bg-green-400 text-slate-900"
-                                            : isUserAnswer && !isCorrectOption
-                                              ? "bg-red-400 text-white"
-                                              : "bg-slate-200 text-slate-700"
-                                        }`}
+                                        className={`w-8 h-8 rounded-lg flex items-center justify-center font-black border-2 border-slate-800 ${isCorrectOption
+                                          ? "bg-green-400 text-slate-900"
+                                          : isUserAnswer && !isCorrectOption
+                                            ? "bg-red-400 text-white"
+                                            : "bg-slate-200 text-slate-700"
+                                          }`}
                                       >
                                         {String.fromCharCode(65 + optionIndex)}
                                       </span>
@@ -572,22 +596,22 @@ export default function StudentTestPage() {
 
                         {(question.explanation ||
                           question.content?.explanation) && (
-                          <div className="mt-6 bg-yellow-50 p-6 rounded-2xl border-4 border-yellow-400 shadow-[4px_4px_0_0_rgba(250,204,21,1)]">
-                            <h5 className="flex items-center gap-2 text-lg font-black text-yellow-800 mb-3 uppercase">
-                              <span className="text-2xl">💡</span> Giải thích
-                              chi tiết
-                            </h5>
-                            <div
-                              className="text-yellow-900 font-medium leading-relaxed"
-                              dangerouslySetInnerHTML={{
-                                __html:
-                                  question.explanation ||
-                                  question.content?.explanation ||
-                                  "",
-                              }}
-                            />
-                          </div>
-                        )}
+                            <div className="mt-6 bg-yellow-50 p-6 rounded-2xl border-4 border-yellow-400 shadow-[4px_4px_0_0_rgba(250,204,21,1)]">
+                              <h5 className="flex items-center gap-2 text-lg font-black text-yellow-800 mb-3 uppercase">
+                                <span className="text-2xl">💡</span> Giải thích
+                                chi tiết
+                              </h5>
+                              <div
+                                className="text-yellow-900 font-medium leading-relaxed"
+                                dangerouslySetInnerHTML={{
+                                  __html:
+                                    question.explanation ||
+                                    question.content?.explanation ||
+                                    "",
+                                }}
+                              />
+                            </div>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -688,13 +712,12 @@ export default function StudentTestPage() {
                   repeat: timeWarning ? Infinity : 0,
                   duration: 0.6,
                 }}
-                className={`border-2 border-slate-800 px-4 py-1.5 rounded-xl shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-mono text-lg ${
-                  timeWarning
-                    ? "bg-red-400 text-white animate-pulse"
-                    : timeLeft < 120
-                      ? "bg-orange-200 text-orange-900"
-                      : "bg-white"
-                }`}
+                className={`border-2 border-slate-800 px-4 py-1.5 rounded-xl shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-mono text-lg ${timeWarning
+                  ? "bg-red-400 text-white animate-pulse"
+                  : timeLeft < 120
+                    ? "bg-orange-200 text-orange-900"
+                    : "bg-white"
+                  }`}
               >
                 {formatTime(timeLeft)}
               </motion.span>
@@ -772,12 +795,11 @@ export default function StudentTestPage() {
                         onClick={() => setCurrentQuestionIndex(index)}
                         className={`
                           w-full aspect-square flex items-center justify-center font-black rounded-xl border-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)] transition-transform hover:-translate-y-1
-                          ${
-                            isCurrent
-                              ? "bg-indigo-500 text-white border-slate-800 scale-110"
-                              : isAnswered
-                                ? "bg-green-400 text-slate-900 border-slate-800"
-                                : "bg-slate-100 text-slate-500 border-slate-300 hover:border-slate-800 hover:text-slate-800"
+                          ${isCurrent
+                            ? "bg-indigo-500 text-white border-slate-800 scale-110"
+                            : isAnswered
+                              ? "bg-green-400 text-slate-900 border-slate-800"
+                              : "bg-slate-100 text-slate-500 border-slate-300 hover:border-slate-800 hover:text-slate-800"
                           }
                         `}
                       >
@@ -814,76 +836,160 @@ export default function StudentTestPage() {
                   }}
                 />
 
-                <div className="space-y-4 mb-10">
-                  {currentQuestion.q_type?.toLowerCase() === "essay" ||
-                  currentQuestion.content.type === "ESSAY" ? (
-                    <div className="space-y-4">
-                      <label className="text-lg font-bold text-slate-700 block mb-2">
-                        Câu trả lời của bạn:
-                      </label>
-                      <textarea
-                        value={(answers[currentQuestion.id] as string) || ""}
-                        onChange={(e) =>
-                          handleAnswerChange(currentQuestion.id, e.target.value)
-                        }
-                        placeholder="Nhập câu trả lời của bạn tại đây..."
-                        className="w-full min-h-[300px] p-6 text-lg font-medium border-4 border-slate-800 rounded-[2rem] bg-[#fffdf8] focus:bg-white focus:outline-none focus:ring-8 focus:ring-indigo-100 transition-all resize-none leading-relaxed"
-                      />
-                      <div className="flex items-center justify-between px-2">
-                        <p className="text-sm text-slate-500 font-bold italic">
-                          * Gợi ý: Hãy trình bày rõ ràng, đủ ý nhé!
-                        </p>
-                        <p className="text-xs font-black uppercase text-slate-400">
-                          {
-                            ((answers[currentQuestion.id] as string) || "")
-                              .length
-                          }{" "}
-                          ký tự
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    (currentQuestion.content.options || []).map(
-                      (option, index) => {
-                        const isSelected =
-                          answers[currentQuestion.id] === index;
-                          const optionText =
-                            typeof option === "string"
-                              ? option
-                              : option?.text || "";
+                <motion.div
+                  animate={isWobbling ? { x: [-10, 10, -10, 10, 0] } : {}}
+                  className="space-y-4 mb-10"
+                >
+                  {(() => {
+                    const qType = currentQuestion.q_type?.toUpperCase() || currentQuestion.content?.type;
+
+                    switch (qType) {
+                      case "WORD_ORDERING":
                         return (
-                          <label
-                            key={index}
-                            className={`flex items-start gap-4 p-4 rounded-2xl border-4 cursor-pointer transition-all ${
-                              isSelected
+                          <WordOrderingRenderer
+                            questionText={currentQuestion.content?.questionText || currentQuestion.content?.question || ""}
+                            orderedWords={currentQuestion.content?.metadata?.orderedWords || []}
+                            onComplete={(isCorrect, answer) => {
+                              handleAnswerChange(currentQuestion.id, answer.join(" "));
+                              if (isCorrect) {
+                                setIsQuestionComplete(true);
+                                confetti({ particleCount: 30, spread: 40, origin: { y: 0.7 } });
+                                setTimeout(handleNextQuestion, 1500);
+                              }
+                            }}
+                          />
+                        );
+                      case "MATCHING":
+                        return (
+                          <MatchingRenderer
+                            matchingPairs={currentQuestion.content?.metadata?.matchingPairs || []}
+                            onComplete={(isCorrect, pairs) => {
+                              handleAnswerChange(currentQuestion.id, JSON.stringify(pairs));
+                              if (isCorrect) {
+                                setIsQuestionComplete(true);
+                                confetti({ particleCount: 30, spread: 40, origin: { y: 0.7 } });
+                                setTimeout(handleNextQuestion, 1500);
+                              }
+                            }}
+                          />
+                        );
+                      case "FILL_IN_BLANKS":
+                        return (
+                          <FillInBlanksRenderer
+                            questionText={currentQuestion.content?.questionText || currentQuestion.content?.question || ""}
+                            blanks={currentQuestion.content?.metadata?.blanks || []}
+                            onComplete={(isCorrect, answers) => {
+                              handleAnswerChange(currentQuestion.id, answers.join("|"));
+                              if (isCorrect) {
+                                setIsQuestionComplete(true);
+                                confetti({ particleCount: 30, spread: 40, origin: { y: 0.7 } });
+                                setTimeout(handleNextQuestion, 1500);
+                              }
+                            }}
+                          />
+                        );
+                      case "CATEGORIZATION":
+                        return (
+                          <CategorizationRenderer
+                            categoriesData={currentQuestion.content?.metadata?.categories || []}
+                            onComplete={(isCorrect, categories) => {
+                              handleAnswerChange(currentQuestion.id, JSON.stringify(categories));
+                              if (isCorrect) {
+                                setIsQuestionComplete(true);
+                                confetti({ particleCount: 30, spread: 40, origin: { y: 0.7 } });
+                                setTimeout(handleNextQuestion, 1500);
+                              }
+                            }}
+                          />
+                        );
+                      case "FIND_ERROR":
+                        return (
+                          <FindErrorRenderer
+                            questionText={currentQuestion.content?.questionText || currentQuestion.content?.question || ""}
+                            errorPosition={(currentQuestion.content?.metadata?.errorPosition as any) || { startIndex: 0, endIndex: 0, correctText: "" }}
+                            onComplete={(isCorrect, selectedText) => {
+                              handleAnswerChange(currentQuestion.id, selectedText);
+                              if (isCorrect) {
+                                setIsQuestionComplete(true);
+                                confetti({ particleCount: 30, spread: 40, origin: { y: 0.7 } });
+                                setTimeout(handleNextQuestion, 1500);
+                              }
+                            }}
+                          />
+                        );
+                      case "ESSAY":
+                        return (
+                          <div className="space-y-4">
+                            <label className="text-lg font-bold text-slate-700 block mb-2">
+                              Câu trả lời của bạn:
+                            </label>
+                            <textarea
+                              value={(answers[currentQuestion.id] as string) || ""}
+                              onChange={(e) => {
+                                handleAnswerChange(currentQuestion.id, e.target.value);
+                                if (e.target.value.length > 10) setIsQuestionComplete(true);
+                              }}
+                              placeholder="Nhập câu trả lời của bạn tại đây..."
+                              className="w-full min-h-[300px] p-6 text-lg font-medium border-4 border-slate-800 rounded-[2rem] bg-[#fffdf8] focus:bg-white focus:outline-none focus:ring-8 focus:ring-indigo-100 transition-all resize-none leading-relaxed"
+                            />
+                          </div>
+                        );
+                      default: // MULTIPLE_CHOICE or TRUE_FALSE
+                        return (currentQuestion.content.options || []).map((option, index) => {
+                          const isSelected = answers[currentQuestion.id] === index;
+                          const optionText = typeof option === "string" ? option : option?.text || "";
+                          return (
+                            <label
+                              key={index}
+                              className={`flex items-start gap-4 p-4 rounded-2xl border-4 cursor-pointer transition-all ${isSelected
                                 ? "bg-indigo-100 border-indigo-500 shadow-[4px_4px_0_0_rgba(99,102,241,1)] transform -rotate-1 scale-[1.02]"
                                 : "bg-slate-50 border-slate-200 hover:border-slate-800 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1"
-                            }`}
-                          >
-                            <div className="flex items-center h-6 mt-1">
-                              <input
-                                type="radio"
-                                name={`question-${currentQuestion.id}`}
-                                value={index}
-                                checked={isSelected}
-                                onChange={(e) =>
-                                  handleAnswerChange(
-                                    currentQuestion.id,
-                                    parseInt(e.target.value),
-                                  )
-                                }
-                                className="w-5 h-5 text-indigo-600 bg-white border-2 border-slate-800 focus:ring-indigo-500"
-                              />
-                            </div>
-                            <span className="text-lg font-bold text-slate-800 leading-snug">
-                              {String.fromCharCode(65 + index)}. {optionText}
-                            </span>
-                          </label>
-                        );
-                      },
-                    )
+                                }`}
+                            >
+                              <div className="flex items-center h-6 mt-1">
+                                <input
+                                  type="radio"
+                                  name={`question-${currentQuestion.id}`}
+                                  value={index}
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    handleAnswerChange(currentQuestion.id, parseInt(e.target.value));
+                                    setIsQuestionComplete(true);
+                                    // Tự động sang câu tiếp theo cho trắc nghiệm nếu đúng (tùy chọn)
+                                    // setTimeout(handleNextQuestion, 1000);
+                                  }}
+                                  className="w-5 h-5 text-indigo-600 bg-white border-2 border-slate-800 focus:ring-indigo-500"
+                                />
+                              </div>
+                              <span className="text-lg font-bold text-slate-800 leading-snug">
+                                {String.fromCharCode(65 + index)}. {optionText}
+                              </span>
+                            </label>
+                          );
+                        });
+                    }
+                  })()}
+                </motion.div>
+
+                {/* Friendly Reminder Popup */}
+                <AnimatePresence>
+                  {friendlyMessage && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, y: 20 }}
+                      className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 w-[90%] md:w-auto"
+                    >
+                      <div className="bg-white border-4 border-indigo-500 p-4 rounded-2xl shadow-[8px_8px_0_0_rgba(99,102,241,1)] flex items-center gap-4">
+                        <span className="text-4xl animate-bounce">🦉</span>
+                        <p className="font-black text-indigo-800 italic text-lg leading-tight">
+                          {friendlyMessage}
+                        </p>
+                      </div>
+                    </motion.div>
                   )}
-                </div>
+                </AnimatePresence>
+
 
                 {/* Navigation + Submit */}
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8 pt-8 border-t-4 border-slate-800">
