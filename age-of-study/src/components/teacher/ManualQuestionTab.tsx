@@ -40,6 +40,9 @@ export function ManualQuestionTab({ questionsLength, onAddQuestion }: ManualQues
     const [categories, setCategories] = useState([{ name: "", items: "" }]);
     const [findErrorData, setFindErrorData] = useState({ startIndex: 0, endIndex: 0, correctText: "" });
 
+    const [blanksSentence, setBlanksSentence] = useState("");
+    const [errorSentence, setErrorSentence] = useState("");
+
 
 
     const handleAddClick = () => {
@@ -93,11 +96,17 @@ export function ManualQuestionTab({ questionsLength, onAddQuestion }: ManualQues
                 : manualQuestionType === "MATCHING"
                     ? { matchingPairs: matchingPairs.filter(p => p.left && p.right) }
                     : manualQuestionType === "FILL_IN_BLANKS"
-                        ? { blanks: blanksStr.split(",").map((s, i) => ({ index: i, answer: s.trim() })).filter(b => b.answer) }
+                        ? {
+                            sentence: blanksSentence,
+                            blanks: blanksStr.split(",").map((s, i) => ({ index: i, answer: s.trim() })).filter(b => b.answer)
+                        }
                         : manualQuestionType === "CATEGORIZATION"
                             ? { categories: categories.map(c => ({ name: c.name, items: c.items.split(",").map(s => s.trim()).filter(Boolean) })).filter(c => c.name) }
                             : manualQuestionType === "FIND_ERROR"
-                                ? { errorPosition: findErrorData }
+                                ? {
+                                    sentence: errorSentence,
+                                    errorPosition: findErrorData
+                                }
                                 : undefined
         };
 
@@ -119,6 +128,8 @@ export function ManualQuestionTab({ questionsLength, onAddQuestion }: ManualQues
         setOrderedWordsStr("");
         setMatchingPairs([{ left: "", right: "" }]);
         setBlanksStr("");
+        setBlanksSentence("");
+        setErrorSentence("");
         setCategories([{ name: "", items: "" }]);
         setFindErrorData({ startIndex: 0, endIndex: 0, correctText: "" });
     };
@@ -130,14 +141,14 @@ export function ManualQuestionTab({ questionsLength, onAddQuestion }: ManualQues
             <div className="grid gap-6">
                 <div>
                     <label className="block text-sm font-bold text-gray-800 uppercase mb-2">
-                        Câu hỏi số {questionsLength + 1}
+                        Lời dẫn / Hướng dẫn làm bài (Câu {questionsLength + 1})
                     </label>
                     <textarea
                         rows={2}
                         value={manualQuestionText}
                         onChange={(e) => setManualQuestionText(e.target.value)}
                         className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg focus:ring-0 focus:border-blue-600 shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900 transition-all hover:-translate-y-0.5"
-                        placeholder="Nhập nội dung câu hỏi tại đây..."
+                        placeholder="Ví dụ: Tìm lỗi sai trong câu sau, Sắp xếp các từ..."
                     />
                 </div>
 
@@ -330,17 +341,27 @@ export function ManualQuestionTab({ questionsLength, onAddQuestion }: ManualQues
                 {/* Fill in Blanks */}
                 {manualQuestionType === "FILL_IN_BLANKS" && (
                     <div className="space-y-4">
-                        <p className="text-xs text-slate-500 italic">* Dùng 3 dấu gạch dưới (___) để làm chỗ trống trong nội dung câu hỏi phía trên.</p>
                         <label className="block text-sm font-bold text-gray-800 uppercase">
-                            Các đáp án đúng (theo thứ tự, cách nhau bằng dấu phẩy)
+                            Nội dung câu văn (Sử dụng ___ cho chỗ trống)
+                        </label>
+                        <textarea
+                            rows={2}
+                            value={blanksSentence}
+                            onChange={(e) => setBlanksSentence(e.target.value)}
+                            placeholder="Ví dụ: Bác Hồ sinh ngày ___ tháng ___ năm 1890."
+                            className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900"
+                        />
+                        <label className="block text-sm font-bold text-gray-800 uppercase mt-4">
+                            Đáp án các ô trống (Cách nhau bằng dấu phẩy)
                         </label>
                         <input
                             type="text"
                             value={blanksStr}
                             onChange={(e) => setBlanksStr(e.target.value)}
-                            placeholder="nhà, trường, học"
+                            placeholder="19, 5"
                             className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold"
                         />
+                        <p className="text-xs text-slate-500 italic">* Các đáp án sẽ được gán vào các ___ theo thứ tự từ trái sang phải.</p>
                     </div>
                 )}
 
@@ -390,27 +411,51 @@ export function ManualQuestionTab({ questionsLength, onAddQuestion }: ManualQues
                 {manualQuestionType === "FIND_ERROR" && (
                     <div className="space-y-4">
                         <label className="block text-sm font-bold text-gray-800 uppercase">
-                            Chi tiết lỗi sai
+                            Câu văn chứa lỗi sai
                         </label>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-[10px] uppercase font-black text-slate-500">Vị trí bắt đầu (Số ký tự)</label>
-                                <input
-                                    type="number"
-                                    value={findErrorData.startIndex}
-                                    onChange={(e) => setFindErrorData({ ...findErrorData, startIndex: parseInt(e.target.value) })}
-                                    className="w-full px-4 py-2 border-2 border-slate-800 rounded-lg"
-                                />
+                        <textarea
+                            rows={2}
+                            value={errorSentence}
+                            onChange={(e) => setErrorSentence(e.target.value)}
+                            placeholder="Nhập câu văn chứa lỗi sai tại đây..."
+                            className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,1)] font-bold text-gray-900"
+                        />
+                        <div className="space-y-2">
+                            <label className="text-[10px] uppercase font-black text-slate-500">Chọn từ sai trong câu dưới đây:</label>
+                            <div className="p-4 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex flex-wrap gap-2">
+                                {errorSentence.split(/(\s+)/).map((part, idx, arr) => {
+                                    if (part.trim().length === 0) return null;
+
+                                    let currentPos = 0;
+                                    for (let i = 0; i < idx; i++) {
+                                        currentPos += arr[i].length;
+                                    }
+
+                                    const isSelected =
+                                        findErrorData.startIndex === currentPos &&
+                                        findErrorData.endIndex === (currentPos + part.length - 1);
+
+                                    return (
+                                        <button
+                                            key={idx}
+                                            onClick={() => {
+                                                setFindErrorData({
+                                                    ...findErrorData,
+                                                    startIndex: currentPos,
+                                                    endIndex: currentPos + part.length - 1
+                                                });
+                                            }}
+                                            className={`px-2 py-1 rounded-md border-2 font-bold transition-all ${isSelected
+                                                ? "bg-red-500 text-white border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+                                                : "bg-white border-gray-300 hover:border-black"
+                                                }`}
+                                        >
+                                            {part}
+                                        </button>
+                                    );
+                                })}
                             </div>
-                            <div>
-                                <label className="text-[10px] uppercase font-black text-slate-500">Vị trí kết thúc</label>
-                                <input
-                                    type="number"
-                                    value={findErrorData.endIndex}
-                                    onChange={(e) => setFindErrorData({ ...findErrorData, endIndex: parseInt(e.target.value) })}
-                                    className="w-full px-4 py-2 border-2 border-slate-800 rounded-lg"
-                                />
-                            </div>
+                            <p className="text-[10px] text-slate-400 italic font-medium">* Nhấn vào từ chứa lỗi sai để đánh dấu</p>
                         </div>
                         <div>
                             <label className="text-[10px] uppercase font-black text-slate-500">Từ đúng (Để sửa lại)</label>
@@ -422,7 +467,6 @@ export function ManualQuestionTab({ questionsLength, onAddQuestion }: ManualQues
                                 className="w-full px-4 py-2 border-2 border-slate-800 rounded-lg"
                             />
                         </div>
-                        <p className="text-[10px] text-slate-500 italic">* Hệ thống sẽ tự động tách các từ dựa trên khoảng trắng để học sinh click chọn.</p>
                     </div>
                 )}
 

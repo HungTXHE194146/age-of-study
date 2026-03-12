@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { verifyAdmin } from "@/lib/adminAuth";
 import { createAuditLog } from "@/lib/auditService";
 import { ParsedStudent } from "@/components/admin/StudentImportModal";
+import { formatBirthdayToPassword } from "@/lib/utils";
 import { now } from "lodash";
 
 const supabaseAdmin = createClient(
@@ -143,10 +144,13 @@ export async function POST(request: NextRequest) {
 
       // 3. User Resolution / Creation
       
-      // Default password = dob (DDMMYYYY format based on input)
-      // Strip out / or -
-      const cleanDob = dob ? dob.replace(/[-\/]/g, "") : ""; 
-      let password = cleanDob.length >= 8 ? cleanDob : globalThis.crypto.randomUUID().slice(0, 12);
+      // Default password = formatted dob (ddmmyyyy)
+      let password = formatBirthdayToPassword(dob);
+      
+      // If no dob, use a random one to avoid predictable 12345678 fallback for admin imports
+      if (password === "12345678" && !dob) {
+        password = globalThis.crypto.randomUUID().slice(0, 12);
+      }
 
       // Try finding the user first by username
       const { data: existingUserParams } = await supabaseAdmin

@@ -37,12 +37,7 @@ export default function FillInBlanksRenderer({
                 ans.trim().toLowerCase() === blanks[i].answer.trim().toLowerCase()
             );
 
-            if (isAllCorrect) {
-                onComplete(true, newAnswers);
-            } else {
-                // Tự động kiểm tra sau khi gõ xong (hoặc khi nhấn Enter)
-                // Ở đây ta có thể đợi học sinh nhấn nút hoặc tự động nếu là câu ngắn
-            }
+            onComplete(isAllCorrect, newAnswers);
         }
     };
 

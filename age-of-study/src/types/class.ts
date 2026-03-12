@@ -74,6 +74,7 @@ export interface StudentProfile {
   avatar_url: string | null
   grade: number | null
   total_xp: number
+  dob: string | null
 }
 
 // Subject type is imported from './teacher' (see top of file)

@@ -43,7 +43,7 @@ export interface Question {
       endIndex: number;
       correctText: string;
     }; // Cho FIND_ERROR
-
+    sentence?: string;
   };
 }
 

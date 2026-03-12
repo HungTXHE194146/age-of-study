@@ -49,7 +49,7 @@ export interface QuestionContent {
       endIndex: number;
       correctText: string;
     };
-
+    sentence?: string;
   };
 }
 
