@@ -1,22 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Question, TestWithQuestions } from "@/types/test";
+import { Question, TestWithQuestions, SubmissionResult, QuestionOption } from "@/types/test";
 import { Button } from "@/components/ui/button";
-
-interface SubmissionResult {
-    score: number;
-    correctAnswers: number;
-    totalQuestions: number;
-    questions: Question[];
-    answers: {
-        question_id: string;
-        selected_option_index?: number;
-        text_answer?: string;
-        is_correct: boolean;
-    }[];
-    xp_earned?: number;
-}
 
 interface TestResultViewProps {
     test: TestWithQuestions;
@@ -151,7 +137,16 @@ export default function TestResultView({
     );
 }
 
-function StatCard({ label, value, color, bg, icon, rotate }: any) {
+interface StatCardProps {
+    label: string;
+    value: string | number;
+    color: string;
+    bg: string;
+    icon: string;
+    rotate: string;
+}
+
+function StatCard({ label, value, color, bg, icon, rotate }: StatCardProps) {
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -174,7 +169,15 @@ function StatCard({ label, value, color, bg, icon, rotate }: any) {
     );
 }
 
-function QuestionReviewItem({ index, question, userAnswer }: { index: number; question: Question; userAnswer: any }) {
+function QuestionReviewItem({
+    index,
+    question,
+    userAnswer,
+}: {
+    index: number;
+    question: Question;
+    userAnswer: SubmissionResult["answers"][number] | undefined;
+}) {
     const isCorrect = userAnswer?.is_correct;
     const qType = (question.content?.type || question.q_type || "").toUpperCase();
 
@@ -237,7 +240,14 @@ function QuestionReviewItem({ index, question, userAnswer }: { index: number; qu
     );
 }
 
-function QuestionResultRenderer({ qType, question, userAnswer, isCorrect }: any) {
+interface QuestionResultRendererProps {
+    qType: string;
+    question: Question;
+    userAnswer: SubmissionResult["answers"][number] | undefined;
+    isCorrect: boolean | undefined;
+}
+
+function QuestionResultRenderer({ qType, question, userAnswer, isCorrect }: QuestionResultRendererProps) {
     switch (qType) {
         case "WORD_ORDERING":
             const studentWords = userAnswer?.text_answer?.split(" ") || [];
@@ -252,8 +262,8 @@ function QuestionResultRenderer({ qType, question, userAnswer, isCorrect }: any)
                                     <span
                                         key={i}
                                         className={`px-3 py-1 rounded-lg border-2 font-bold ${word === correctWords[i]
-                                                ? "bg-green-100 border-green-400 text-green-700"
-                                                : "bg-red-100 border-red-400 text-red-700"
+                                            ? "bg-green-100 border-green-400 text-green-700"
+                                            : "bg-red-100 border-red-400 text-red-700"
                                             }`}
                                     >
                                         {word}
@@ -348,8 +358,8 @@ function QuestionResultRenderer({ qType, question, userAnswer, isCorrect }: any)
                                 {i < textSegments.length - 1 && (
                                     <span
                                         className={`mx-1 px-2 py-0.5 rounded border-b-2 font-bold ${studentBlanks[i]?.trim().toLowerCase() === correctBlanks[i]?.answer.trim().toLowerCase()
-                                                ? "bg-green-100 border-green-500 text-green-700"
-                                                : "bg-red-100 border-red-500 text-red-700"
+                                            ? "bg-green-100 border-green-500 text-green-700"
+                                            : "bg-red-100 border-red-500 text-red-700"
                                             }`}
                                     >
                                         {studentBlanks[i] || "..."}
@@ -532,7 +542,7 @@ function QuestionResultRenderer({ qType, question, userAnswer, isCorrect }: any)
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 pt-4 border-t-2 border-dashed border-slate-300">
-                        {(question.content.options || []).map((option, optionIndex) => {
+                        {(question.content.options || []).map((option: string | QuestionOption, optionIndex: number) => {
                             const isUserAnswer = optionIndex === (userAnswer?.selected_option_index ?? -1);
                             const isCorrectOption = optionIndex === question.correct_option_index;
 
@@ -550,10 +560,10 @@ function QuestionResultRenderer({ qType, question, userAnswer, isCorrect }: any)
                                     <div className="flex items-center gap-3">
                                         <span
                                             className={`w-8 h-8 rounded-lg flex items-center justify-center font-black border-2 border-slate-800 ${isCorrectOption
-                                                    ? "bg-green-400 text-slate-900"
-                                                    : isUserAnswer && !isCorrectOption
-                                                        ? "bg-red-400 text-white"
-                                                        : "bg-slate-200 text-slate-700"
+                                                ? "bg-green-400 text-slate-900"
+                                                : isUserAnswer && !isCorrectOption
+                                                    ? "bg-red-400 text-white"
+                                                    : "bg-slate-200 text-slate-700"
                                                 }`}
                                         >
                                             {String.fromCharCode(65 + optionIndex)}
