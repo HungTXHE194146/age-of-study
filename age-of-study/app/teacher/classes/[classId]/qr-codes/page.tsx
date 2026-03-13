@@ -110,15 +110,6 @@ export default function QRCodesPage() {
           {classData?.students.map((student) => {
             const studentPassword = formatBirthdayToPassword(student.profile.dob);
 
-            // Chuỗi dữ liệu cho QR code: Định dạng chứa action login, username và password
-            const qrDataObj = {
-              action: "qr_login_v1",
-              classId: classId,
-              studentId: student.student_id,
-              username: student.profile.username,
-              password: studentPassword
-            };
-
             // Tạo link đăng nhập tự động sử dụng query params đơn giản
             // Điều này giúp camera điện thoại dễ dàng nhận diện URL và nội dung
             const params = new URLSearchParams({
