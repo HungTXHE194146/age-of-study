@@ -21,6 +21,12 @@ export default function QRCodesPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [baseUrl, setBaseUrl] = useState("");
+
+  useEffect(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    setBaseUrl(process.env.NEXT_PUBLIC_BASE_URL || origin || "http://localhost:3000");
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -105,13 +111,25 @@ export default function QRCodesPage() {
             const studentPassword = formatBirthdayToPassword(student.profile.dob);
 
             // Chuỗi dữ liệu cho QR code: Định dạng chứa action login, username và password
-            const qrData = JSON.stringify({
+            const qrDataObj = {
               action: "qr_login_v1",
               classId: classId,
               studentId: student.student_id,
               username: student.profile.username,
               password: studentPassword
+            };
+
+            // Tạo link đăng nhập tự động sử dụng query params đơn giản
+            // Điều này giúp camera điện thoại dễ dàng nhận diện URL và nội dung
+            const params = new URLSearchParams({
+              action: "qr_login_v1",
+              u: student.profile.username || "",
+              p: studentPassword,
+              cid: String(classId),
+              sid: student.student_id
             });
+
+            const fullLoginUrl = `${baseUrl}/login?${params.toString()}`;
 
             return (
               <div
@@ -127,7 +145,7 @@ export default function QRCodesPage() {
 
                 <div className="p-4 border-4 border-black rounded-lg bg-white inline-block">
                   <QRCodeSVG
-                    value={qrData}
+                    value={fullLoginUrl}
                     size={160}
                     level="H" // High error correction, dễ quét ngay cả khi giấy in mờ
                   />

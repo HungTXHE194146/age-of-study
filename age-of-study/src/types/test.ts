@@ -29,6 +29,20 @@ export interface QuestionOption {
   isCorrect: boolean;
 }
 
+export interface SubmissionResult {
+  score: number;
+  correctAnswers: number;
+  totalQuestions: number;
+  questions: Question[];
+  answers: {
+    question_id: string;
+    selected_option_index?: number;
+    text_answer?: string;
+    is_correct: boolean;
+  }[];
+  xp_earned?: number;
+}
+
 export interface QuestionContent {
   type: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'ESSAY' | 'WORD_ORDERING' | 'MATCHING' | 'FILL_IN_BLANKS' | 'CATEGORIZATION' | 'FIND_ERROR';
 
