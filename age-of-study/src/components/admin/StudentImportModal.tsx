@@ -139,9 +139,31 @@ export default function StudentImportModal({
         const val = (idx: number | undefined) =>
           idx !== undefined ? String(row[idx] || "").trim() : "";
 
+        // DOB needs special handling: XLSX.js may return a Date object or
+        // an Excel serial number instead of a string for date-formatted cells.
+        const parseDob = (idx: number | undefined): string => {
+          if (idx === undefined) return "";
+          const raw = row[idx];
+          if (!raw) return "";
+          if (raw instanceof Date) {
+            const d = String(raw.getDate()).padStart(2, "0");
+            const m = String(raw.getMonth() + 1).padStart(2, "0");
+            return `${d}/${m}/${raw.getFullYear()}`;
+          }
+          if (typeof raw === "number") {
+            // Excel serial date: days since 1900-01-01 (with Lotus bug offset)
+            const excelEpoch = new Date(1899, 11, 30);
+            const date = new Date(excelEpoch.getTime() + raw * 86400000);
+            const d = String(date.getDate()).padStart(2, "0");
+            const m = String(date.getMonth() + 1).padStart(2, "0");
+            return `${d}/${m}/${date.getFullYear()}`;
+          }
+          return String(raw).trim();
+        };
+
         const username = val(colMap.username);
         const fullName = val(colMap.fullName);
-        const dob = val(colMap.dob);
+        const dob = parseDob(colMap.dob);
         const gender = val(colMap.gender);
         const ethnicity = val(colMap.ethnicity);
         const phone = val(colMap.phone);

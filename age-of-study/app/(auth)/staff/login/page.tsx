@@ -408,17 +408,12 @@ export default function StaffLoginPage() {
             <div className="text-center pt-2">
               <p className="text-sm text-gray-600">
                 Quên mật khẩu?{" "}
-                <button
-                  type="button"
+                <Link
+                  href="/staff/magic-login"
                   className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
-                  onClick={() =>
-                    alert(
-                      "Vui lòng liên hệ quản trị viên hệ thống để được hỗ trợ.",
-                    )
-                  }
                 >
-                  Liên hệ quản trị viên
-                </button>
+                  Nhờ admin cấp mã
+                </Link>
               </p>
             </div>
           </motion.form>

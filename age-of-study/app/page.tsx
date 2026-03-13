@@ -92,14 +92,7 @@ export default function HomePage() {
               </Link>
             </div>
 
-            <div className="h-6 w-px bg-slate-300 hidden md:block"></div>
 
-            <Link
-              href="/staff/login"
-              className="hidden md:block text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors"
-            >
-              Giáo viên / Admin
-            </Link>
           </div>
         </div>
       </header>
@@ -157,12 +150,6 @@ export default function HomePage() {
               transition={{ delay: 0.3 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-4"
             >
-              <Link href="/staff/login?role=teacher">
-                <button className="w-full sm:w-auto px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white text-lg font-bold rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center justify-center gap-2 group">
-                  Đăng nhập Giáo viên
-                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </button>
-              </Link>
               <Link href="#how-it-works">
                 <button className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50 text-lg font-bold rounded-2xl shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2">
                   <Play className="w-5 h-5 text-indigo-500 fill-indigo-500" />
@@ -498,9 +485,9 @@ export default function HomePage() {
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                <Link href="/staff/login?role=teacher">
+                <Link href="/login">
                   <button className="w-full sm:w-auto px-10 py-5 bg-white text-slate-900 text-xl font-bold rounded-2xl shadow-xl hover:shadow-indigo-500/20 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 group">
-                    Bắt đầu Dạy thử Miễn phí
+                    Bắt đầu Học ngay
                     <ArrowRight className="w-6 h-6 text-indigo-600 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </Link>
