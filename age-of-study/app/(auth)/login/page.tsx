@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -11,17 +12,18 @@ import { QrCode } from "lucide-react";
 import { QRScanner } from "@/components/qr-scanner";
 import { VerifyMFAModal } from "@/components/auth/VerifyMFAModal";
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const { 
-    login, 
-    verifyMFA, 
-    isLoading, 
-    error, 
-    clearError, 
+  const {
+    login,
+    verifyMFA,
+    isLoading,
+    error,
+    clearError,
     clearMFAChallenge,
-    user, 
-    requiresMFA 
+    user,
+    requiresMFA
   } = useAuthStore();
 
 
@@ -36,6 +38,25 @@ export default function LoginPage() {
   useEffect(() => {
     clearError();
   }, [clearError]);
+
+  // Xử lý tự động đăng nhập từ mã QR trên URL
+  useEffect(() => {
+    const encodedData = searchParams.get('qr_data');
+    if (encodedData) {
+      const performAutoLogin = async () => {
+        try {
+          const decoded = atob(encodedData);
+          const parsed = JSON.parse(decoded);
+          if (parsed.action === 'qr_login_v1' && parsed.username && parsed.password) {
+            await login(parsed.username, parsed.password);
+          }
+        } catch (e) {
+          console.error("Auto login error:", e);
+        }
+      };
+      performAutoLogin();
+    }
+  }, [searchParams, login]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -70,8 +91,24 @@ export default function LoginPage() {
   const handleQRScanSuccess = async (decodedText: string) => {
     try {
       setScanError(null);
-      const parsed = JSON.parse(decodedText);
-      if (parsed.action === 'qr_login_v1' && parsed.username && parsed.password) {
+      let parsed: any = null;
+
+      // Kiểm tra nếu encoded trong URL hoặc là JSON trực tiếp
+      if (decodedText.startsWith('http') && decodedText.includes('qr_data=')) {
+        const url = new URL(decodedText);
+        const encodedData = url.searchParams.get('qr_data');
+        if (encodedData) {
+          parsed = JSON.parse(atob(encodedData));
+        }
+      } else {
+        try {
+          parsed = JSON.parse(decodedText);
+        } catch {
+          // Bỏ qua nếu không phải JSON
+        }
+      }
+
+      if (parsed && parsed.action === 'qr_login_v1' && parsed.username && parsed.password) {
         setIsScanningQR(false);
         await login(parsed.username, parsed.password);
       } else {
@@ -169,21 +206,21 @@ export default function LoginPage() {
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
           {scanError && (
-             <div className="bg-orange-50 border border-orange-200 text-orange-700 px-4 py-3 text-center rounded-xl mb-4 text-sm font-medium">
-               {scanError}
-             </div>
+            <div className="bg-orange-50 border border-orange-200 text-orange-700 px-4 py-3 text-center rounded-xl mb-4 text-sm font-medium">
+              {scanError}
+            </div>
           )}
 
           {/* Nút Quét QR to rõ */}
           <button
-             type="button"
-             onClick={() => setIsScanningQR(true)}
-             className="w-full bg-blue-100 hover:bg-blue-200 border-2 border-blue-500 text-blue-700 font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 shadow-sm text-lg"
+            type="button"
+            onClick={() => setIsScanningQR(true)}
+            className="w-full bg-blue-100 hover:bg-blue-200 border-2 border-blue-500 text-blue-700 font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 shadow-sm text-lg"
           >
-             <QrCode className="w-6 h-6" />
-             Quét thẻ QR
+            <QrCode className="w-6 h-6" />
+            Quét thẻ QR
           </button>
-          
+
           {/* Divider */}
           <div className="relative pt-2 pb-2">
             <div className="absolute inset-0 flex items-center">
@@ -366,16 +403,16 @@ export default function LoginPage() {
       {/* Footer */}
       <div className="text-center text-xs text-gray-600 mt-6 pb-6">
 
-      {/* MFA Verification Modal */}
-      {requiresMFA && (
-        <VerifyMFAModal
-          title="Xác thực 2 yếu tố"
-          description="Nhập mã 6 số từ app xác thực của bạn"
-          onVerify={handleMFAVerify}
-          onClose={handleMFAClose}
-          canClose={true}
-        />
-      )}
+        {/* MFA Verification Modal */}
+        {requiresMFA && (
+          <VerifyMFAModal
+            title="Xác thực 2 yếu tố"
+            description="Nhập mã 6 số từ app xác thực của bạn"
+            onVerify={handleMFAVerify}
+            onClose={handleMFAClose}
+            canClose={true}
+          />
+        )}
         © {new Date().getFullYear()} Age Of Study. Cùng bé khôn lớn mỗi ngày.
       </div>
 
@@ -389,5 +426,17 @@ export default function LoginPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <LoadingSpinner size="lg" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
