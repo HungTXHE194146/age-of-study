@@ -30,11 +30,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Set turbopack root explicitly to current directory to avoid parent workspace inference
-// In Next.js 15+, turbopack is placed at the root of the configuration object
-nextConfig.turbopack = {
-  ...nextConfig.turbopack || {},
-  root: process.cwd(),
-};
-
 export default nextConfig;
