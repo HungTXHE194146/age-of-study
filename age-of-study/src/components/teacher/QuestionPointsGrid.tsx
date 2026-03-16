@@ -78,7 +78,7 @@ export function QuestionPointsGrid({
                 Câu hỏi đang chọn
               </label>
               <div className="text-2xl font-black text-blue-700 font-handwritten tracking-tight mt-1">
-                {selectedQuestionId 
+                {selectedQuestionId
                   ? `Câu ${questions.find(q => q.id === selectedQuestionId)?.number || ''}`
                   : 'Chưa chọn'}
               </div>
@@ -103,7 +103,7 @@ export function QuestionPointsGrid({
             </div>
           </div>
           <div className="flex gap-3 flex-wrap mt-4 md:mt-0">
-             <button
+            <button
               onClick={() => {
                 if (selectedQuestionId) {
                   setEditingPoints(points[selectedQuestionId] || 10);
@@ -129,22 +129,20 @@ export function QuestionPointsGrid({
         {questions.map((question, index) => (
           <div
             key={question.id}
-            className={`relative group cursor-pointer transition-all duration-200 ${
-              currentQuestionIndex === index
+            className={`relative group cursor-pointer transition-all duration-200 ${currentQuestionIndex === index
                 ? 'ring-4 ring-blue-400 ring-offset-2 rounded-xl scale-105 z-10'
                 : selectedQuestionId === question.id
-                ? 'ring-4 ring-green-400 ring-offset-2 rounded-xl scale-105 z-10'
-                : 'hover:scale-105 hover:z-10'
-            }`}
+                  ? 'ring-4 ring-green-400 ring-offset-2 rounded-xl scale-105 z-10'
+                  : 'hover:scale-105 hover:z-10'
+              }`}
             onClick={() => handleQuestionClick(question.id, index)}
           >
-            <div className={`aspect-square sm:aspect-auto sm:h-20 ${
-              currentQuestionIndex === index
+            <div className={`aspect-square sm:aspect-auto sm:h-20 ${currentQuestionIndex === index
                 ? 'bg-blue-100 text-blue-900 border-black'
                 : selectedQuestionId === question.id
-                ? 'bg-green-100 text-green-900 border-black'
-                : 'bg-white text-gray-800 border-black hover:bg-yellow-50 hover:text-yellow-900'
-            } rounded-xl p-2 flex flex-col items-center justify-center border-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]`}>
+                  ? 'bg-green-100 text-green-900 border-black'
+                  : 'bg-white text-gray-800 border-black hover:bg-yellow-50 hover:text-yellow-900'
+              } rounded-xl p-2 flex flex-col items-center justify-center border-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]`}>
               <div className="text-2xl font-black font-handwritten">
                 {question.number}
               </div>
@@ -152,7 +150,7 @@ export function QuestionPointsGrid({
                 {getPointsForQuestion(question.id)} pts
               </div>
             </div>
-            
+
             {/* Selection indicator */}
             {selectedQuestionId === question.id && (
               <div className="absolute -top-2 -right-2 z-20">
@@ -167,12 +165,13 @@ export function QuestionPointsGrid({
 
       <div className="flex justify-between items-center text-lg font-black font-handwritten tracking-tight pt-4 border-t-2 border-dashed border-gray-400">
         <span className="text-red-700">
-          Tổng điểm: {Object.values(points).reduce((sum, pts) => sum + pts, 0)} pts
+          Tổng điểm: {questions.reduce((sum, q) => sum + (points[q.id] || 10), 0)} pts
         </span>
         <span className="text-blue-700">
-          Trung bình: {questions.length > 0 ? Math.round(Object.values(points).reduce((sum, pts) => sum + pts, 0) / questions.length) : 0} pts/câu
+          Trung bình: {questions.length > 0 ? Math.round(questions.reduce((sum, q) => sum + (points[q.id] || 10), 0) / questions.length) : 0} pts/câu
         </span>
       </div>
+
     </div>
   );
 }

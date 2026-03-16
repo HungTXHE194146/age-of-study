@@ -78,47 +78,59 @@ export default function TeacherLeaderboardPage() {
     setFilteredStudents(filtered);
   };
 
-  const exportToCSV = () => {
-    const escapeCSV = (value: string | number | null): string => {
-      if (value === null) return "N/A";
-      const str = String(value);
-      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-        return `"${str.replace(/"/g, '""')}"`;
-      }
-      return str;
-    };
+  const exportToExcel = async () => {
+    try {
+      const ExcelJS = (await import("exceljs")).default;
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Bảng Xếp Hạng");
 
-    const headers = [
-      "Rank",
-      "Name",
-      "Username",
-      "Grade",
-      "Total XP",
-      "Weekly XP",
-      "Streak",
-    ];
-    const rows = filteredStudents.map((student, index) => [
-      escapeCSV(index + 1),
-      escapeCSV(student.full_name),
-      escapeCSV(student.username),
-      escapeCSV(student.grade),
-      escapeCSV(student.total_xp),
-      escapeCSV(student.weekly_xp),
-      escapeCSV(student.current_streak),
-    ]);
+      // Define columns
+      worksheet.columns = [
+        { header: "Hạng", key: "rank", width: 10 },
+        { header: "Họ và Tên", key: "full_name", width: 30 },
+        { header: "Tên đăng nhập", key: "username", width: 20 },
+        { header: "Lớp", key: "grade", width: 10 },
+        { header: "Tổng XP", key: "total_xp", width: 15 },
+        { header: "Weekly XP", key: "weekly_xp", width: 15 },
+        { header: "Chuỗi (Ngày)", key: "streak", width: 15 },
+      ];
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.join(",")),
-    ].join("\n");
+      // Add rows
+      filteredStudents.forEach((student, index) => {
+        worksheet.addRow({
+          rank: index + 1,
+          full_name: student.full_name || "N/A",
+          username: student.username || "N/A",
+          grade: student.grade ? `Lớp ${student.grade}` : "N/A",
+          total_xp: student.total_xp,
+          weekly_xp: student.weekly_xp,
+          streak: student.current_streak,
+        });
+      });
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `leaderboard_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+      // Format header
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE0E0E0" },
+      };
+
+      // Generate buffer and download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `leaderboard_${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export to Excel failed:", error);
+      alert("Xuất file Excel thất bại. Vui lòng thử lại sau.");
+    }
   };
 
   if (isLoading || !isAuthenticated) {
@@ -128,9 +140,9 @@ export default function TeacherLeaderboardPage() {
   const avgXP =
     filteredStudents.length > 0
       ? Math.round(
-          filteredStudents.reduce((acc, s) => acc + s.total_xp, 0) /
-            filteredStudents.length,
-        )
+        filteredStudents.reduce((acc, s) => acc + s.total_xp, 0) /
+        filteredStudents.length,
+      )
       : 0;
 
   const topStudent = filteredStudents[0];
@@ -230,11 +242,11 @@ export default function TeacherLeaderboardPage() {
 
           {/* Export Button */}
           <button
-            onClick={exportToCSV}
+            onClick={exportToExcel}
             className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-semibold flex items-center gap-2 whitespace-nowrap"
           >
             <Download className="w-5 h-5" />
-            Xuất CSV
+            Xuất Excel
           </button>
         </div>
       </div>

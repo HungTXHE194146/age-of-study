@@ -1,464 +1,398 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "../ui/input";
-import { Textarea } from "../ui/textarea";
-import { Label } from "../ui/label";
-import { CloudUpload, FileText, X, Loader2, AlertCircle } from "lucide-react";
-import { GeneratorFormState, DifficultyLevel, Subject } from "@/types/teacher";
-import { subjectService } from "@/lib/subjectService";
+import Loading from "@/components/ui/loading";
+import { AIQuestionService } from "@/lib/aiQuestionService";
+
 import {
-  difficultyOptions,
-  questionCountOptions,
-} from "@/constants/teacherConstants";
+  PlusCircle,
+  FileText,
+  Brain,
+  Database,
+  Wand2,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2
+} from "lucide-react";
+import { NotebookBadge, NotebookButton, NotebookCard } from "@/components/ui/notebook-card";
+import { Question } from "@/types/teacher";
 
 interface QuizGeneratorFormProps {
-  onGenerate: (data: GeneratorFormState) => void;
-  isLoading?: boolean;
-  existingQuestionCount?: number;
+  subjectId?: string;
+  nodeId?: string;
+  onQuestionsGenerated: (questions: Question[]) => void;
+  onBankQuestionsSelected: (questions: Question[]) => void;
+  bankQuestions?: Question[];
+  isLoadingBank?: boolean;
 }
 
 export function QuizGeneratorForm({
-  onGenerate,
-  isLoading = false,
-  existingQuestionCount = 0,
+  subjectId,
+  nodeId,
+  onQuestionsGenerated,
+  onBankQuestionsSelected,
+  bankQuestions = [],
+  isLoadingBank = false,
 }: QuizGeneratorFormProps) {
-  const [formData, setFormData] = useState<GeneratorFormState>({
-    topic: "",
-    difficulty: "Easy",
-    questionCount: 10,
-    file: null,
-    onlyFromFile: true,
-    fromKnowledgeBase: false,
-    fromQuestionBank: false,
-    questionTypes: ["MULTIPLE_CHOICE"],
-    action: "append",
+  const [activeTab, setActiveTab] = useState<"ai" | "bank">("ai");
+  const [source, setSource] = useState<"file" | "kb" | "bank" | "topic">("topic");
+  const [topic, setTopic] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">("Medium");
+  const [numQuestions, setNumQuestions] = useState(10);
+  const [questionTypesCount, setQuestionTypesCount] = useState<Record<string, number>>({
+    MULTIPLE_CHOICE: 10,
+    TRUE_FALSE: 0,
+    ESSAY: 0,
+    WORD_ORDERING: 0,
+    MATCHING: 0,
+    FILL_IN_BLANKS: 0,
+    CATEGORIZATION: 0,
+    FIND_ERROR: 0
   });
-  const [isDragging, setIsDragging] = useState(false);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [isLoadingSubjects, setIsLoadingSubjects] = useState(true);
-  const [fileError, setFileError] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [selectedBankQuestionIds, setSelectedBankQuestionIds] = useState<string[]>([]);
 
-  // Fetch subjects from Supabase
-  useEffect(() => {
-    async function fetchSubjects() {
-      try {
-        setIsLoadingSubjects(true);
-        const subjectList = await subjectService.getSubjects();
-        setSubjects(subjectList);
-      } catch (error) {
-        console.error("Failed to fetch subjects:", error);
-      } finally {
-        setIsLoadingSubjects(false);
+  const aiService = new AIQuestionService();
+
+
+  // Filter bank questions based on subject/node if needed
+  const filteredBankQuestions = bankQuestions;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setFiles(newFiles);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (source === "topic" && !topic.trim()) {
+      alert("Vui lòng nhập chủ đề bài kiểm tra");
+      return;
+    }
+    if (source === "file" && files.length === 0) {
+      alert("Vui lòng chọn ít nhất một tệp tin");
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const selectedTypes = Object.entries(questionTypesCount)
+        .filter(([_, count]) => count > 0)
+        .map(([type]) => type);
+
+      const response = await aiService.generateQuestions({
+        textPrompt: topic,
+        questionCount: numQuestions,
+        difficulty: difficulty,
+        subject: subjectId,
+        questionTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
+        fromKnowledgeBase: source === "kb",
+        fromQuestionBank: source === "bank",
+        onlyFromFile: source === "file",
+        file: source === "file" ? files[0] : undefined
+      });
+
+      if (response.questions && response.questions.length > 0) {
+        // Map types to match teacher.ts Question interface
+        const formattedQuestions = response.questions.map((q, idx) => ({
+          ...q,
+          id: `ai-${Date.now()}-${idx}`,
+          createdAt: Date.now(),
+          number: idx + 1,
+          type: q.type as any,
+          difficulty: q.difficulty as any
+        }));
+        onQuestionsGenerated(formattedQuestions as any);
+      } else {
+        alert("AI không tạo được câu hỏi nào. Vui lòng thử lại với yêu cầu khác.");
       }
-    }
-
-    fetchSubjects();
-  }, []);
-
-  const handleFileUpload = (file: File) => {
-    // Validate MIME type
-    const validTypes = [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/msword'
-    ];
-
-    if (!validTypes.includes(file.type)) {
-      setFileError('Invalid file type. Please upload PDF or DOCX files only.');
-      return;
-    }
-
-    // Validate file size (10MB max)
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-    if (file.size > maxSize) {
-      setFileError(`File size exceeds 10MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`);
-      return;
-    }
-
-    // Clear any previous errors and set the file
-    setFileError(null);
-    setFormData((prev) => ({ ...prev, file }));
-  };
-
-  const handleFileRemove = () => {
-    setFormData((prev) => ({ ...prev, file: null }));
-    setFileError(null);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      handleFileUpload(files[0]);
+    } catch (error) {
+      console.error("Error generating questions:", error);
+      alert(error instanceof Error ? error.message : "Đã có lỗi xảy ra khi tạo câu hỏi.");
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    onGenerate(formData);
+  const toggleBankQuestion = (id: string) => {
+    setSelectedBankQuestionIds(prev =>
+      prev.includes(id) ? prev.filter(qId => qId !== id) : [...prev, id]
+    );
   };
+
 
   return (
-    <div className="bg-[#fffdf8] rounded-xl border-2 border-black p-6 shadow-[4px_4px_0_0_rgba(0,0,0,1)] relative mt-4">
-      {/* Decorative inner pins */}
-      <div className="absolute top-3 left-3 w-3 h-3 rounded-full bg-blue-200 border-2 border-black shadow-[1px_1px_0_0_rgba(0,0,0,1)]"></div>
-      <div className="absolute top-3 right-3 w-3 h-3 rounded-full bg-blue-200 border-2 border-black shadow-[1px_1px_0_0_rgba(0,0,0,1)]"></div>
-
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-dashed border-gray-300 ml-4 mr-4 mt-2">
-        <h2 className="text-3xl font-black text-gray-900 font-handwritten tracking-tight">
-          Tạo Câu Hỏi bằng AI
-        </h2>
-        <div className="flex items-center gap-2 font-bold text-blue-700 bg-blue-100 px-3 py-1 rounded-full border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
-          <CloudUpload className="w-5 h-5" />
-          <span className="text-sm">Trí tuệ nhân tạo</span>
-        </div>
+    <div className="space-y-6">
+      {/* Tab Selection */}
+      <div className="flex bg-gray-100 p-1.5 rounded-2xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+        <button
+          onClick={() => setActiveTab("ai")}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${activeTab === "ai" ? "bg-indigo-600 text-white shadow-[2px_2px_0_0_rgba(0,0,0,1)]" : "text-gray-600 hover:bg-gray-200"}`}
+        >
+          <Wand2 className="w-5 h-5" />
+          Tạo bằng AI
+        </button>
+        <button
+          onClick={() => setActiveTab("bank")}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${activeTab === "bank" ? "bg-emerald-600 text-white shadow-[2px_2px_0_0_rgba(0,0,0,1)]" : "text-gray-600 hover:bg-gray-200"}`}
+        >
+          <Database className="w-5 h-5" />
+          Ngân hàng đề
+        </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6 px-4">
-        {/* File Upload Area */}
-        <div>
-          <div
-            className={`border-4 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer relative overflow-hidden ${isDragging
-              ? "border-blue-400 bg-blue-50"
-              : fileError
-                ? "border-red-400 bg-red-50 relative"
-                : "border-gray-400 bg-white hover:bg-gray-50 hover:border-blue-400"
-              }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => document.getElementById('file-upload')?.click()}
-          >
-            {formData.file ? (
-              <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center gap-3">
-                  <FileText className="w-10 h-10 text-blue-600" />
-                  <div className="text-left">
-                    <p className="font-bold text-gray-900 text-lg">
-                      {formData.file.name}
-                    </p>
-                    <p className="font-bold text-gray-500">
-                      {(formData.file.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleFileRemove}
-                  className="p-2 border-2 border-black rounded-lg bg-red-100 hover:bg-red-200 text-red-900 shadow-[2px_2px_0_0_rgba(0,0,0,1)] transition-transform hover:-translate-y-0.5"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3 pointer-events-none">
-                <CloudUpload className="w-14 h-14 mx-auto text-blue-500" />
-                <div>
-                  <p className="font-bold text-gray-900 text-lg">
-                    Click hoặc kéo thả tài liệu vào đây
-                  </p>
-                  <p className="font-bold text-gray-500">
-                    PDF, DOCX (Tối đa 10MB)
-                  </p>
-                </div>
+      {activeTab === "ai" ? (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="bg-blue-50 border-2 border-black p-4 rounded-2xl shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+            <h4 className="font-black text-blue-900 border-b-2 border-blue-200 pb-2 mb-4 uppercase text-xs tracking-widest flex items-center gap-2">
+              <Brain className="w-4 h-4" />
+              Nguồn học liệu đầu vào
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <button
+                onClick={() => setSource("topic")}
+                className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "topic" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
+              >
+                <span className="text-2xl">📝</span>
+                <span className="text-[10px] uppercase">Chủ đề</span>
+              </button>
+              <button
+                onClick={() => setSource("file")}
+                className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "file" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
+              >
+                <span className="text-2xl">📁</span>
+                <span className="text-[10px] uppercase">Tệp tin</span>
+              </button>
+              <button
+                onClick={() => setSource("kb")}
+                className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "kb" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
+              >
+                <span className="text-2xl">🧠</span>
+                <span className="text-[10px] uppercase">Học liệu</span>
+              </button>
+              <button
+                onClick={() => setSource("bank")}
+                className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "bank" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
+              >
+                <span className="text-2xl">🏛️</span>
+                <span className="text-[10px] uppercase">Kho đề</span>
+              </button>
+            </div>
+          </div>
+
+          {source === "topic" && (
+            <div className="space-y-2">
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Nhập nội dung/yêu cầu</label>
+              <textarea
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 bg-white border-2 border-black rounded-xl focus:ring-0 shadow-[4px_4px_0_0_rgba(0,0,0,1)] font-bold text-gray-900"
+                placeholder="Ví dụ: 10 câu trắc nghiệm Phép cộng phạm vi 100, tập trung vào các số có 2 chữ số..."
+              />
+            </div>
+          )}
+
+          {source === "file" && (
+            <div className="space-y-2">
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Kéo thả tài liệu (.pdf, .docx)</label>
+              <div className="border-2 border-dashed border-black rounded-2xl p-8 bg-white flex flex-col items-center gap-4 hover:bg-blue-50 cursor-pointer relative transition-colors shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload(file);
-                  }}
-                  className="hidden"
-                  id="file-upload"
+                  multiple
+                  accept=".pdf,.docx,.doc,.txt"
+                  onChange={handleFileChange}
+                  className="absolute inset-0 opacity-0 cursor-pointer"
                 />
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center border-2 border-blue-200">
+                  <FileText className="w-8 h-8 text-blue-600" />
+                </div>
+                <div className="text-center">
+                  <p className="font-black text-gray-900">Chọn tệp từ máy tính</p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">Hỗ trợ PDF, DOCX tối đa 10MB</p>
+                </div>
               </div>
-            )}
-          </div>
-          {fileError && (
-            <div className="mt-3 bg-red-100 border-2 border-black text-red-800 font-bold px-4 py-2 rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex items-center gap-2 w-max">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              {fileError}
-            </div>
-          )}
-        </div>
-
-        {/* Divider */}
-        <div className="flex items-center justify-center my-8">
-          <div className="flex-1 border-t-2 border-dashed border-gray-400"></div>
-          <span className="px-4 font-black font-handwritten text-gray-500 text-2xl tracking-tight">
-            HOẶC DÙNG GỢI Ý
-          </span>
-          <div className="flex-1 border-t-2 border-dashed border-gray-400"></div>
-        </div>
-
-        {/* Topic/Instructions */}
-        <div className="space-y-2">
-          <label
-            htmlFor="topic"
-            className="block text-xl font-black text-gray-800 font-handwritten tracking-tight"
-          >
-            Chủ đề & Yêu cầu cụ thể {!formData.file && !formData.fromKnowledgeBase && !formData.fromQuestionBank && <span className="text-red-500">*</span>}
-          </label>
-          <textarea
-            id="topic"
-            placeholder="Ví dụ: Tạo 10 câu hỏi trắc nghiệm tiếng Anh lớp 6 về Unit 1..."
-            value={formData.topic}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, topic: e.target.value }))
-            }
-            className="w-full min-h-[140px] p-4 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem] leading-8 border-2 border-black rounded-lg resize-y focus:outline-none focus:ring-4 focus:ring-blue-100 transition-shadow font-medium text-gray-900"
-            required={!formData.file && !formData.fromKnowledgeBase && !formData.fromQuestionBank}
-          />
-        </div>
-
-        {/* Source Selection Checkboxes */}
-        <div className="space-y-4 pt-2">
-          <label className="block text-xl font-black text-gray-800 font-handwritten tracking-tight">
-            Nguồn dữ liệu câu hỏi
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div
-              className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.onlyFromFile ? 'border-blue-600 bg-blue-50 shadow-[2px_2px_0_0_rgba(0,0,0,1)]' : 'border-black bg-white hover:bg-gray-50'}`}
-              onClick={() => setFormData(prev => ({ ...prev, onlyFromFile: !prev.onlyFromFile }))}
-            >
-              <input
-                type="checkbox"
-                checked={formData.onlyFromFile}
-                onChange={() => { }} // Controlled by div click
-                className="w-5 h-5 accent-blue-600 cursor-pointer"
-              />
-              <div>
-                <p className="font-bold text-gray-900 leading-tight">Từ File đã tải</p>
-                <p className="text-xs text-gray-600">Dựa trên nội dung file PDF/DOCX</p>
-              </div>
-            </div>
-
-            <div
-              className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.fromKnowledgeBase ? 'border-green-600 bg-green-50 shadow-[2px_2px_0_0_rgba(0,0,0,1)]' : 'border-black bg-white hover:bg-gray-50'}`}
-              onClick={() => setFormData(prev => ({ ...prev, fromKnowledgeBase: !prev.fromKnowledgeBase }))}
-            >
-              <input
-                type="checkbox"
-                checked={formData.fromKnowledgeBase}
-                onChange={() => { }}
-                className="w-5 h-5 accent-green-600 cursor-pointer"
-              />
-              <div>
-                <p className="font-bold text-gray-900 leading-tight">Kho kiến thức</p>
-                <p className="text-xs text-gray-600">Từ các mục bài học trong hệ thống</p>
-              </div>
-            </div>
-
-            <div
-              className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.fromQuestionBank ? 'border-purple-600 bg-purple-50 shadow-[2px_2px_0_0_rgba(0,0,0,1)]' : 'border-black bg-white hover:bg-gray-50'}`}
-              onClick={() => setFormData(prev => ({ ...prev, fromQuestionBank: !prev.fromQuestionBank }))}
-            >
-              <input
-                type="checkbox"
-                checked={formData.fromQuestionBank}
-                onChange={() => { }}
-                className="w-5 h-5 accent-purple-600 cursor-pointer"
-              />
-              <div>
-                <p className="font-bold text-gray-900 leading-tight">Ngân hàng câu hỏi</p>
-                <p className="text-xs text-gray-600">Tham khảo các câu hỏi sẵn có</p>
-              </div>
-            </div>
-          </div>
-          {(!formData.onlyFromFile && !formData.fromKnowledgeBase && !formData.fromQuestionBank && !formData.topic.trim()) && (
-            <p className="text-red-600 font-bold text-sm flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" /> Vui lòng chọn ít nhất một nguồn dữ liệu hoặc nhập yêu cầu
-            </p>
-          )}
-        </div>
-
-        {/* Controls */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 items-end">
-          <div className="space-y-2">
-            <label
-              htmlFor="subject"
-              className="block text-xl font-black text-gray-800 font-handwritten tracking-tight"
-            >
-              Môn học <span className="text-red-500">*</span>
-            </label>
-            <select
-              id="subject"
-              value={formData.subject || ""}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  subject: e.target.value,
-                }))
-              }
-              className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-blue-100 appearance-none shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
-            >
-              <option value="">Chọn môn học...</option>
-              {isLoadingSubjects ? (
-                <option disabled>Đang tải môn học...</option>
-              ) : (
-                subjects.map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name} ({subject.code})
-                  </option>
-                ))
+              {files.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {files.map((f, i) => (
+                    <div key={i} className="px-3 py-1 bg-blue-100 border-2 border-black rounded-lg text-xs font-black flex items-center gap-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                      {f.name}
+                      <button onClick={() => setFiles(files.filter((_, idx) => idx !== i))} className="text-red-500 hover:text-red-700">×</button>
+                    </div>
+                  ))}
+                </div>
               )}
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <label
-              htmlFor="difficulty"
-              className="block text-xl font-black text-gray-800 font-handwritten tracking-tight"
-            >
-              Độ khó
-            </label>
-            <select
-              id="difficulty"
-              value={formData.difficulty}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  difficulty: e.target.value as DifficultyLevel,
-                }))
-              }
-              className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-blue-100 appearance-none shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
-            >
-              {difficultyOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <label
-              htmlFor="questionCount"
-              className="block text-xl font-black text-gray-800 font-handwritten tracking-tight"
-            >
-              Số lượng câu hỏi
-            </label>
-            <select
-              id="questionCount"
-              value={formData.questionCount.toString()}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  questionCount: parseInt(e.target.value),
-                }))
-              }
-              className="w-full px-4 py-3 bg-white border-2 border-black rounded-lg font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-blue-100 appearance-none shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
-            >
-              {questionCountOptions.map((option) => (
-                <option key={option.value} value={option.value.toString()}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Question Type Selection */}
-        <div className="space-y-4 pt-2">
-          <label className="block text-xl font-black text-gray-800 font-handwritten tracking-tight">
-            Loại câu hỏi muốn tạo
-          </label>
-          <div className="flex flex-wrap gap-4">
-            {[
-              { id: 'MULTIPLE_CHOICE', label: 'Trắc nghiệm' },
-              { id: 'TRUE_FALSE', label: 'Đúng/Sai' },
-              { id: 'ESSAY', label: 'Tự luận' }
-            ].map((type) => (
-              <label
-                key={type.id}
-                className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-all ${formData.questionTypes.includes(type.id as any) ? 'border-orange-600 bg-orange-50' : 'border-black bg-white'}`}
-              >
-                <input
-                  type="checkbox"
-                  checked={formData.questionTypes.includes(type.id as any)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setFormData(prev => ({ ...prev, questionTypes: [...prev.questionTypes, type.id as any] }));
-                    } else {
-                      if (formData.questionTypes.length > 1) {
-                        setFormData(prev => ({ ...prev, questionTypes: prev.questionTypes.filter(t => t !== type.id) }));
-                      }
-                    }
-                  }}
-                  className="w-4 h-4 accent-orange-600"
-                />
-                <span className="font-bold text-gray-800">{type.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Action Selection (if questions exist) */}
-        {existingQuestionCount > 0 && (
-          <div className="space-y-4 pt-2">
-            <label className="block text-xl font-black text-gray-800 font-handwritten tracking-tight">
-              Hành động với {existingQuestionCount} câu hỏi hiện tại
-            </label>
-            <div className="flex flex-wrap gap-4">
-              {[
-                { id: 'append', label: 'Thêm vào danh sách' },
-                { id: 'replace', label: 'Thay thế toàn bộ' },
-                { id: 'edit', label: 'AI sửa lại các câu hiện tại' }
-              ].map((actionType) => (
-                <label
-                  key={actionType.id}
-                  className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-all ${formData.action === actionType.id ? 'border-blue-600 bg-blue-50 shadow-[2px_2px_0_0_rgba(0,0,0,1)]' : 'border-black bg-white hover:bg-gray-50'}`}
-                >
-                  <input
-                    type="radio"
-                    name="generation_action"
-                    checked={formData.action === actionType.id}
-                    onChange={() => setFormData(prev => ({ ...prev, action: actionType.id as "append" | "replace" | "edit" }))}
-                    className="w-4 h-4 accent-blue-600 cursor-pointer"
-                  />
-                  <span className="font-bold text-gray-800">{actionType.label}</span>
-                </label>
-              ))}
             </div>
-            {formData.action === 'edit' && (
-              <p className="text-sm font-bold text-blue-700 bg-blue-50 p-3 rounded-lg border-2 border-blue-200 mt-2 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                <span>
-                  Trí tuệ nhân tạo sẽ dùng yêu cầu ở trên để chỉnh sửa trực tiếp <strong>{existingQuestionCount} câu hỏi</strong> đang có. Hãy ghi rõ yêu cầu sửa (VD: "Đổi tất cả đáp án đúng thành A").
-                </span>
-              </p>
-            )}
-          </div>
-        )}
+          )}
 
-        {/* Action Button */}
-        <div className="pt-8">
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Số lượng câu hỏi</label>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min="5"
+                  max="40"
+                  step="5"
+                  value={numQuestions}
+                  onChange={(e) => setNumQuestions(parseInt(e.target.value))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                />
+                <span className="w-12 h-10 flex items-center justify-center bg-white text-indigo-900 font-black rounded-xl border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                  {numQuestions}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-end pb-1">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="text-indigo-600 font-black text-xs uppercase tracking-wider flex items-center gap-1 hover:underline"
+              >
+                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                {showAdvanced ? "Cài đặt cơ bản" : "Cài đặt nâng cao"}
+              </button>
+            </div>
+          </div>
+
+          {showAdvanced && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-indigo-50/50 border-2 border-dashed border-indigo-200 rounded-2xl animate-in slide-in-from-top-4 duration-300">
+              <div className="space-y-3">
+                <label className="block text-[10px] font-black text-indigo-900 uppercase tracking-wider">Mức độ khó của đề</label>
+                <div className="flex gap-2">
+                  {(['Easy', 'Medium', 'Hard'] as const).map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setDifficulty(d)}
+                      className={`flex-1 py-2 rounded-lg border-2 font-black text-[10px] uppercase tracking-tighter transition-all ${difficulty === d ? 'bg-indigo-600 text-white border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] -translate-y-0.5' : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'}`}
+                    >
+                      {d === 'Easy' ? 'Dễ' : d === 'Medium' ? 'Vừa' : 'Khó'}
+                    </button>
+                  ))}
+
+                </div>
+              </div>
+              <div className="space-y-3 text-left">
+                <label className="block text-[10px] font-black text-indigo-900 uppercase tracking-wider">Các loại câu hỏi muốn tạo</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'MULTIPLE_CHOICE', label: 'Trắc nghiệm' },
+                    { id: 'TRUE_FALSE', label: 'Đúng/Sai' },
+                    { id: 'WORD_ORDERING', label: 'Sắp xếp từ' },
+                    { id: 'MATCHING', label: 'Nối cặp' },
+                    { id: 'FILL_IN_BLANKS', label: 'Điền trống' },
+                    { id: 'CATEGORIZATION', label: 'Phân loại' },
+                    { id: 'FIND_ERROR', label: 'Tìm lỗi sai' },
+                    { id: 'ESSAY', label: 'Tự luận' }
+                  ].map(type => (
+                    <label key={type.id} className="flex items-center gap-2 cursor-pointer group">
+                      <div
+                        onClick={() => {
+                          setQuestionTypesCount(prev => ({
+                            ...prev,
+                            [type.id]: prev[type.id] > 0 ? 0 : 1
+                          }));
+                        }}
+                        className={`w-4 h-4 rounded border-2 border-black flex items-center justify-center transition-all ${questionTypesCount[type.id] > 0 ? 'bg-indigo-500' : 'bg-white'}`}
+                      >
+                        {questionTypesCount[type.id] > 0 && <div className="w-2 h-2 bg-white rounded-sm" />}
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-700 group-hover:text-indigo-600 transition-colors uppercase tracking-tighter">
+                        {type.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[9px] text-gray-400 font-bold italic mt-2">* AI sẽ cố gắng điều phối tỷ lệ câu hỏi phù hợp.</p>
+              </div>
+
+            </div>
+          )}
+
           <button
-            type="submit"
-            disabled={isLoading || (!formData.topic.trim() && !formData.file && !formData.fromKnowledgeBase && !formData.fromQuestionBank)}
-            className="w-full flex items-center justify-center gap-3 bg-[#ffde59] hover:bg-[#efce49] border-2 border-black text-black font-black py-4 px-6 rounded-lg text-lg transition-transform hover:-translate-y-1 shadow-[4px_4px_0_0_rgba(0,0,0,1)] uppercase disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+            onClick={handleGenerate}
+            disabled={isGenerating}
+            className="w-full py-5 bg-indigo-600 text-white font-black border-2 border-black rounded-2xl shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:bg-indigo-500 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all uppercase tracking-[0.2em] disabled:opacity-50 flex items-center justify-center gap-3"
           >
-            {isLoading ? (
-              <><Loader2 className="w-6 h-6 animate-spin" /> Đang tạo câu hỏi bằng AI...</>
+            {isGenerating ? (
+              <>
+                <Loading size="sm" message="ĐANG PHÂN TÍCH..." />
+              </>
             ) : (
-              <><span>✨</span> Bắt đầu Nhờ AI Tạo Câu Hỏi</>
+              <>✨ BẮT ĐẦU TẠO ĐỀ</>
             )}
           </button>
         </div>
-      </form>
+      ) : (
+        <div className="space-y-4 animate-in fade-in duration-300">
+          <div className="flex items-center justify-between px-2">
+            <div className="space-y-0.5">
+              <h3 className="font-black text-gray-900 uppercase text-sm">Kho câu hỏi sẵn có</h3>
+              <p className="text-[10px] font-bold text-gray-400 uppercase">Chọn những câu hỏi thầy cô đã biên soạn</p>
+            </div>
+            <NotebookBadge variant="success" className="border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+              {filteredBankQuestions.length} Câu
+            </NotebookBadge>
+          </div>
+
+          <div className="max-h-[460px] overflow-y-auto pr-3 space-y-3 custom-scrollbar">
+            {isLoadingBank ? (
+              <div className="py-20 flex flex-col items-center gap-4">
+                <Loading size="md" />
+                <p className="font-black text-gray-400 uppercase text-[10px] tracking-widest">Đang tải học liệu...</p>
+              </div>
+            ) : filteredBankQuestions.length > 0 ? (
+              filteredBankQuestions.map((q) => (
+                <div
+                  key={q.id}
+                  onClick={() => toggleBankQuestion(q.id)}
+                  className={`p-4 border-2 rounded-2xl cursor-pointer transition-all relative ${selectedBankQuestionIds.includes(q.id) ? "bg-emerald-50 border-emerald-600 shadow-[4px_4px_0_0_rgba(16,185,129,1)] -translate-x-0.5 -translate-y-0.5" : "bg-white border-black hover:bg-gray-50 shadow-[2px_2px_0_0_rgba(0,0,0,1)]"}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`mt-1 flex-shrink-0 w-6 h-6 rounded-lg border-2 border-black flex items-center justify-center transition-colors ${selectedBankQuestionIds.includes(q.id) ? "bg-emerald-500" : "bg-white"}`}>
+                      {selectedBankQuestionIds.includes(q.id) && <CheckCircle2 className="w-4 h-4 text-white" />}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className={`font-bold text-gray-900 transition-colors ${selectedBankQuestionIds.includes(q.id) ? "text-emerald-900" : ""}`}>{q.questionText}</p>
+                      <div className="flex gap-2 mt-3">
+                        <span className="text-[9px] font-black px-2 py-0.5 bg-gray-100 border border-black rounded uppercase text-gray-600">
+                          {q.type === 'MULTIPLE_CHOICE' ? 'Trắc nghiệm' : q.type === 'TRUE_FALSE' ? 'Đúng/Sai' : 'Tự luận'}
+                        </span>
+                        <span className={`text-[9px] font-black px-2 py-0.5 border border-black rounded uppercase ${q.difficulty === 'Easy' ? 'bg-green-100' : q.difficulty === 'Medium' ? 'bg-yellow-100' : q.difficulty === 'Hard' ? 'bg-red-100' : ''}`}>
+                          {q.difficulty}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="py-20 text-center bg-gray-50 border-4 border-dashed border-gray-200 rounded-3xl">
+                <Database className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                <p className="font-black text-gray-400 italic uppercase text-[10px]">Chưa có câu hỏi trong kho</p>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => {
+              if (selectedBankQuestionIds.length > 0) {
+                const selectedQuestions = bankQuestions.filter(q => selectedBankQuestionIds.includes(q.id));
+                onBankQuestionsSelected(selectedQuestions);
+                setSelectedBankQuestionIds([]);
+              }
+            }}
+            disabled={selectedBankQuestionIds.length === 0}
+            className="w-full py-5 bg-emerald-600 text-white font-black border-2 border-black rounded-2xl shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:bg-emerald-500 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all uppercase tracking-widest disabled:opacity-50"
+          >
+            THÊM {selectedBankQuestionIds.length} CÂU HỎI VÀO BÀI
+          </button>
+        </div>
+      )}
     </div>
   );
 }

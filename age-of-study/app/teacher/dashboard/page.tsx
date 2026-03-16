@@ -18,6 +18,7 @@ import {
   Award,
   Download,
   QrCode,
+  GraduationCap,
 } from "lucide-react";
 import { checkRoutePermission } from "@/lib/routeMiddleware";
 import {
@@ -203,59 +204,186 @@ export default function TeacherDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Classes List Section */}
-          <div className="lg:col-span-2 space-y-6 text-left">
-            <h2 className="text-3xl font-black text-gray-900 flex items-center gap-3">
-              Lớp học của tôi
-              <div className="h-1 bg-gray-300 flex-1 ml-2" />
-            </h2>
+          <div className="lg:col-span-2 space-y-10 text-left">
+            {/* Homeroom Section (Integrated View) */}
+            {summary?.homeroomDetails ? (
+              <div className="space-y-6">
+                <h2 className="text-3xl font-black text-indigo-900 flex items-center gap-3">
+                  🌟 Lớp chủ nhiệm: {summary.homeroomDetails.className}
+                  <div className="h-1 bg-indigo-200 flex-1 ml-2" />
+                </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {summary?.classes.map((cls) => (
-                <NotebookCard
-                  key={cls.id}
-                  className="group hover:scale-[1.02] transition-transform duration-300"
-                >
-                  <NotebookCardHeader className="bg-blue-50">
-                    <div className="flex justify-between items-start">
-                      <NotebookCardTitle className="text-2xl">
-                        {cls.name}
-                      </NotebookCardTitle>
-                      <NotebookBadge>{cls.school_year}</NotebookBadge>
+                <NotebookCard className="border-indigo-600 shadow-[8px_8px_0_0_#4f46e5] overflow-hidden">
+                  <NotebookCardHeader className="bg-indigo-50/50 border-b-2 border-indigo-100 py-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-white border-2 border-indigo-600 rounded-2xl flex items-center justify-center shadow-[4px_4px_0_0_#4f46e5]">
+                          <GraduationCap className="w-10 h-10 text-indigo-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-3xl font-black text-indigo-950">
+                            {summary.homeroomDetails.className}
+                          </h3>
+                          <p className="text-indigo-600 font-bold flex items-center gap-2">
+                            <Users className="w-4 h-4" /> {summary.homeroomDetails.students.length} học sinh đang theo dõi
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <NotebookButton
+                          onClick={() => handleNavigate(`/teacher/classes/${summary.homeroomDetails?.classId}`)}
+                          className="bg-white border-indigo-600 text-indigo-600"
+                        >
+                          Xem chi tiết
+                        </NotebookButton>
+                      </div>
                     </div>
                   </NotebookCardHeader>
-                  <NotebookCardContent className="py-4">
-                    <div className="flex items-center gap-2 text-gray-600 font-bold">
-                      <Users className="w-4 h-4" />
-                      {cls.student_count} học sinh
+
+                  <NotebookCardContent className="py-8">
+                    {/* Key Stats Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                      <div className="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-3xl border-2 border-indigo-100 shadow-sm">
+                        <div className="flex items-center gap-3 mb-2">
+                          <BarChart3 className="w-6 h-6 text-indigo-600" />
+                          <span className="font-bold text-gray-500 uppercase tracking-wider text-xs">Điểm trung bình</span>
+                        </div>
+                        <div className="text-4xl font-black text-indigo-900">
+                          {summary.homeroomDetails.averageScore.toFixed(1)}
+                        </div>
+                        <div className="mt-2 text-xs font-bold text-indigo-400 bg-indigo-50 px-2 py-1 rounded-full inline-block">
+                          Ổn định
+                        </div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-emerald-50 to-white p-6 rounded-3xl border-2 border-emerald-100 shadow-sm">
+                        <div className="flex items-center gap-3 mb-2">
+                          <ClipboardList className="w-6 h-6 text-emerald-600" />
+                          <span className="font-bold text-gray-500 uppercase tracking-wider text-xs">Hoàn thành bài</span>
+                        </div>
+                        <div className="text-4xl font-black text-emerald-700">
+                          {summary.homeroomDetails.completionRate.toFixed(0)}%
+                        </div>
+                        <div className="w-full bg-emerald-100 h-2 rounded-full mt-3 overflow-hidden border border-emerald-200">
+                          <div
+                            className="bg-emerald-500 h-full transition-all duration-1000"
+                            style={{ width: `${summary.homeroomDetails.completionRate}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-orange-50 to-white p-6 rounded-3xl border-2 border-orange-100 shadow-sm">
+                        <div className="flex items-center gap-3 mb-2">
+                          <TrendingUp className="w-6 h-6 text-orange-600" />
+                          <span className="font-bold text-gray-500 uppercase tracking-wider text-xs">Hoạt động tuần này</span>
+                        </div>
+                        <div className="text-4xl font-black text-orange-700">
+                          {summary.homeroomDetails.activityLogs.length}
+                        </div>
+                        <p className="text-xs font-medium text-orange-400 mt-2">Sự kiện mới trong lớp</p>
+                      </div>
+                    </div>
+
+                    {/* Quick Student Grid (Mini) */}
+                    <div>
+                      <h4 className="font-black text-gray-800 mb-4 flex items-center gap-2">
+                        <Users className="w-5 h-5" /> Danh sách học sinh ({summary.homeroomDetails.students.length})
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                        {summary.homeroomDetails.students.slice(0, 10).map((s: any) => (
+                          <div
+                            key={s.student_id}
+                            onClick={() => handleNavigate(`/teacher/classes/${summary.homeroomDetails?.classId}/students/${s.student_id}`)}
+                            className="flex flex-col items-center p-3 rounded-2xl hover:bg-gray-50 border-2 border-transparent hover:border-gray-200 cursor-pointer transition-all"
+                          >
+                            <div className="w-12 h-12 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-indigo-700 font-black mb-2 shadow-sm overflow-hidden">
+                              {s.profile.avatar_url ? (
+                                <img src={s.profile.avatar_url} alt={s.profile.full_name} className="w-full h-full object-cover" />
+                              ) : (
+                                s.profile.full_name?.[0] || '?'
+                              )}
+                            </div>
+                            <span className="text-[10px] font-black text-gray-700 text-center line-clamp-1">{s.profile.full_name}</span>
+                            <span className="text-[8px] font-bold text-indigo-400 uppercase">{s.profile.total_xp} XP</span>
+                          </div>
+                        ))}
+                        {summary.homeroomDetails.students.length > 10 && (
+                          <div
+                            onClick={() => handleNavigate(`/teacher/classes/${summary.homeroomDetails?.classId}`)}
+                            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-300 cursor-pointer hover:bg-gray-100 transition-all"
+                          >
+                            <span className="text-xs font-black text-gray-400">+{summary.homeroomDetails.students.length - 10}</span>
+                            <span className="text-[8px] font-bold text-gray-400 uppercase">Xem thêm</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </NotebookCardContent>
-                  <div className="p-6 pt-0 flex gap-3">
-                    <NotebookButton
-                      onClick={() =>
-                        handleNavigate(`/teacher/classes/${cls.id}`)
-                      }
-                      className="flex-1 py-1 text-base bg-blue-600 text-white border-blue-900"
-                    >
-                      Vào lớp
-                    </NotebookButton>
-                    <NotebookButton
-                      onClick={() =>
-                        handleNavigate(`/teacher/classes/${cls.id}/reports`)
-                      }
-                      className="aspect-square p-2 bg-amber-100 border-amber-800 group-hover:bg-amber-300"
-                      title="Xuất báo cáo"
-                    >
-                      <Download className="w-5 h-5 text-amber-900" />
-                    </NotebookButton>
-                  </div>
                 </NotebookCard>
-              ))}
-
-              {summary?.classes.length === 0 && (
-                <div className="col-span-full py-12 text-center text-gray-500 font-bold border-4 border-dashed border-gray-200 rounded-2xl">
-                  Thầy cô chưa được phân công lớp học nào.
+              </div>
+            ) : (
+              // Fallback for non-homeroom teachers but who might have subject classes
+              summary?.homeroomClasses && summary.homeroomClasses.length > 0 && (
+                <div className="space-y-6 text-center py-10 opacity-50">
+                  <p>Lớp chủ nhiệm đang tải...</p>
                 </div>
-              )}
+              )
+            )}
+
+            {/* Subject Classes Section */}
+            <div className="space-y-6">
+              <h2 className="text-2xl font-black text-gray-800 flex items-center gap-3">
+                📖 Lớp học bộ môn
+                <div className="h-1 bg-gray-200 flex-1 ml-2" />
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {summary?.subjectClasses.map((cls) => (
+                  <NotebookCard
+                    key={cls.id}
+                    className="group hover:-translate-y-1 transition-all duration-300"
+                  >
+                    <NotebookCardHeader className="bg-blue-50/50">
+                      <div className="flex justify-between items-center">
+                        <NotebookCardTitle className="text-2xl">
+                          {cls.name}
+                        </NotebookCardTitle>
+                        <NotebookBadge>{cls.school_year}</NotebookBadge>
+                      </div>
+                    </NotebookCardHeader>
+                    <NotebookCardContent className="py-4">
+                      <div className="flex items-center gap-2 text-gray-600 font-bold">
+                        <Users className="w-4 h-4" />
+                        {cls.student_count} học sinh
+                      </div>
+                    </NotebookCardContent>
+                    <div className="p-4 pt-0 flex gap-3">
+                      <NotebookButton
+                        onClick={() =>
+                          handleNavigate(`/teacher/classes/${cls.id}`)
+                        }
+                        className="flex-1 py-1 text-sm bg-white border-gray-300"
+                      >
+                        Vào lớp
+                      </NotebookButton>
+                      <NotebookButton
+                        onClick={() =>
+                          handleNavigate(`/teacher/tests/create?classId=${cls.id}`)
+                        }
+                        className="flex-1 py-1 text-sm bg-emerald-50 text-emerald-700 border-emerald-200"
+                      >
+                        Giao bài
+                      </NotebookButton>
+                    </div>
+                  </NotebookCard>
+                ))}
+
+                {summary?.subjectClasses.length === 0 && (!summary?.homeroomClasses || summary.homeroomClasses.length === 0) && (
+                  <div className="col-span-full py-12 text-center text-gray-400 font-bold border-4 border-dashed border-gray-100 rounded-3xl">
+                    Chưa có lớp học nào được gán cho thầy cô.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -265,7 +393,7 @@ export default function TeacherDashboard() {
 
             <NotebookCard className="border-indigo-200 shadow-none">
               <NotebookCardContent className="p-4 space-y-4 pt-4">
-                {summary?.recentActivities.map((activity, idx) => (
+                {(summary?.homeroomDetails?.activityLogs || summary?.recentActivities || []).map((activity: any, idx: number) => (
                   <div
                     key={idx}
                     className="flex gap-3 pb-3 border-b-2 border-dashed border-gray-100 last:border-0 last:pb-0"
@@ -274,26 +402,35 @@ export default function TeacherDashboard() {
                       <TrendingUp className="w-5 h-5 text-indigo-600" />
                     </div>
                     <div>
-                      <p className="font-bold text-indigo-900">
-                        {activity.student.full_name ||
-                          activity.student.username}
+                      <p className="font-bold text-indigo-900 border-b border-indigo-50 inline-block mb-1">
+                        {activity.student?.full_name ||
+                          activity.student?.username || "Ẩn danh"}
                       </p>
-                      <p className="text-sm text-gray-500 font-medium">
-                        {activity.activity_type === "node_complete"
-                          ? "✅ Đã hoàn thành bài học"
-                          : "📝 Đã làm kiểm tra"}
-                      </p>
-                      <p className="text-xs text-indigo-400 font-bold mt-1 uppercase">
-                        {new Date(activity.created_at).toLocaleTimeString(
-                          "vi-VN",
-                          { hour: "2-digit", minute: "2-digit" },
+                      <p className="text-sm text-gray-500 font-medium leading-tight">
+                        {activity.description || (
+                          activity.activity_type === "node_complete"
+                            ? "✅ Hoàn thành bài học"
+                            : "📝 Đang học tập"
                         )}
                       </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] text-indigo-400 font-black uppercase">
+                          {new Date(activity.created_at).toLocaleTimeString(
+                            "vi-VN",
+                            { hour: "2-digit", minute: "2-digit" },
+                          )}
+                        </span>
+                        {activity.xp_earned > 0 && (
+                          <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1 rounded font-bold">
+                            +{activity.xp_earned} XP
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
 
-                {summary?.recentActivities.length === 0 && (
+                {(!summary?.homeroomDetails?.activityLogs?.length && !summary?.recentActivities?.length) && (
                   <p className="text-center py-8 text-gray-400 font-bold italic">
                     Chưa có hoạt động mới nào.
                   </p>
@@ -305,6 +442,13 @@ export default function TeacherDashboard() {
             <div className="bg-indigo-600 rounded-3xl p-8 text-white shadow-[8px_8px_0_0_#312e81] border-4 border-[#312e81]">
               <h3 className="text-2xl font-black mb-4">Hành động nhanh</h3>
               <div className="space-y-4">
+                <button
+                  onClick={() => handleNavigate("/teacher/tests/create?type=homework")}
+                  className="w-full py-3 bg-emerald-500 text-white rounded-2xl font-black hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2 border-2 border-emerald-700"
+                >
+                  <PlusCircle className="w-5 h-5" />
+                  GIAO BÀI TẬP VỀ NHÀ
+                </button>
                 <button
                   onClick={() => handleNavigate("/teacher/tests/create")}
                   className="w-full py-3 bg-white text-indigo-600 rounded-2xl font-black hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2"

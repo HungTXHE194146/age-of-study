@@ -11,7 +11,18 @@ import {
   ArrowLeft,
   Book,
   Eye,
+  RotateCcw,
+  Wifi,
+  X,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { NotebookCard, NotebookCardContent, NotebookButton } from "@/components/ui/notebook-card";
 import { QuizGeneratorForm } from "@/components/teacher/QuizGeneratorForm";
 import { QuestionBankTab } from "@/components/teacher/QuestionBankTab";
@@ -83,39 +94,42 @@ const fetchTeacherClassesData = async (userId: string) => {
 
 const prepareQuestionsToSave = (questions: Question[], testDetails: any, userId: string | undefined) => {
   return questions.map((q) => {
-    let qType = "multiple_choice";
-    if (q.type === "TRUE_FALSE") qType = "true_false";
-    else if (q.type === "ESSAY") qType = "essay";
+    let qType = q.type.toLowerCase();
 
     let correctIndex = -1;
     if (q.type === "MULTIPLE_CHOICE") {
       correctIndex = (q.options || []).findIndex((opt) => opt.isCorrect);
     } else if (q.type === "TRUE_FALSE") {
-      correctIndex = 0;
+      correctIndex = (q.options || []).findIndex((opt) => opt.isCorrect);
     }
 
     return {
       id: q.id,
       node_id: resolveNodeId(testDetails.subject, testDetails.node),
       content: {
+        type: q.type, // Make sure we match QuestionContent signature if needed
         questionText: q.questionText,
         options: (q.options || []).map((opt) => ({
           label: opt.label,
           text: opt.text,
+          isCorrect: opt.isCorrect
         })),
+        metadata: q.metadata
       },
-      correct_option_index: correctIndex,
-      difficulty: q.difficulty.toLowerCase() as "easy" | "medium" | "hard",
+      correct_option_index: correctIndex !== -1 ? correctIndex : null,
+      difficulty: (q.difficulty || "Medium").toLowerCase() as "easy" | "medium" | "hard",
       status: "available",
       created_by: userId || null,
       created_at: new Date().toISOString(),
-      q_type: qType,
+      q_type: qType, // <-- lowercase
       model_answer: q.model_answer || "",
       subject_id: resolveSubjectId(testDetails.subject),
       explanation: q.explanation || null,
     };
   });
 };
+
+
 
 function CreateTestContent() {
   const router = useRouter();
@@ -132,6 +146,7 @@ function CreateTestContent() {
     node: "",
     timeLimit: 30,
     classId: classIdParam || "",
+    type: "homework", // Default to homework
   });
   const [nodes, setNodes] = useState<{ id: number; title: string }[]>([]);
   const [isLoadingNodes, setIsLoadingNodes] = useState(false);
@@ -140,17 +155,40 @@ function CreateTestContent() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isLoadingSubjects, setIsLoadingSubjects] = useState(true);
 
+  // Auto-save logic states
+  const [hasDraft, setHasDraft] = useState(false);
+  const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+  const [draftData, setDraftData] = useState<any>(null);
+
+  // Offline Sync states
+  const [isOffline, setIsOffline] = useState(false);
+  const [pendingSync, setPendingSync] = useState(false);
+
+
+
   // State for question management
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [points, setPoints] = useState<{ [questionId: string]: number }>({});
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isReplacing, setIsReplacing] = useState(false);
+  const [totalPoints, setTotalPoints] = useState(0);
+
+  useEffect(() => {
+    const total = questions.reduce((sum, q) => sum + (points[q.id] || 10), 0);
+    setTotalPoints(total);
+  }, [questions, points]);
+
 
   const [teacherClasses, setTeacherClasses] = useState<any[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
 
   useEffect(() => {
     if (classIdParam) {
-      setTestDetails((prev) => ({ ...prev, classId: classIdParam }));
+      setTestDetails((prev) => ({
+        ...prev,
+        classId: classIdParam,
+        type: "homework"
+      }));
     }
   }, [classIdParam]);
 
@@ -173,12 +211,180 @@ function CreateTestContent() {
     loadInitialData();
   }, [user?.id]);
 
+  // Network & Sync Logic
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      // Auto-trigger sync if there's a draft
+      const savedDraft = localStorage.getItem("teacher-test-draft");
+      if (savedDraft) {
+        setPendingSync(true);
+      }
+    };
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    setIsOffline(!window.navigator.onLine);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  // Hotkeys handling
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl + S: Save Draft
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave(true);
+      }
+      // Ctrl + Enter: Save Test
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleSave(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [testDetails, questions, isSaving]); // Re-bind when data changes to ensure handleSave has latest state
+
+
+  // Check for existing draft on mount
+  useEffect(() => {
+    const savedDraft = localStorage.getItem("teacher-test-draft");
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        // Only show restore if there's actually some content
+        if (parsed.testDetails?.title || parsed.questions?.length > 0) {
+          setDraftData(parsed);
+          setHasDraft(true);
+          setShowRestoreDialog(true);
+        }
+      } catch (e) {
+        console.error("Failed to parse draft", e);
+      }
+    }
+  }, []);
+
+  // Sync state with localStorage whenever data changes (debounced)
+  useEffect(() => {
+    if (isSaving) return; // Don't save draft while actively saving to DB
+
+    const timer = setTimeout(() => {
+      // Don't save empty drafts
+      if (!testDetails.title && questions.length === 0) return;
+
+      const dataToSave = {
+        testDetails,
+        questions,
+        points,
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem("teacher-test-draft", JSON.stringify(dataToSave));
+    }, 2000); // 2 second debounce
+
+    return () => clearTimeout(timer);
+  }, [testDetails, questions, points, isSaving]);
+
+  const restoreDraft = () => {
+    if (draftData) {
+      setTestDetails(draftData.testDetails);
+      setQuestions(draftData.questions);
+      if (draftData.points) setPoints(draftData.points);
+    }
+    setShowRestoreDialog(false);
+  };
+
+  const discardDraft = () => {
+    localStorage.removeItem("teacher-test-draft");
+    setShowRestoreDialog(false);
+  };
+
+
   const handleAddQuestion = (question: Question) => {
     setQuestions((prev) => [...prev, question]);
+    setPoints((prev) => ({
+      ...prev,
+      [question.id]: question.points || 10
+    }));
   };
+
 
   const handleRemoveQuestion = (id: string) => {
     setQuestions((prev) => prev.filter((q) => q.id !== id));
+  };
+
+  const handleEditQuestion = (updatedQuestion: Question) => {
+    setQuestions(prev => prev.map(q => q.id === updatedQuestion.id ? updatedQuestion : q));
+  };
+
+  const handleReplaceQuestion = async (id: string) => {
+    const questionToReplace = questions.find(q => q.id === id);
+    if (!questionToReplace) return;
+
+    setIsReplacing(true);
+    try {
+      const aiService = new AIQuestionService();
+      // Yêu cầu AI tạo 1 câu hỏi với cấu trúc tách bạch Instruction và Content
+      const response = await aiService.generateQuestions({
+        textPrompt: `Tạo một câu hỏi mới thay thế cho câu hỏi này: "${questionToReplace.questionText}". 
+        YÊU CẦU QUAN TRỌNG: 
+        1. Phải tách rõ phần dẫn đề (ví dụ: "Sắp xếp các từ sau...") vào trường questionText.
+        2. Phần nội dung làm bài (ví dụ: câu văn, các từ đơn) phải nằm trong metadata.
+        3. Cùng chủ đề và mức độ khó: ${questionToReplace.difficulty}.`,
+        questionCount: 1,
+        difficulty: questionToReplace.difficulty as any,
+        subject: testDetails.subject,
+        questionTypes: [questionToReplace.type],
+        fromKnowledgeBase: !!testDetails.node,
+      });
+
+      if (response.questions && response.questions.length > 0) {
+        let newQuestion = response.questions[0];
+
+        const instructionMap: Record<string, string> = {
+          WORD_ORDERING: "Hãy sắp xếp các từ sau để tạo thành một câu hoàn chỉnh nhé!",
+          FIND_ERROR: "Thám tử nhí ơi, hãy tìm và nhấn vào lỗi sai trong câu sau đây nhé!",
+          FILL_IN_BLANKS: "Em hãy điền từ còn thiếu vào chỗ trống để hoàn thành câu dưới đây:",
+          MATCHING: "Hãy nối các cụm từ ở cột bên trái với cột bên phải sao cho phù hợp nhất!",
+          CATEGORIZATION: "Em hãy phân loại các từ ngữ sau vào nhóm tương ứng nhé!"
+        };
+
+        // Quan trọng: Lưu lại nội dung câu văn gốc vào metadata nếu AI trả về trong questionText
+        const rawMetadata = (newQuestion as any).metadata || {};
+        let finalMetadata = { ...rawMetadata };
+        let finalQuestionText = instructionMap[newQuestion.type] || newQuestion.questionText || "Hãy hoàn thành câu hỏi sau:";
+
+        if (newQuestion.type === "FILL_IN_BLANKS" || newQuestion.type === "FIND_ERROR") {
+          // Nếu questionText chứa dấu gạch chân hoặc lỗi sai, di chuyển nó vào metadata.sentence
+          if (!finalMetadata.sentence && (newQuestion.questionText.includes('_') || newQuestion.questionText.length > 20)) {
+            finalMetadata.sentence = newQuestion.questionText;
+          }
+        }
+
+        const transformed: Question = {
+          ...newQuestion as any,
+          id: crypto.randomUUID(),
+          number: questionToReplace.number,
+          createdAt: Date.now(),
+          questionText: finalQuestionText,
+          metadata: finalMetadata
+        };
+
+        setQuestions(prev => prev.map(q => q.id === id ? transformed : q));
+        setPoints(prev => ({ ...prev, [transformed.id]: prev[id] || 10 }));
+      }
+    } catch (error) {
+      console.error("Failed to replace question:", error);
+      alert("Không thể tạo câu hỏi thay thế lúc này. Vui lòng thử lại sau.");
+    } finally {
+      setIsReplacing(false);
+    }
   };
 
   const handleSave = async (isDraft: boolean) => {
@@ -195,7 +401,7 @@ function CreateTestContent() {
       const createTestRequest: CreateTestRequest = {
         title: testDetails.title,
         description: testDetails.description,
-        type: "practice",
+        type: testDetails.type as any,
         subject_id: resolveSubjectId(testDetails.subject),
         node_id: resolveNodeId(testDetails.subject, testDetails.node),
         settings: {
@@ -230,9 +436,10 @@ function CreateTestContent() {
         (q: Question, index: number) => ({
           test_id: createdTest.id,
           question_id: q.id,
-          points: q.points || 10,
+          points: points[q.id] || 10,
           display_order: index,
         })
+
       );
 
       const { error: testQuestionsError } = await supabase
@@ -242,17 +449,28 @@ function CreateTestContent() {
       if (testQuestionsError) throw testQuestionsError;
 
       alert(`Bài kiểm tra đã được lưu ${isDraft ? "nháp " : ""}thành công!`);
+
+      // Clear local draft upon successful save
+      localStorage.removeItem("teacher-test-draft");
+      setPendingSync(false);
+
       if (classIdParam) {
         router.push(`/teacher/classes/${classIdParam}`);
       } else {
         router.push("/teacher/tests");
       }
     } catch (error) {
-      console.error(`Error saving ${isDraft ? "draft" : "test"}:`, error);
-      alert(`Có lỗi xảy ra khi lưu ${isDraft ? "nháp " : ""}bài kiểm tra`);
+      if (isOffline) {
+        setPendingSync(true);
+        alert("Hiện không có kết nối mạng. Bài kiểm tra đã được lưu tạm vào trình duyệt và sẽ tự động đồng bộ khi có mạng trở lại.");
+      } else {
+        console.error(`Error saving ${isDraft ? "draft" : "test"}:`, error);
+        alert(`Có lỗi xảy ra khi lưu ${isDraft ? "nháp " : ""}bài kiểm tra`);
+      }
     } finally {
       setIsSaving(false);
     }
+
   };
 
   const handleSaveTest = () => handleSave(false);
@@ -263,6 +481,41 @@ function CreateTestContent() {
       <div className="mb-8 p-8 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2.5rem] border-b-2 border-dashed border-gray-400 relative">
         <div className="absolute top-4 left-4 w-4 h-4 rounded-full bg-blue-200 border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]"></div>
         <div className="absolute top-4 right-4 w-4 h-4 rounded-full bg-blue-200 border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]"></div>
+
+        {/* Restore Draft Dialog */}
+        <Dialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
+          <DialogContent className="bg-[#fffdf8] border-4 border-black shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-gray-900 sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-3xl font-black font-handwritten flex items-center gap-3">
+                <RotateCcw className="w-8 h-8 text-blue-600" />
+                Khôi phục bản nháp?
+              </DialogTitle>
+              <DialogDescription className="text-lg font-bold text-gray-700 pt-4">
+                Chúng tôi tìm thấy một bản nháp bài kiểm tra chưa được lưu từ lần trước (
+                <span className="text-blue-700 italic">
+                  {draftData?.savedAt ? new Date(draftData.savedAt).toLocaleString('vi-VN') : 'vừa xong'}
+                </span>
+                ). Bạn có muốn tiếp tục chỉnh sửa không?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="pt-6 flex flex-row gap-4 justify-end">
+              <Button
+                variant="outline"
+                onClick={discardDraft}
+                className="border-2 border-black font-bold hover:bg-red-50 hover:text-red-700"
+              >
+                Bỏ qua và tạo mới
+              </Button>
+              <Button
+                onClick={restoreDraft}
+                className="bg-blue-600 border-2 border-black text-white font-bold hover:bg-blue-700 shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+              >
+                Tiếp tục soạn thảo
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
 
         <NotebookButton onClick={() => router.back()} className="mb-6 bg-white border-2 border-black text-gray-800 hover:bg-gray-100 px-4 py-1 text-sm font-bold flex items-center gap-2">
           Quay lại
@@ -377,115 +630,44 @@ function CreateTestContent() {
                   )}
 
                   {activeTab === "ai" && (
-                    <div>
+                    <div className="animate-in fade-in duration-500">
                       <QuizGeneratorForm
-                        existingQuestionCount={questions.length}
-                        onGenerate={async (data) => {
-                          setIsGenerating(true);
-                          try {
-                            const aiQuestionService = new AIQuestionService();
+                        subjectId={testDetails.subject}
+                        nodeId={testDetails.node}
+                        onQuestionsGenerated={(newQuestions) => {
+                          const transformed = newQuestions.map((q, index) => ({
+                            ...q,
+                            number: questions.length + index + 1,
+                            id: crypto.randomUUID(),
+                            createdAt: Date.now(),
+                          }));
+                          setQuestions(prev => [...prev, ...transformed as Question[]]);
 
-                            const requestPayload: any = {
-                              textPrompt: data.topic || "",
-                              questionCount: data.questionCount,
-                              difficulty: data.difficulty,
-                              subject: data.subject || "",
-                              file: data.file || null,
-                              onlyFromFile: data.onlyFromFile,
-                              fromKnowledgeBase: data.fromKnowledgeBase,
-                              fromQuestionBank: data.fromQuestionBank,
-                              questionTypes: data.questionTypes,
-                              action: data.action,
-                            };
+                          // Initialize points for new questions
+                          const newPoints = { ...points };
+                          transformed.forEach(q => {
+                            newPoints[q.id] = 10; // Default points
+                          });
+                          setPoints(newPoints);
+                        }}
 
-                            if (data.action === "edit" && questions.length > 0) {
-                              requestPayload.existingQuestions = JSON.stringify(
-                                questions.map((q) => ({
-                                  type: q.type,
-                                  questionText: q.questionText,
-                                  options: (q.options || []).map((opt) => ({
-                                    label: opt.label,
-                                    text: opt.text,
-                                    isCorrect: opt.isCorrect,
-                                  })),
-                                  difficulty: q.difficulty,
-                                  explanation: q.explanation,
-                                }))
-                              );
-                            }
+                        onBankQuestionsSelected={(selectedQuestions) => {
+                          const existingIds = new Set(questions.map(q => q.id));
+                          const unique = selectedQuestions.filter(q => !existingIds.has(q.id));
 
-                            const result = await aiQuestionService.generateQuestions(requestPayload);
+                          const transformed = unique.map((q, index) => ({
+                            ...q,
+                            number: questions.length + index + 1,
+                            createdAt: q.createdAt || Date.now(),
+                          }));
 
-                            if (result.questions && result.questions.length > 0) {
-                              // Transform AI-generated questions to match the expected format
-                              const transformedQuestions = result.questions.map(
-                                (
-                                  q: {
-                                    type: string;
-                                    questionText: string;
-                                    options: {
-                                      label: string;
-                                      text: string;
-                                      isCorrect: boolean;
-                                    }[];
-                                    difficulty: string;
-                                    explanation?: string;
-                                  },
-                                  index: number,
-                                ) => ({
-                                  id: crypto.randomUUID(), // Generate proper UUID
-                                  createdAt: Date.now(),
-                                  number: (data.action === "replace" || data.action === "edit" ? 0 : questions.length) + index + 1,
-                                  type: q.type as
-                                    | "MULTIPLE_CHOICE"
-                                    | "TRUE_FALSE"
-                                    | "ESSAY",
-                                  questionText: q.questionText,
-                                  options: (q.options || []).map((opt, idx) => ({
-                                    id: `${idx}`,
-                                    label: opt.label,
-                                    text: opt.text,
-                                    isCorrect: opt.isCorrect,
-                                  })),
-                                  difficulty: q.difficulty as QuestionDifficulty,
-                                  topic: data.topic || "AI Generated",
-                                  explanation: q.explanation || "",
-                                }),
-                              );
-
-                              if (data.action === "replace" || data.action === "edit") {
-                                setQuestions(transformedQuestions);
-                              } else {
-                                transformedQuestions.forEach((q) =>
-                                  handleAddQuestion(q),
-                                );
-                              }
-
-                              if (result.totalGenerated < result.requested) {
-                                alert(
-                                  `AI đã tạo được ${result.totalGenerated} câu hỏi (yêu cầu ${result.requested}). Vui lòng kiểm tra chất lượng câu hỏi.`,
-                                );
-                              }
-                            } else {
-                              alert(
-                                "AI không thể tạo câu hỏi từ tài liệu này. Vui lòng thử với tài liệu khác hoặc nội dung rõ ràng hơn.",
-                              );
-                            }
-                          } catch (error) {
-                            console.error(
-                              "Error generating questions with AI:",
-                              error,
-                            );
-                            alert(
-                              error instanceof Error
-                                ? error.message
-                                : "Có lỗi xảy ra khi tạo câu hỏi bằng AI. Vui lòng thử lại sau."
-                            );
-                          } finally {
-                            setIsGenerating(false);
+                          setQuestions(prev => [...prev, ...transformed as Question[]]);
+                          if (unique.length < selectedQuestions.length) {
+                            alert(`Đã thêm ${unique.length} câu hỏi. ${selectedQuestions.length - unique.length} câu đã tồn tại.`);
                           }
                         }}
-                        isLoading={isGenerating}
+                        bankQuestions={[]} // This would ideally come from a separate hook/fetch
+                        isLoadingBank={false}
                       />
                     </div>
                   )}
@@ -621,13 +803,32 @@ function CreateTestContent() {
                 </div>
 
                 {questions.length > 0 ? (
-                  <PaginatedQuestionPreview
-                    questions={questions}
-                    currentQuestionIndex={currentQuestionIndex}
-                    onQuestionChange={setCurrentQuestionIndex}
-                    onQuestionDelete={handleRemoveQuestion}
-                    points={points}
-                  />
+                  <div className="space-y-4">
+                    <PaginatedQuestionPreview
+                      questions={questions}
+                      currentQuestionIndex={currentQuestionIndex}
+                      onQuestionChange={setCurrentQuestionIndex}
+                      onQuestionDelete={handleRemoveQuestion}
+                      onQuestionEdit={handleEditQuestion}
+                      onQuestionReplace={handleReplaceQuestion}
+                      isReplacing={isReplacing}
+                      points={points}
+                    />
+                    <div className="flex justify-center pt-4">
+                      <Button
+                        onClick={() => {
+                          setActiveTab("manual");
+                          const element = document.getElementById("manual-tab-trigger");
+                          if (element) element.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className="bg-green-100 text-green-700 border-2 border-green-600 font-bold hover:bg-green-200"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Thêm câu hỏi mới vào sau
+                      </Button>
+                    </div>
+                  </div>
+
                 ) : (
                   <div className="text-center py-12 bg-white border-2 border-dashed border-gray-400 rounded-lg">
                     <div className="text-gray-600 font-bold mb-2">Chưa có câu hỏi nào</div>
@@ -651,6 +852,7 @@ function CreateTestContent() {
         >
           <Save className="w-5 h-5" />
           {isSaving ? "Đang lưu..." : "Lưu nháp"}
+          <span className="ml-1 text-[10px] opacity-60">Ctrl+S</span>
         </NotebookButton>
         <NotebookButton
           onClick={handleSaveTest}
@@ -659,8 +861,34 @@ function CreateTestContent() {
         >
           <Save className="w-5 h-5" />
           {isSaving ? "Đang lưu..." : "Lưu bài kiểm tra"}
+          <span className="ml-1 text-[10px] opacity-60">Ctrl+↵</span>
         </NotebookButton>
       </div>
+
+      {/* Sync Status Toast */}
+      {pendingSync && !isOffline && (
+        <div className="fixed bottom-8 left-8 z-[100] bg-white border-4 border-black p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-4 animate-bounce">
+          <div className="bg-green-100 p-2 rounded-full border-2 border-black">
+            <Wifi className="w-6 h-6 text-green-700" />
+          </div>
+          <div>
+            <p className="font-bold text-gray-900">Bạn đã online trở lại!</p>
+            <button
+              onClick={() => {
+                setPendingSync(false);
+                handleSave(true);
+              }}
+              className="text-blue-600 font-extrabold hover:underline text-sm"
+            >
+              Nhấn đây để đồng bộ bản nháp lên Server ngay
+            </button>
+          </div>
+          <button onClick={() => setPendingSync(false)} className="ml-2">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
     </div>
   );
 }

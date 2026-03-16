@@ -479,10 +479,22 @@ function mergeHomeroomAndSubjectMaps(
 /**
  * Get all classes assigned to a teacher (both homeroom and subject)
  */
+let teacherClassesCache: { userId: string, data: any, timestamp: number } | null = null;
+
 export async function getTeacherClasses(
+
   teacherId: string
 ): Promise<TeacherClassesResponse> {
+  // Simple session-level cache (5 minutes)
+  const fiveMinutes = 5 * 60 * 1000;
+  if (teacherClassesCache && 
+      teacherClassesCache.userId === teacherId && 
+      (Date.now() - teacherClassesCache.timestamp < fiveMinutes)) {
+    return { data: teacherClassesCache.data, error: null };
+  }
+
   const supabase = getSupabaseBrowserClient();
+
 
   try {
     // Get teacher profile
@@ -559,7 +571,16 @@ export async function getTeacherClasses(
       subject_classes: subjectClasses,
     };
 
+
+    // Update cache
+    teacherClassesCache = {
+      userId: teacherId,
+      data: result,
+      timestamp: Date.now()
+    };
+
     return { data: result, error: null };
+
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return { data: null, error: message };

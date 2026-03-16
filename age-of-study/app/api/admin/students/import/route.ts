@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { verifyAdmin } from "@/lib/adminAuth";
 import { createAuditLog } from "@/lib/auditService";
 import { ParsedStudent } from "@/components/admin/StudentImportModal";
+import { formatBirthdayToPassword } from "@/lib/utils";
 import { now } from "lodash";
 
 const supabaseAdmin = createClient(
@@ -142,12 +143,14 @@ export async function POST(request: NextRequest) {
       }
 
       // 3. User Resolution / Creation
-
-      // Generate a secure random password for new users
-      // DOB should not be used as a password due to security concerns
-      // The must_change_password flag (set below) will force users to change it on first login
-      // Note: The authentication flow MUST enforce password change when must_change_password is true
-      const password = globalThis.crypto.randomUUID();
+      
+      // Default password = formatted dob (ddmmyyyy)
+      let password = formatBirthdayToPassword(dob);
+      
+      // If no dob, use a random one to avoid predictable 12345678 fallback for admin imports
+      if (password === "12345678" && !dob) {
+        password = globalThis.crypto.randomUUID().slice(0, 12);
+      }
 
       // Try finding the user first by username
       const { data: existingUserParams } = await supabaseAdmin

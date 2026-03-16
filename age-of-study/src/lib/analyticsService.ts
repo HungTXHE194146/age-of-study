@@ -59,6 +59,41 @@ export interface TeacherActivityReport {
   };
 }
 
+export interface TeacherClassAnalytics {
+  classes: ClassAnalytics[];
+  summary: {
+    totalClasses: number;
+    totalStudents: number;
+    averageScore: number;
+    averageCompletion: number;
+  };
+}
+
+export interface StudentReportData {
+  studentId: string;
+  fullName: string | null;
+  username: string | null;
+  avatarUrl: string | null;
+  totalXP: number;
+  level: number;
+  completedNodes: number;
+  totalNodes: number;
+  averageTestScore: number;
+  testHistory: {
+    testId: string;
+    testTitle: string;
+    score: number;
+    submittedAt: string;
+    type: string;
+  }[];
+  nodeHistory: {
+    nodeId: string;
+    nodeTitle: string;
+    status: string;
+    completedAt: string | null;
+  }[];
+}
+
 /**
  * Get analytics for all classes with comparison metrics
  */
@@ -476,4 +511,221 @@ export function exportTeacherDataToCSV(teachers: TeacherActivity[]): string {
 
   const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
   return csv;
+}
+
+/**
+ * Get analytics for classes taught by a specific teacher
+ */
+export async function getTeacherClassAnalytics(teacherId: string): Promise<{
+  data: TeacherClassAnalytics | null;
+  error: string | null;
+}> {
+  try {
+    const supabase = getSupabaseBrowserClient();
+
+    // 1. Get class IDs assigned to this teacher
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from('class_teachers')
+      .select('class_id')
+      .eq('teacher_id', teacherId);
+
+    if (assignmentsError) {
+      return { data: null, error: assignmentsError.message };
+    }
+
+    const assignedClassIds = assignments?.map((a: { class_id: number }) => a.class_id) || [];
+    if (assignedClassIds.length === 0) {
+      return {
+        data: {
+          classes: [],
+          summary: {
+            totalClasses: 0,
+            totalStudents: 0,
+            averageScore: 0,
+            averageCompletion: 0
+          }
+        },
+        error: null
+      };
+    }
+
+    // 2. Get active classes from the assigned list
+    const { data: classes, error: classesError } = await supabase
+      .from('classes')
+      .select('id, name, grade, school_year')
+      .in('id', assignedClassIds)
+      .eq('status', 'active');
+
+    if (classesError) {
+      return { data: null, error: classesError.message };
+    }
+
+    // 3. Get analytics for each class
+    const classAnalytics: ClassAnalytics[] = [];
+    for (const cls of (classes || [])) {
+      const { data: classStudents } = await supabase
+        .from('class_students')
+        .select('student_id')
+        .eq('class_id', cls.id)
+        .eq('status', 'active');
+
+      const studentIds = classStudents?.map((s: { student_id: string }) => s.student_id) || [];
+      const studentCount = studentIds.length;
+      let totalXP = 0;
+      let activeStudents = 0;
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+      if (studentIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, total_xp, last_active_at')
+          .in('id', studentIds);
+
+        if (profiles) {
+          for (const profile of profiles) {
+            totalXP += profile.total_xp || 0;
+            if (profile.last_active_at && new Date(profile.last_active_at) > weekAgo) activeStudents++;
+          }
+        }
+
+        const { data: pd } = await supabase
+          .from('student_node_progress')
+          .select('status, score')
+          .in('student_id', studentIds);
+
+        let completedNodes = 0;
+        let totalScore = 0;
+        let scoreCount = 0;
+        const totalNodes = pd?.length || 0;
+
+        if (pd) {
+          pd.forEach((p: { status: string; score: number | null }) => {
+            if (p.status === 'completed') completedNodes++;
+            if (p.score) { totalScore += p.score; scoreCount++; }
+          });
+        }
+
+        classAnalytics.push({
+          classId: cls.id,
+          className: cls.name,
+          grade: cls.grade,
+          schoolYear: cls.school_year,
+          studentCount,
+          averageScore: scoreCount > 0 ? totalScore / scoreCount : 0,
+          completionRate: totalNodes > 0 ? (completedNodes / totalNodes) * 100 : 0,
+          totalXP,
+          averageXP: studentCount > 0 ? totalXP / studentCount : 0,
+          activeStudents,
+          completedNodes,
+          totalAssignedNodes: totalNodes,
+        });
+      }
+    }
+
+    return {
+      data: {
+        classes: classAnalytics,
+        summary: {
+          totalClasses: classAnalytics.length,
+          totalStudents: classAnalytics.reduce((sum, c) => sum + c.studentCount, 0),
+          averageScore: classAnalytics.length > 0 ? classAnalytics.reduce((sum, c) => sum + c.averageScore, 0) / classAnalytics.length : 0,
+          averageCompletion: classAnalytics.length > 0 ? classAnalytics.reduce((sum, c) => sum + c.completionRate, 0) / classAnalytics.length : 0,
+        }
+      },
+      error: null
+    };
+  } catch (err) {
+    return { data: null, error: err instanceof Error ? err.message : 'Unknown error' };
+  }
+}
+
+/**
+ * Get detailed report card data for a specific student
+ */
+export async function getStudentReportData(studentId: string): Promise<{
+  data: StudentReportData | null;
+  error: string | null;
+}> {
+  try {
+    const supabase = getSupabaseBrowserClient();
+
+    // 1. Get profile basic info
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, full_name, username, avatar_url, total_xp, level')
+      .eq('id', studentId)
+      .single();
+
+    if (profileError) return { data: null, error: profileError.message };
+
+    // 2. Get node progress
+    const { data: nodeProgress } = await supabase
+      .from('student_node_progress')
+      .select(`
+        node_id,
+        status,
+        completed_at,
+        nodes (
+          title
+        )
+      `)
+      .eq('student_id', studentId);
+
+    // 3. Get test submissions history
+    const { data: testSubmissions } = await supabase
+      .from('test_submissions')
+      .select(`
+        test_id,
+        score,
+        submitted_at,
+        tests (
+          title,
+          type
+        )
+      `)
+      .eq('student_id', studentId)
+      .order('submitted_at', { ascending: false });
+
+    // Process nodes
+    const nodeHistory = (nodeProgress || []).map((p: any) => ({
+      nodeId: p.node_id,
+      nodeTitle: p.nodes?.title || 'Unknown Node',
+      status: p.status,
+      completedAt: p.completed_at
+    }));
+
+    const completedNodes = nodeHistory.filter((n: { status: string }) => n.status === 'completed').length;
+    const totalNodes = nodeHistory.length;
+
+    // Process tests
+    const testHistory = (testSubmissions || []).map((s: any) => ({
+      testId: s.test_id,
+      testTitle: s.tests?.title || 'Unknown Test',
+      score: s.score,
+      submittedAt: s.submitted_at,
+      type: s.tests?.type || 'practice'
+    }));
+
+    const totalScore = testHistory.reduce((sum: number, t: { score: number }) => sum + t.score, 0);
+    const averageScore = testHistory.length > 0 ? totalScore / testHistory.length : 0;
+
+    return {
+      data: {
+        studentId: profile.id,
+        fullName: profile.full_name,
+        username: profile.username,
+        avatarUrl: profile.avatar_url,
+        totalXP: profile.total_xp || 0,
+        level: profile.level || 1,
+        completedNodes,
+        totalNodes,
+        averageTestScore: averageScore,
+        testHistory,
+        nodeHistory
+      },
+      error: null
+    };
+  } catch (err) {
+    return { data: null, error: err instanceof Error ? err.message : 'Unknown error' };
+  }
 }

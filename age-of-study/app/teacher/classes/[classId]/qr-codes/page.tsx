@@ -10,26 +10,23 @@ import { AlertCircle, ArrowLeft, Printer } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { NotebookCard, NotebookCardTitle, NotebookButton } from "@/components/ui/notebook-card";
+import type { ClassDetail } from "@/types/class";
+import { formatBirthdayToPassword } from "@/lib/utils";
 
-interface StudentData {
-  student_id: string;
-  profile: {
-    full_name: string | null;
-    username: string | null;
-  };
-}
 
 export default function QRCodesPage() {
   const { classId } = useParams();
   const { user } = useAuthStore();
-  const [classData, setClassData] = useState<{
-    id: number;
-    name: string;
-    students: Array<StudentData>;
-  } | null>(null);
+  const [classData, setClassData] = useState<ClassDetail | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [baseUrl, setBaseUrl] = useState("");
+
+  useEffect(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    setBaseUrl(process.env.NEXT_PUBLIC_BASE_URL || origin || "http://localhost:3000");
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -111,37 +108,42 @@ export default function QRCodesPage() {
         {/* Lưới in: 3 cột trên máy tính/giấy, 1 cột trên mobile */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 print:gap-4 print:grid-cols-3">
           {classData?.students.map((student) => {
-            // Chuỗi dữ liệu cho QR code: Định dạng chứa action login, username và password
-            const qrData = JSON.stringify({
+            const studentPassword = formatBirthdayToPassword(student.profile.dob);
+
+            // Tạo link đăng nhập tự động sử dụng query params đơn giản
+            // Điều này giúp camera điện thoại dễ dàng nhận diện URL và nội dung
+            const params = new URLSearchParams({
               action: "qr_login_v1",
-              classId: classId,
-              studentId: student.student_id,
-              username: student.profile.username,
-              password: "12345678"
+              u: student.profile.username || "",
+              p: studentPassword,
+              cid: String(classId),
+              sid: student.student_id
             });
 
+            const fullLoginUrl = `${baseUrl}/login?${params.toString()}`;
+
             return (
-              <div 
-                key={student.student_id} 
+              <div
+                key={student.student_id}
                 className="bg-white border-4 border-black border-dashed rounded-xl p-6 flex flex-col items-center text-center print:break-inside-avoid print:shadow-none shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
               >
                 <div className="text-2xl font-black text-blue-900 mb-1 max-w-full truncate px-2">
                   {student.profile.full_name || student.profile.username}
                 </div>
                 <div className="text-lg font-bold text-gray-600 mb-6">
-                  {student.profile.username}
+                  ID: {student.profile.username}
                 </div>
-                
+
                 <div className="p-4 border-4 border-black rounded-lg bg-white inline-block">
-                  <QRCodeSVG 
-                    value={qrData} 
+                  <QRCodeSVG
+                    value={fullLoginUrl}
                     size={160}
                     level="H" // High error correction, dễ quét ngay cả khi giấy in mờ
                   />
                 </div>
-                
+
                 <div className="mt-6 text-sm font-bold text-gray-500 uppercase">
-                  Quét mã để vào học
+                  Mật khẩu: {studentPassword}
                 </div>
               </div>
             );

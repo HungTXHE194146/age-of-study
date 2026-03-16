@@ -2,10 +2,12 @@
 
 import { Sidebar } from "@/components/teacher/Sidebar";
 import { useState, useEffect, useRef } from "react";
-import { Menu } from "lucide-react";
+import { Menu, WifiOff } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { useBlockedCheck } from "@/hooks/useBlockedCheck";
+import { AnimatePresence, motion } from "framer-motion";
+
 
 export default function TeacherLayout({
   children,
@@ -17,6 +19,27 @@ export default function TeacherLayout({
   const router = useRouter();
   const hasCheckedAuth = useRef(false);
   const hasRedirected = useRef(false);
+  const [isOffline, setIsOffline] = useState(false);
+
+  // Connection listeners
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    // Initial check
+    if (typeof window !== "undefined") {
+      setIsOffline(!window.navigator.onLine);
+    }
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
 
   // Periodic check for blocked users
   useBlockedCheck();
@@ -33,14 +56,14 @@ export default function TeacherLayout({
   useEffect(() => {
     // Avoid multiple redirects
     if (hasRedirected.current) return;
-    
+
     if (!isLoading) {
       if (!isAuthenticated) {
         hasRedirected.current = true;
         router.replace("/staff/login");
         return;
       }
-      
+
       if (user) {
         if (user.role !== "teacher") {
           hasRedirected.current = true;
@@ -93,7 +116,25 @@ export default function TeacherLayout({
           </h1>
         </header>
 
-        <main className="flex-1 overflow-auto">{children}</main>
+
+        <main className="flex-1 overflow-auto relative">
+          {/* Offline Notification */}
+          <AnimatePresence>
+            {isOffline && (
+              <motion.div
+                initial={{ y: -50, opacity: 0 }}
+                animate={{ y: 20, opacity: 1 }}
+                exit={{ y: -50, opacity: 0 }}
+                className="fixed top-0 left-1/2 -translate-x-1/2 z-[100] bg-red-600 border-2 border-black text-white px-6 py-3 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-3 font-bold"
+              >
+                <WifiOff className="w-6 h-6 animate-pulse" />
+                <span>Mất kết nối internet. Dữ liệu đang được lưu cục bộ.</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {children}
+        </main>
+
       </div>
     </div>
   );

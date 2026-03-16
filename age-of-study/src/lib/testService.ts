@@ -320,8 +320,58 @@ export class TestService {
         // For now, consider essay correct if it has some content
         isCorrect = !!answer.text_answer && answer.text_answer.trim().length > 0;
       } else {
-        isCorrect = question?.correct_option_index === answer.selected_option_index;
+        const qType = (question?.q_type || question?.content?.type || '').toUpperCase();
+        const metadata = question?.content?.metadata;
+
+        switch (qType) {
+          case 'WORD_ORDERING':
+            isCorrect = answer.text_answer === metadata?.orderedWords?.join(" ");
+            break;
+          case 'MATCHING':
+            try {
+              const studentPairs = JSON.parse(answer.text_answer || "[]");
+              const correctPairs = metadata?.matchingPairs || [];
+              isCorrect = studentPairs.length === correctPairs.length && 
+                studentPairs.every((sp: any) => 
+                  correctPairs.some((cp: any) => cp.left === sp.left && cp.right === sp.right)
+                );
+            } catch { isCorrect = false; }
+            break;
+          case 'FILL_IN_BLANKS':
+            const studentAnswers = (answer.text_answer || "").split("|");
+            const correctBlanks = metadata?.blanks || [];
+            isCorrect = studentAnswers.length === correctBlanks.length && 
+              studentAnswers.every((ans, idx) => 
+                ans.trim().toLowerCase() === correctBlanks[idx]?.answer.trim().toLowerCase()
+              );
+            break;
+          case "CATEGORIZATION": {
+            const studentCategorization = JSON.parse(answer.text_answer || "[]");
+            const correctCategories = question?.content.metadata?.categories || [];
+            // So sánh từng nhóm
+            isCorrect = correctCategories.every((cat) => {
+              const studentCat = studentCategorization.find((sc: any) => sc.name === cat.name);
+              if (!studentCat) return false;
+              return cat.items.every((item) => studentCat.items.includes(item)) &&
+                studentCat.items.length === cat.items.length;
+            });
+            break;
+          }
+          case "FIND_ERROR": {
+            const errorPos = question?.content.metadata?.errorPosition;
+            const fullText = (question?.content.questionText || question?.content.question || (question?.content as any)?.text || "");
+            if (errorPos && fullText) {
+              const errorText = fullText.substring(errorPos.startIndex, errorPos.endIndex);
+              isCorrect = errorText.includes(answer.text_answer || "");
+            }
+            break;
+          }
+
+          default:
+            isCorrect = question?.correct_option_index === answer.selected_option_index;
+        }
       }
+
 
       return {
         submission_id: submission.id,
