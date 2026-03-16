@@ -68,10 +68,16 @@ export default function TeacherChangePasswordPage() {
       }
 
       // Clear the must_change_password flag
-      await supabase
+      const { error: profileError } = await supabase
         .from("profiles")
         .update({ must_change_password: false })
         .eq("id", user.id);
+
+      if (profileError) {
+        console.error("Failed to clear must_change_password flag:", profileError);
+        // Password was changed successfully, so we should still proceed
+        // but log this for debugging purposes
+      }
 
       await checkAuth();
 

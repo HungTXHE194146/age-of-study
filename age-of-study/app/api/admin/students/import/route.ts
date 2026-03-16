@@ -142,11 +142,12 @@ export async function POST(request: NextRequest) {
       }
 
       // 3. User Resolution / Creation
-      
-      // Default password = dob (DDMMYYYY format based on input)
-      // Strip out / or -
-      const cleanDob = dob ? dob.replace(/[-\/]/g, "") : ""; 
-      let password = cleanDob.length >= 8 ? cleanDob : globalThis.crypto.randomUUID().slice(0, 12);
+
+      // Generate a secure random password for new users
+      // DOB should not be used as a password due to security concerns
+      // The must_change_password flag (set below) will force users to change it on first login
+      // Note: The authentication flow MUST enforce password change when must_change_password is true
+      const password = globalThis.crypto.randomUUID();
 
       // Try finding the user first by username
       const { data: existingUserParams } = await supabaseAdmin

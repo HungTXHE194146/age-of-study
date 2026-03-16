@@ -97,10 +97,18 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Mark code as used
-    await supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
       .from("magic_login_codes")
       .update({ used_at: new Date().toISOString() })
       .eq("id", matchedCodeId);
+
+    if (updateError) {
+      console.error("Failed to mark code as used:", updateError);
+      return NextResponse.json(
+        { error: "Không thể hoàn tất đăng nhập. Vui lòng thử lại." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       token_hash: linkData.properties.hashed_token,

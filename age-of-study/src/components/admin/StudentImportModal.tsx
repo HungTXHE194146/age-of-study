@@ -146,17 +146,17 @@ export default function StudentImportModal({
           const raw = row[idx];
           if (!raw) return "";
           if (raw instanceof Date) {
-            const d = String(raw.getDate()).padStart(2, "0");
-            const m = String(raw.getMonth() + 1).padStart(2, "0");
-            return `${d}/${m}/${raw.getFullYear()}`;
+            const d = String(raw.getUTCDate()).padStart(2, "0");
+            const m = String(raw.getUTCMonth() + 1).padStart(2, "0");
+            return `${d}/${m}/${raw.getUTCFullYear()}`;
           }
           if (typeof raw === "number") {
-            // Excel serial date: days since 1900-01-01 (with Lotus bug offset)
-            const excelEpoch = new Date(1899, 11, 30);
-            const date = new Date(excelEpoch.getTime() + raw * 86400000);
-            const d = String(date.getDate()).padStart(2, "0");
-            const m = String(date.getMonth() + 1).padStart(2, "0");
-            return `${d}/${m}/${date.getFullYear()}`;
+            // Excel serial date (1900 system): convert using Unix epoch offset
+            // 25569 = days between 1900-01-01 and 1970-01-01 (with Lotus bug)
+            const date = new Date((raw - 25569) * 86400 * 1000);
+            const d = String(date.getUTCDate()).padStart(2, "0");
+            const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+            return `${d}/${m}/${date.getUTCFullYear()}`;
           }
           return String(raw).trim();
         };

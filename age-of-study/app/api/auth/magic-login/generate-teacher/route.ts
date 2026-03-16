@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifyAdmin } from "@/lib/adminAuth";
+import { randomInt } from "crypto";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,7 +10,7 @@ const supabaseAdmin = createClient(
 );
 
 function generateCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(100000, 1000000).toString();
 }
 
 export async function POST(request: NextRequest) {
@@ -67,10 +68,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Flag teacher to change password on next login
-    await supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
       .from("profiles")
       .update({ must_change_password: true })
       .eq("id", teacher_id);
+
+    if (updateError) {
+      console.error("Failed to set must_change_password flag:", updateError);
+    }
 
     return NextResponse.json({ code, expires_in_minutes: 5 });
   } catch (err) {

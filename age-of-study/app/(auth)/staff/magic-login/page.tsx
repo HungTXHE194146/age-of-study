@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,6 +19,16 @@ export default function TeacherMagicLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<"form" | "success">("form");
   const [teacherName, setTeacherName] = useState("");
+  const timeoutRef = useRef<number | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +72,7 @@ export default function TeacherMagicLoginPage() {
       setStep("success");
 
       // 4. Redirect to teacher change-password page
-      setTimeout(() => {
+      timeoutRef.current = window.setTimeout(() => {
         router.replace("/teacher/change-password");
       }, 1500);
     } catch (err) {

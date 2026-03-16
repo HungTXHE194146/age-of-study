@@ -487,8 +487,7 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                 <Link href="/login">
                   <button className="w-full sm:w-auto px-10 py-5 bg-white text-slate-900 text-xl font-bold rounded-2xl shadow-xl hover:shadow-indigo-500/20 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 group">
-                    Bắt đầu Học ngay
-                    <ArrowRight className="w-6 h-6 text-indigo-600 group-hover:translate-x-1 transition-transform" />
+                    Trải nghiệm ngay                    <ArrowRight className="w-6 h-6 text-indigo-600 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </Link>
               </div>

@@ -134,9 +134,8 @@ export default function UsersManagementPage() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const data = await res.json();
-      showToast(`Đã migrate ${data.success} tài khoản thành công. Lỗi: ${data.errors}`, data.errors ? "warning" : "success");
-      setMigration({ needsMigration: 0, checking: false, running: false, done: true });
-    } catch {
+      showToast(`Đã migrate ${data.success ?? 0} tài khoản thành công.${data.errors ? ` Lỗi: ${data.errors}` : ""}`, data.errors ? "warning" : "success");
+      setMigration({ needsMigration: 0, checking: false, running: false, done: true });    } catch {
       showToast("Lỗi khi thực hiện migration.", "error");
       setMigration((prev) => ({ ...prev, running: false }));
     }
@@ -225,14 +224,14 @@ export default function UsersManagementPage() {
           .eq("class_id", classFilter)
           .eq("status", "active");
         classFilterIds = (cs || []).map((r: { student_id: string }) => r.student_id);
-        if (classFilterIds.length === 0) {
+        if (classFilterIds && classFilterIds.length === 0) {
           setUsers([]);
           setTotalCount(0);
           setClassStudentMap({});
+          setLoading(false);
           return;
         }
       }
-
       let query = supabase.from("profiles").select("*", { count: "exact" });
 
       if (roleFilter !== "all") query = query.eq("role", roleFilter);
@@ -242,8 +241,12 @@ export default function UsersManagementPage() {
       if (classFilterIds) query = query.in("id", classFilterIds);
 
       if (debouncedSearch.trim()) {
-        const term = debouncedSearch.trim();
-        query = query.or(`username.ilike.%${term}%,full_name.ilike.%${term}%`);
+        // Escape SQL LIKE special characters to prevent wildcard injection
+        const escapedTerm = debouncedSearch.trim()
+          .replace(/\\/g, "\\\\")
+          .replace(/%/g, "\\%")
+          .replace(/_/g, "\\_");
+        query = query.or(`username.ilike.%${escapedTerm}%,full_name.ilike.%${escapedTerm}%`);
       }
 
       switch (sortBy) {
