@@ -9,6 +9,8 @@ interface FillInBlanksRendererProps {
     blanks: Array<{ index: number; answer: string }>;
     onComplete: (isCorrect: boolean, answers: string[]) => void;
     supportMode?: boolean;
+    hint?: string;
+    showHintsSetting?: boolean;
 }
 
 export default function FillInBlanksRenderer({
@@ -16,6 +18,8 @@ export default function FillInBlanksRenderer({
     blanks,
     onComplete,
     supportMode = true,
+    hint,
+    showHintsSetting = false,
 }: FillInBlanksRendererProps) {
     const [userAnswers, setUserAnswers] = useState<string[]>(new Array(blanks.length).fill(""));
     const [isWobbling, setIsWobbling] = useState(false);
@@ -92,7 +96,9 @@ export default function FillInBlanksRenderer({
                     >
                         <div className="text-4xl text-orange-500">🦉</div>
                         <p className="font-black italic text-lg">
-                            "Ôi, hiệp sĩ ơi! Còn một chút xíu nữa thôi, mình hoàn thành nốt nhé!"
+                            {showHintsSetting && hint
+                                ? hint
+                                : "Ôi, hiệp sĩ ơi! Còn một chút xíu nữa thôi, mình hoàn thành nốt nhé!"}
                         </p>
                     </motion.div>
                 )}

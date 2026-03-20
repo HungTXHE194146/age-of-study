@@ -8,6 +8,8 @@ interface FindErrorRendererProps {
     errorPosition: { startIndex: number; endIndex: number; correctText: string };
     onComplete: (isCorrect: boolean, selectedText: string) => void;
     supportMode?: boolean;
+    hint?: string;
+    showHintsSetting?: boolean;
 }
 
 export default function FindErrorRenderer({
@@ -15,6 +17,8 @@ export default function FindErrorRenderer({
     errorPosition,
     onComplete,
     supportMode = true,
+    hint,
+    showHintsSetting = false,
 }: FindErrorRendererProps) {
     const [selectedWordIndex, setSelectedWordIndex] = useState<number | null>(null);
     const [isWobbling, setIsWobbling] = useState(false);
@@ -121,7 +125,9 @@ export default function FindErrorRenderer({
                     >
                         <div className="text-4xl">🦉</div>
                         <p className="font-black text-sky-800 italic text-lg">
-                            "Thám tử nhí ơi, hãy quan sát thật kỹ từng từ nhé! Có một lỗi nhỏ đang trốn ở đâu đó đấy."
+                            {showHintsSetting && hint
+                                ? hint
+                                : '"Thám tử nhí ơi, hãy quan sát thật kỹ từng từ nhé! Có một lỗi nhỏ đang trốn ở đâu đó đấy."'}
                         </p>
                     </motion.div>
                 )}

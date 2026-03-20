@@ -10,6 +10,7 @@ export interface TestDetails {
     timeLimit: number;
     classId: string;
     type: string;
+    showHints?: boolean;
 }
 
 export interface TestDetailsFormProps {
@@ -241,6 +242,31 @@ export function TestDetailsForm({
                         <p className="mt-2 text-xs text-gray-500 font-bold italic">
                             Chỉ chọn nếu bài kiểm tra này dành riêng cho một bài học/chủ đề nhất định.
                         </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl shadow-sm">
+                        <div className="flex items-center h-6">
+                            <input
+                                id="show-hints-toggle"
+                                type="checkbox"
+                                checked={testDetails.showHints || false}
+                                onChange={(e) =>
+                                    setTestDetails((prev) => ({
+                                        ...prev,
+                                        showHints: e.target.checked,
+                                    }))
+                                }
+                                className="w-5 h-5 text-indigo-600 bg-white border-2 border-black rounded focus:ring-indigo-500"
+                            />
+                        </div>
+                        <div className="text-sm">
+                            <label htmlFor="show-hints-toggle" className="font-bold text-indigo-900 cursor-pointer">
+                                Hiển thị gợi ý cho học sinh 🦉
+                            </label>
+                            <p className="text-indigo-600 text-xs font-semibold">
+                                Khi bật, học sinh sẽ thấy gợi ý nếu trả lời sai thay vì chỉ nhận lời động viên.
+                            </p>
+                        </div>
                     </div>
                 </div>
             )}

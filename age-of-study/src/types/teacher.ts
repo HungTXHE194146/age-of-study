@@ -31,6 +31,7 @@ export interface Question {
   difficulty: QuestionDifficulty;
   points?: number;
   explanation?: string;
+  hint?: string;
   model_answer?: string;
   // Cấu trúc bổ sung cho các loại câu hỏi mới
   metadata?: {

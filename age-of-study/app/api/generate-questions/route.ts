@@ -14,6 +14,7 @@ interface QuestionType {
   }>
   difficulty: 'Easy' | 'Medium' | 'Hard' | 'Mixed'
   explanation: string
+  hint: string
   metadata?: {
     orderedWords?: string[]
     matchingPairs?: Array<{ left: string; right: string }>
@@ -89,9 +90,10 @@ const SYSTEM_PROMPT = `Bạn là Giáo sư Cú, một chuyên gia giáo dục ti
 8. FIND_ERROR: Tìm một lỗi sai. Yêu cầu có \`metadata.errorPosition\` chứa \`startIndex\`, \`endIndex\` (vị trí ký tự CHÍNH XÁC trong chuỗi, bắt đầu từ 0, trong đó \`endIndex\` là vị trí ký tự cuối cùng của lỗi - inclusive) và \`correctText\` (từ/cụm từ đúng). LƯU Ý: Trường \`questionText\` CHỈ được chứa câu văn cần tìm lỗi, KHÔNG bao gồm lời dẫn.
 
 **YÊU CẦU BẮT BUỘC:**
-1. Trả về kết quả CHỈ DƯỚI DẠNG MỘT MẢNG JSON.
-2. Cấu trúc JSON phải chính xác theo schema, đặc biệt là phần \`metadata\` cho các loại câu hỏi mới.
-3. Nội dung phải thuần Việt, phù hợp tâm lý và trình độ tiểu học.
+  - TRƯỜNG \`hint\`: Tạo gợi ý ngắn gọn, súc tích để giúp học sinh tự tìm ra câu trả lời khi làm sai. Gợi ý phải mang tính gợi mở, không được chứa trực tiếp đáp án. (Ví dụ: "Hãy để ý kỹ vần của từ này nhé!", "Thử nhớ xem con vật này kêu như thế nào?").
+9. Trả về kết quả CHỈ DƯỚI DẠNG MỘT MẢNG JSON.
+10. Cấu trúc JSON phải chính xác theo schema, đặc biệt là phần \`metadata\` cho các loại câu hỏi mới.
+11. Nội dung phải thuần Việt, phù hợp tâm lý và trình độ tiểu học.
 `
 
 
@@ -105,6 +107,7 @@ const JSON_SCHEMA = `
     "questionText": "Nội dung câu hỏi...",
     "difficulty": "Easy | Medium | Hard | Mixed",
     "explanation": "Lời nhắn nhủ thân thiện và giải thích kiến thức từ Giáo sư Cú...",
+    "hint": "Gợi ý nhỏ để học sinh tự làm lại câu hỏi...",
     "options": [
       {"label": "A", "text": "...", "isCorrect": true},
       ...

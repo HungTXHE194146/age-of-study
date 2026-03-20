@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import { Handle, Position, NodeProps } from "@xyflow/react";
-import { Lock, FileText, Edit2, Trash2 } from "lucide-react";
+import { Lock, FileText, Edit2, Trash2, Sparkles, Crown } from "lucide-react";
 import { CustomNodeType } from "./types";
 import { NodeCallbacksContext } from "./NodeCallbacksContext";
 import { NODE_ICONS, TEACHER_STICKY_COLORS } from "./constants";
@@ -44,8 +44,8 @@ const NodeHandles = React.memo(({ isTeacher }: { isTeacher: boolean }) => (
                 position={config.position}
                 id={config.id}
                 className={`w-4 h-4 transition-all duration-200 ${isTeacher
-                        ? "opacity-0 group-hover:opacity-100 bg-black cursor-pointer rounded-none border-2 border-white"
-                        : "rounded-full border-2 border-white !bg-transparent !border-none"
+                    ? "opacity-0 group-hover:opacity-100 bg-black cursor-pointer rounded-none border-2 border-white"
+                    : "rounded-full border-2 border-white !bg-transparent !border-none"
                     }`}
                 style={config.style}
             />
@@ -82,6 +82,46 @@ const TeacherEditControls = React.memo(({
 ));
 TeacherEditControls.displayName = "TeacherEditControls";
 
+// Progress Ring Component for Notebook theme
+const ProgressRing = React.memo(({ percentage, color }: { percentage: number; color: string }) => {
+    const radius = 60;
+    const stroke = 6;
+    const normalizedRadius = radius - stroke * 2;
+    const circumference = normalizedRadius * 2 * Math.PI;
+    const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+    return (
+        <svg
+            height={radius * 2}
+            width={radius * 2}
+            className="absolute -z-10 transform -rotate-90 pointer-events-none"
+        >
+            <circle
+                stroke="#e2e8f0"
+                fill="transparent"
+                strokeWidth={stroke}
+                r={normalizedRadius}
+                cx={radius}
+                cy={radius}
+                className="opacity-40"
+            />
+            <circle
+                stroke={color}
+                fill="transparent"
+                strokeWidth={stroke}
+                strokeDasharray={circumference + ' ' + circumference}
+                style={{ strokeDashoffset }}
+                strokeLinecap="round"
+                r={normalizedRadius}
+                cx={radius}
+                cy={radius}
+                className="transition-all duration-1000 ease-out"
+            />
+        </svg>
+    );
+});
+ProgressRing.displayName = "ProgressRing";
+
 export const CustomNode = React.memo(({ data, selected }: NodeProps<CustomNodeType>) => {
     const { onEditNode, onDeleteNode, isTeacherMode } = useContext(NodeCallbacksContext);
     const isTeacher = isTeacherMode;
@@ -90,78 +130,100 @@ export const CustomNode = React.memo(({ data, selected }: NodeProps<CustomNodeTy
 
     const baseColor = isLocked ? "#9ca3af" : data.color || "#fbbf24";
     const Icon = isLocked ? Lock : (NODE_ICONS[data.nodeType] || FileText);
-    const teacherStickyColor = TEACHER_STICKY_COLORS[data.nodeType] || "#fef08a";
+    const progressPercentage = Math.min(100, Math.round(((data.bestXp || 0) / (data.requiredXp || 100)) * 100));
 
-    const nodeStyle = isTeacher
-        ? getTeacherStyle(selected, isLocked, teacherStickyColor)
-        : getStudentStyle(selected, isLocked, isCompleted, baseColor);
-
+    // Notebook styled styles
     const containerClass = isTeacher
-        ? `relative w-36 h-36 border-2 flex flex-col items-center justify-center p-2 transition-transform duration-200 ${!isLocked ? "hover:-translate-y-1" : ""
-        } ${selected ? "scale-105 -rotate-2" : "rotate-1"}`
-        : `relative w-32 h-32 rounded-[2rem] border-[3px] border-slate-800 flex flex-col items-center justify-center p-2 transition-all duration-300 ease-out notebook-lines ${!isLocked ? "hover:scale-105 hover:-translate-y-1 cursor-pointer" : "opacity-80 cursor-not-allowed"
-        } ${selected ? "scale-105 -rotate-2 ring-4 ring-offset-2 ring-blue-500" : "rotate-1"}`;
+        ? `relative w-36 h-36 border-2 flex flex-col items-center justify-center p-2 transition-transform duration-200 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] bg-yellow-100 ${selected ? "scale-105 -rotate-2" : "rotate-1"}`
+        : `relative w-32 h-32 flex flex-col items-center justify-center p-2 transition-all duration-300 ease-out ${!isLocked ? "hover:scale-110 cursor-pointer" : "cursor-not-allowed"
+        } ${selected ? "scale-110 -rotate-2" : ""}`;
 
-    const iconContainerClass = isTeacher
-        ? `w-12 h-12 flex items-center justify-center mb-1 z-10 ${isLocked ? "text-gray-400" : "text-gray-900"}`
-        : `w-14 h-14 rounded-full flex items-center justify-center mb-2 border-2 border-slate-800 z-10 ${isLocked ? "bg-gray-200 opacity-60" : isCompleted ? "bg-green-300" : "bg-white"
-        }`;
-
-    const titleClass = isTeacher
-        ? `text-sm font-bold leading-tight line-clamp-3 text-black font-handwritten tracking-wide`
-        : `text-xs font-black leading-tight line-clamp-2 uppercase tracking-wide px-1 ${isLocked ? "text-slate-500" : "text-slate-900"
-        }`;
+    const innerNodeClass = `
+        w-24 h-24 rounded-full flex flex-col items-center justify-center z-10 
+        border-4 border-slate-900 shadow-[4px_4px_0_0_rgba(15,23,42,1)]
+        transition-all duration-300
+        ${isLocked ? "bg-slate-200 border-slate-400 grayscale" : isCompleted ? "bg-[#fefce8]" : "bg-white"}
+    `;
 
     return (
         <div className="relative group">
             <NodeHandles isTeacher={isTeacher} />
 
             <div
-                style={nodeStyle}
                 onClick={(e) => {
-                    if (!isTeacher && isLocked) e.stopPropagation();
+                    if (!isTeacher && isLocked) {
+                        e.stopPropagation();
+                    }
                 }}
                 className={containerClass}
             >
-                {isTeacher && !isLocked && (
-                    <div className="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-3 bg-red-200/60 border border-red-300 rounded-sm italic z-0 transform -rotate-2" />
+                {/* Progress Ring for active node (Current and slightly in-progress) */}
+                {!isTeacher && !isLocked && !isCompleted && (
+                    <ProgressRing percentage={progressPercentage} color={baseColor} />
                 )}
 
-                <div
-                    className={iconContainerClass}
-                    style={{
-                        color: isTeacher ? undefined : isLocked ? "#64748b" : "#0f172a",
-                        boxShadow: isTeacher ? "none" : "2px 2px 0 0 rgba(0,0,0,1)",
-                    }}
-                >
-                    <Icon
-                        size={isTeacher ? 36 : 28}
-                        strokeWidth={isTeacher ? 2 : 2.5}
-                        className={`${!isLocked && !isTeacher ? "group-hover:animate-wiggle" : ""}`}
-                    />
+                {/* Teacher Tape Effect */}
+                {isTeacher && (
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-4 bg-blue-200/60 border border-blue-300 rounded-sm italic z-20 transform -rotate-1 shadow-sm" />
+                )}
+
+                {/* Main Node Body */}
+                <div className={innerNodeClass}>
+                    <div
+                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-transform ${!isLocked ? "group-hover:scale-110" : ""
+                            }`}
+                        style={{ color: isLocked ? "#94a3b8" : "#0f172a" }}
+                    >
+                        <Icon size={32} strokeWidth={2.5} />
+                    </div>
                 </div>
 
-                <div className="text-center px-1 z-10 w-full">
-                    <h3 className={titleClass} style={{ textShadow: isTeacher ? "none" : "1px 1px 0 #fff" }}>
+                {/* Label / Title below the circle */}
+                <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-40 text-center pointer-events-none">
+                    <h3
+                        className={`text-xs font-black uppercase tracking-tight line-clamp-2 px-2 py-1 rounded-lg border-2 border-slate-900 bg-white shadow-[2px_2px_0_0_rgba(15,23,42,1)] font-handwritten ${isLocked ? "text-slate-400 opacity-70" : "text-slate-800"
+                            }`}
+                    >
                         {data.title}
                     </h3>
-                    {isCompleted && !isTeacher && (
-                        <div className="mt-1 flex justify-center w-full">
-                            <div className="bg-green-400 text-slate-900 border-2 border-slate-800 text-[9px] uppercase font-black px-2 py-0.5 rounded shadow-[2px_2px_0_0_rgba(0,0,0,1)] transform rotate-2">
-                                HOÀN THÀNH
-                            </div>
-                        </div>
-                    )}
                 </div>
 
-                {!isTeacher && isLocked && (
-                    <div className="absolute inset-0 bg-slate-200/60 rounded-[1.8rem] flex items-center justify-center backdrop-blur-[1px] pointer-events-none z-20">
-                        <div className="w-12 h-12 bg-slate-100 border-2 border-slate-800 rounded-full flex items-center justify-center shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
-                            <Lock size={24} className="text-slate-700" />
+                {/* Completed Sticker (Enhanced Cartoon Style) */}
+                {isCompleted && !isTeacher && (
+                    <div className="absolute -top-4 -right-4 z-40 animate-in zoom-in-50 duration-500 hover:scale-110 transition-transform cursor-pointer group">
+                        {/* Main Sticker Shape */}
+                        <div className="relative bg-gradient-to-br from-yellow-300 to-amber-500 text-white border-[3px] border-slate-900 rounded-2xl p-1.5 flex flex-col items-center justify-center shadow-[4px_4px_0_0_rgba(15,23,42,1)] transform rotate-12">
+                            {/* Glossy overlay effect */}
+                            <div className="absolute inset-0 bg-white/20 rounded-xl pointer-events-none" style={{ clipPath: 'inset(0 0 60% 0)' }}></div>
+
+                            <div className="flex items-center gap-1 mb-0.5">
+                                <Sparkles className="w-3 h-3 text-white animate-pulse" />
+                                <Crown className="w-5 h-5 text-white drop-shadow-md fill-yellow-100/30" />
+                                <Sparkles className="w-3 h-3 text-white animate-pulse delay-75" />
+                            </div>
+
+                            <span className="text-[11px] font-[1000] italic tracking-tight uppercase leading-none text-slate-900 bg-white px-2 py-0.5 rounded-full border-2 border-slate-900 mb-0.5">
+                                XONG LUN!
+                            </span>
+
+                            {/* Tiny dots decoration */}
+                            <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-pink-400 rounded-full border border-slate-900"></div>
+                            <div className="absolute -top-1 -left-1 w-2 h-2 bg-blue-400 rounded-full border border-slate-900"></div>
                         </div>
                     </div>
                 )}
 
+                {/* Current Tooltip / Message */}
+                {!isTeacher && !isLocked && !isCompleted && progressPercentage < 10 && (
+                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap z-30 pointer-events-none animate-bounce">
+                        <div className="bg-blue-600 text-white text-[10px] font-black px-3 py-1.5 rounded-xl border-2 border-slate-900 shadow-[3px_3px_0_0_rgba(0,0,0,1)] relative">
+                            MỚI NÈ!
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black" />
+                        </div>
+                    </div>
+                )}
+
+                {/* Teacher Controls */}
                 {isTeacher && Number(data.id) > 0 && (
                     <TeacherEditControls
                         id={Number(data.id)}
@@ -170,7 +232,7 @@ export const CustomNode = React.memo(({ data, selected }: NodeProps<CustomNodeTy
                     />
                 )}
             </div>
-        </div>
+        </div >
     );
 });
 

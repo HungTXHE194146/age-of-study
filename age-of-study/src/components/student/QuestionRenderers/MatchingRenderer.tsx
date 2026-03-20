@@ -8,12 +8,16 @@ interface MatchingRendererProps {
     matchingPairs: Array<{ left: string; right: string }>;
     onComplete: (isCorrect: boolean, pairs: any[]) => void;
     supportMode?: boolean;
+    hint?: string;
+    showHintsSetting?: boolean;
 }
 
 export default function MatchingRenderer({
     matchingPairs,
     onComplete,
     supportMode = true,
+    hint,
+    showHintsSetting = false,
 }: MatchingRendererProps) {
     const [leftItems, setLeftItems] = useState<string[]>([]);
     const [rightItems, setRightItems] = useState<string[]>([]);
@@ -124,7 +128,9 @@ export default function MatchingRenderer({
                     >
                         <div className="text-4xl">🦉</div>
                         <p className="font-black text-sky-800 italic">
-                            "Bạn nhỏ ơi, hãy nối hết các cặp để khám phá bí mật tiếp theo nào!"
+                            {showHintsSetting && hint
+                                ? hint
+                                : '"Bạn nhỏ ơi, hãy nối hết các cặp để khám phá bí mật tiếp theo nào!"'}
                         </p>
                     </motion.div>
                 )}

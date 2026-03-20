@@ -127,6 +127,7 @@ export default function TestInterface({
                             handleAnswerChange={handleAnswerChange}
                             setIsQuestionComplete={setIsQuestionComplete}
                             handleNextQuestion={handleNextQuestion}
+                            showHintsSetting={test.settings?.show_hints ?? false}
                         />
                     </motion.div>
 
@@ -196,13 +197,13 @@ export default function TestInterface({
     );
 }
 
-
 interface QuestionBodyRendererProps {
     currentQuestion: Question;
     answers: Record<string, number | string>;
     handleAnswerChange: (questionId: string, answer: number | string) => void;
     setIsQuestionComplete: (complete: boolean) => void;
     handleNextQuestion: () => void;
+    showHintsSetting: boolean;
 }
 
 function QuestionBodyRenderer({
@@ -211,13 +212,103 @@ function QuestionBodyRenderer({
     handleAnswerChange,
     setIsQuestionComplete,
     handleNextQuestion,
+    showHintsSetting,
 }: QuestionBodyRendererProps) {
     const qType = (currentQuestion.content?.type || currentQuestion.q_type || "").toUpperCase();
 
     switch (qType) {
-        // ... (WORD_ORDERING, MATCHING, FILL_IN_BLANKS, CATEGORIZATION, FIND_ERROR cases remain the same)
+        case "WORD_ORDERING":
+            return (
+                <WordOrderingRenderer
+                    questionText={currentQuestion.content?.questionText || ""}
+                    orderedWords={currentQuestion.content?.metadata?.orderedWords || []}
+                    onComplete={(isCorrect) => {
+                        handleAnswerChange(currentQuestion.id, answers[currentQuestion.id] || "");
+                        setIsQuestionComplete(isCorrect);
+                    }}
+                    hint={currentQuestion.content?.hint}
+                    showHintsSetting={showHintsSetting}
+                />
+            );
+
+        case "MATCHING":
+            return (
+                <MatchingRenderer
+                    matchingPairs={currentQuestion.content?.metadata?.matchingPairs || []}
+                    onComplete={(isCorrect, pairs) => {
+                        handleAnswerChange(currentQuestion.id, JSON.stringify(pairs));
+                        setIsQuestionComplete(isCorrect);
+                    }}
+                    hint={currentQuestion.content?.hint}
+                    showHintsSetting={showHintsSetting}
+                />
+            );
+
+        case "FILL_IN_BLANKS":
+            return (
+                <FillInBlanksRenderer
+                    questionText={currentQuestion.content?.questionText || ""}
+                    blanks={currentQuestion.content?.metadata?.blanks || []}
+                    onComplete={(isCorrect, userAnswers) => {
+                        handleAnswerChange(currentQuestion.id, userAnswers.join("|"));
+                        setIsQuestionComplete(isCorrect);
+                    }}
+                    hint={currentQuestion.content?.hint}
+                    showHintsSetting={showHintsSetting}
+                />
+            );
+
+        case "CATEGORIZATION":
+            return (
+                <CategorizationRenderer
+                    categoriesData={currentQuestion.content?.metadata?.categories || []}
+                    onComplete={(isCorrect, categories) => {
+                        handleAnswerChange(currentQuestion.id, JSON.stringify(categories));
+                        setIsQuestionComplete(isCorrect);
+                    }}
+                    hint={currentQuestion.content?.hint}
+                    showHintsSetting={showHintsSetting}
+                />
+            );
+
+        case "FIND_ERROR":
+            return (
+                <FindErrorRenderer
+                    questionText={currentQuestion.content?.questionText || ""}
+                    errorPosition={
+                        currentQuestion.content?.metadata?.errorPosition || {
+                            startIndex: 0,
+                            endIndex: 0,
+                            correctText: "",
+                        }
+                    }
+                    onComplete={(isCorrect, selectedText) => {
+                        handleAnswerChange(currentQuestion.id, selectedText);
+                        setIsQuestionComplete(isCorrect);
+                    }}
+                    hint={currentQuestion.content?.hint}
+                    showHintsSetting={showHintsSetting}
+                />
+            );
+
         case "ESSAY":
-        // ... (ESSAY case remain same)
+            return (
+                <div className="space-y-4">
+                    <textarea
+                        value={(answers[currentQuestion.id] as string) || ""}
+                        onChange={(e) => {
+                            handleAnswerChange(currentQuestion.id, e.target.value);
+                            setIsQuestionComplete(e.target.value.length > 5);
+                        }}
+                        className="w-full p-6 text-xl font-medium border-4 border-slate-800 rounded-[2rem] focus:ring-4 focus:ring-indigo-200 outline-none transition-all min-h-[200px]"
+                        placeholder="Nhập câu trả lời của em tại đây..."
+                    />
+                    <p className="text-sm text-slate-400 font-bold italic">
+                        (Giáo viên sẽ chấm điểm bài này sau nhé!)
+                    </p>
+                </div>
+            );
+
         default: // MULTIPLE_CHOICE or TRUE_FALSE
             return (currentQuestion.content.options || []).map((option: string | QuestionOption, index: number) => {
                 const isSelected = answers[currentQuestion.id] === index;

@@ -103,6 +103,7 @@ const prepareQuestionsToSave = (questions: Question[], testDetails: any, userId:
       content: {
         type: q.type,
         questionText: q.questionText,
+        hint: q.hint,
         options: (q.options || []).map((opt) => ({
           label: opt.label,
           text: opt.text,
@@ -210,6 +211,7 @@ function TestEditContent() {
           explanation: q.explanation || q.content.explanation || "",
           model_answer: q.model_answer || "",
           metadata: q.content.metadata,
+          hint: q.content.hint || "",
           points: q.points || 10,
         }));
 

@@ -9,6 +9,8 @@ interface WordOrderingRendererProps {
     orderedWords: string[];
     onComplete: (isCorrect: boolean, answer: string[]) => void;
     supportMode?: boolean;
+    hint?: string;
+    showHintsSetting?: boolean;
 }
 
 export default function WordOrderingRenderer({
@@ -16,6 +18,8 @@ export default function WordOrderingRenderer({
     orderedWords,
     onComplete,
     supportMode = true,
+    hint,
+    showHintsSetting = false,
 }: WordOrderingRendererProps) {
     const [shuffledWords, setShuffledWords] = useState<string[]>([]);
     const [selectedWords, setSelectedWords] = useState<string[]>([]);
@@ -116,15 +120,15 @@ export default function WordOrderingRenderer({
                         <div className="text-4xl">🦉</div>
                         <div>
                             <p className="font-black text-yellow-800 text-lg">
-                                Ối, hiệp sĩ ơi! Còn một chút xíu nữa thôi!
+                                {showHintsSetting && hint ? "🦉 Gợi ý từ Giáo sư Cú:" : "Ối, hiệp sĩ ơi! Còn một chút xíu nữa thôi!"}
                             </p>
                             <p className="font-bold text-yellow-700">
-                                Lớp mình thử đổi chỗ các từ xem sao nhé. Cố lên nào!
+                                {showHintsSetting && hint ? hint : "Lớp mình thử đổi chỗ các từ xem sao nhé. Cố lên nào!"}
                             </p>
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 }

@@ -27,6 +27,10 @@ export function QuestionEditor({ question, onSave, onCancel }: QuestionEditorPro
     setEditedQuestion(prev => ({ ...prev, difficulty: value }));
   };
 
+  const handleHintChange = (value: string) => {
+    setEditedQuestion(prev => ({ ...prev, hint: value }));
+  };
+
   const handleOptionChange = (optionId: string, field: 'text' | 'isCorrect', value: string | boolean) => {
     setEditedQuestion(prev => ({
       ...prev,
@@ -223,6 +227,21 @@ export function QuestionEditor({ question, onSave, onCancel }: QuestionEditorPro
                 rows={3}
                 className="w-full px-4 py-3 border-2 border-dashed border-gray-400 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-blue-50 text-lg font-medium transition-colors resize-none"
                 placeholder="Nhập nội dung câu hỏi..."
+              />
+            </div>
+
+            {/* Hint Content */}
+            <div className="bg-indigo-50 p-4 rounded-xl border-2 border-indigo-200 shadow-[4px_4px_0_0_rgba(99,102,241,0.2)]">
+              <label className="text-lg font-black text-indigo-900 mb-3 block uppercase tracking-tight flex items-center gap-2">
+                <span>🦉 Gợi ý cho học sinh (Hint)</span>
+                <span className="text-xs font-bold bg-indigo-200 px-2 py-0.5 rounded text-indigo-700 normal-case">Xuất hiện khi trả lời sai</span>
+              </label>
+              <textarea
+                value={editedQuestion.hint || ''}
+                onChange={(e) => handleHintChange(e.target.value)}
+                rows={2}
+                className="w-full px-4 py-3 border-2 border-dashed border-indigo-300 rounded-lg focus:outline-none focus:border-indigo-500 focus:bg-white text-base font-medium transition-colors resize-none"
+                placeholder="Ví dụ: Hãy để ý kỹ vần của từ này nhé!..."
               />
             </div>
 
@@ -436,8 +455,8 @@ export function QuestionEditor({ question, onSave, onCancel }: QuestionEditorPro
                             });
                           }}
                           className={`px-2 py-1 rounded-md border-2 font-bold transition-all ${isSelected
-                              ? "bg-red-500 text-white border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
-                              : "bg-white border-gray-300 hover:border-black"
+                            ? "bg-red-500 text-white border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+                            : "bg-white border-gray-300 hover:border-black"
                             }`}
                         >
                           {part}

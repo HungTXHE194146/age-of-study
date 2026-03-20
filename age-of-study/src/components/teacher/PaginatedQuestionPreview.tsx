@@ -224,6 +224,15 @@ export function PaginatedQuestionPreview({
               <h4 className="text-2xl font-bold text-gray-900 mb-6 leading-relaxed">
                 {currentQuestion.questionText}
               </h4>
+              {currentQuestion.hint && (
+                <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl flex items-start gap-3">
+                  <div className="text-xl">💡</div>
+                  <div>
+                    <p className="text-xs font-black text-blue-700 uppercase tracking-wider mb-1">Gợi ý cho học sinh:</p>
+                    <p className="text-sm font-bold text-blue-800 italic">{currentQuestion.hint}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -339,6 +348,8 @@ export function PaginatedQuestionPreview({
                       confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                     }
                   }}
+                  hint={currentQuestion.hint}
+                  showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 border-2 border-green-600 rounded-xl">
@@ -359,6 +370,8 @@ export function PaginatedQuestionPreview({
                       confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                     }
                   }}
+                  hint={currentQuestion.hint}
+                  showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 border-2 border-green-600 rounded-xl">
@@ -386,6 +399,8 @@ export function PaginatedQuestionPreview({
                       confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                     }
                   }}
+                  hint={currentQuestion.hint}
+                  showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 border-2 border-green-600 rounded-xl">
@@ -412,6 +427,8 @@ export function PaginatedQuestionPreview({
                       confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                     }
                   }}
+                  hint={currentQuestion.hint}
+                  showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 gap-4">
@@ -437,6 +454,8 @@ export function PaginatedQuestionPreview({
                       confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                     }
                   }}
+                  hint={currentQuestion.hint}
+                  showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 border-2 border-green-600 rounded-xl">

@@ -107,8 +107,9 @@ const prepareQuestionsToSave = (questions: Question[], testDetails: any, userId:
       id: q.id,
       node_id: resolveNodeId(testDetails.subject, testDetails.node),
       content: {
-        type: q.type, // Make sure we match QuestionContent signature if needed
+        type: q.type,
         questionText: q.questionText,
+        hint: q.hint,
         options: (q.options || []).map((opt) => ({
           label: opt.label,
           text: opt.text,

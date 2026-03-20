@@ -103,60 +103,70 @@ export async function syncTestProgressAction(
     const supabase = supabaseClient as any; // Cast to any to bypass strict typing for missing tables
     
     // 1. We bypass the RPC function to run JS logic because the DB one might not have the correct submit_count/bestScore logic
-    
-    // 2. Get the node_id and title for this test
-    const { data: testData } = await supabase
-      .from("tests")
-      .select("node_id, title")
-      .eq("id", testId)
-      .single();
-      
-    if (testData?.node_id) {
-      const isCompleted = score >= 50;
-      
-      // Get existing progress to prevent overwriting with lower scores
-      const { data: existingProgress } = await supabase
-        .from("student_node_progress")
-        .select("*")
-        .eq("student_id", studentId)
-        .eq("node_id", testData.node_id)
+        // 2. Get the node_id and title for this test, and the required_xp of that node
+      const { data: testData } = await supabase
+        .from("tests")
+        .select(`
+          id,
+          title,
+          node_id,
+          nodes (
+            required_xp
+          )
+        `)
+        .eq("id", testId)
         .single();
+      
+      if (testData?.node_id) {
+        // required_xp logic from nodes table
+        const nodeRequiredXp = (testData.nodes as any)?.required_xp || 100; // default if missing
+        
+        // Get existing progress
+        const { data: existingProgress } = await supabase
+          .from("student_node_progress")
+          .select("*")
+          .eq("student_id", studentId)
+          .eq("node_id", testData.node_id)
+          .single();
 
-      let finalStatus = isCompleted ? "completed" : "in_progress";
-      let finalScoreStr = score.toString();
-      let finalCompletedAt = isCompleted ? new Date().toISOString() : null;
-      let submitCount = 1;
+        let currentBestXp = xpEarned;
+        let submitCount = 1;
 
-      if (existingProgress) {
-        // Keep completed status if it was already completed
-        if (existingProgress.status === "completed") {
+        if (existingProgress) {
+          // Keep highest XP (stored in score column for this task)
+          const existingBestXp = existingProgress.score ? parseFloat(existingProgress.score) : 0;
+          if (existingBestXp > currentBestXp) {
+            currentBestXp = existingBestXp;
+          }
+          submitCount = (existingProgress.submit_count || 0) + 1;
+        }
+
+        // Check if now completed based on XP
+        const isCompleted = currentBestXp >= nodeRequiredXp;
+        let finalStatus = isCompleted ? "completed" : "in_progress";
+        
+        // If it was already completed, don't revert to in_progress
+        if (existingProgress?.status === "completed") {
           finalStatus = "completed";
-          finalCompletedAt = existingProgress.completed_at || finalCompletedAt;
         }
-        
-        // Keep the higher score
-        const existingScoreNum = parseInt(existingProgress.score || "0", 10);
-        if (score < existingScoreNum) {
-          finalScoreStr = existingProgress.score;
-        }
-        
-        // Increment submit count
-        submitCount = (existingProgress.submit_count || 0) + 1;
-      }
 
-      // Update progress with best stats
-      await supabase
-        .from("student_node_progress")
-        .upsert({
-          student_id: studentId,
-          node_id: testData.node_id,
-          status: finalStatus,
-          completed_at: finalCompletedAt,
-          score: finalScoreStr,
-          submit_count: submitCount,
-          last_accessed_at: new Date().toISOString()
-        }, { onConflict: "student_id, node_id" });
-    }
+        const finalCompletedAt = (finalStatus === "completed" && !existingProgress?.completed_at) 
+          ? new Date().toISOString() 
+          : existingProgress?.completed_at;
+
+        // Update progress with best stats (XP based, stored in score as text)
+        await supabase
+          .from("student_node_progress")
+          .upsert({
+            student_id: studentId,
+            node_id: testData.node_id,
+            status: finalStatus,
+            completed_at: finalCompletedAt,
+            score: currentBestXp.toString(), // Use score column to store best_xp as text
+            submit_count: submitCount,
+            last_accessed_at: new Date().toISOString()
+          }, { onConflict: "student_id, node_id" });
+      }
     
     // 3. Update XP + Streak + Weekly/Monthly XP (atomic via RPC)
     // ── Compute streak delta client-side, then apply atomically ─────────────

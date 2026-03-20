@@ -13,6 +13,25 @@ CREATE TABLE public.activity_logs (
   CONSTRAINT activity_logs_pkey PRIMARY KEY (id),
   CONSTRAINT activity_logs_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.profiles(id)
 );
+CREATE TABLE public.audit_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  actor_id uuid NOT NULL,
+  actor_role USER-DEFINED NOT NULL,
+  actor_email text,
+  action USER-DEFINED NOT NULL,
+  resource_type text,
+  resource_id text,
+  description text NOT NULL,
+  old_values jsonb,
+  new_values jsonb,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  ip_address inet,
+  user_agent text,
+  session_id text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT audit_logs_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.profiles(id)
+);
 CREATE TABLE public.avatar_shop (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   avatar_code text NOT NULL UNIQUE,
@@ -35,6 +54,7 @@ CREATE TABLE public.badges (
   icon_url text,
   condition_type text,
   condition_value integer,
+  xp_reward integer NOT NULL DEFAULT 50,
   CONSTRAINT badges_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.certificates (
@@ -191,6 +211,7 @@ CREATE TABLE public.nodes (
   order_index integer DEFAULT 0,
   source_position text DEFAULT 'bottom'::text CHECK (source_position = ANY (ARRAY['top'::text, 'bottom'::text, 'left'::text, 'right'::text])),
   target_position text DEFAULT 'top'::text CHECK (target_position = ANY (ARRAY['top'::text, 'bottom'::text, 'left'::text, 'right'::text])),
+  volume_number smallint CHECK (volume_number IS NULL OR (volume_number = ANY (ARRAY[1, 2]))),
   CONSTRAINT nodes_pkey PRIMARY KEY (id),
   CONSTRAINT nodes_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.subjects(id),
   CONSTRAINT nodes_parent_node_id_fkey FOREIGN KEY (parent_node_id) REFERENCES public.nodes(id)
@@ -228,6 +249,9 @@ CREATE TABLE public.profiles (
   must_change_password boolean DEFAULT false,
   last_active_at timestamp with time zone,
   email text,
+  mfa_enabled boolean DEFAULT false,
+  mfa_enrolled_at timestamp without time zone,
+  metadata jsonb DEFAULT '{}'::jsonb,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
@@ -287,6 +311,7 @@ CREATE TABLE public.system_settings (
   ai_question_max_tokens integer NOT NULL DEFAULT 8000 CHECK (ai_question_max_tokens >= 100 AND ai_question_max_tokens <= 32000),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_by uuid,
+  ai_chat_banned_words text NOT NULL DEFAULT ''::text,
   CONSTRAINT system_settings_pkey PRIMARY KEY (id),
   CONSTRAINT system_settings_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.profiles(id)
 );
@@ -361,6 +386,7 @@ CREATE TABLE public.user_badges (
   user_id uuid NOT NULL,
   badge_id text NOT NULL,
   earned_at timestamp with time zone DEFAULT now(),
+  xp_claimed_at timestamp with time zone,
   CONSTRAINT user_badges_pkey PRIMARY KEY (user_id, badge_id),
   CONSTRAINT user_badges_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
   CONSTRAINT user_badges_badge_id_fkey FOREIGN KEY (badge_id) REFERENCES public.badges(id)

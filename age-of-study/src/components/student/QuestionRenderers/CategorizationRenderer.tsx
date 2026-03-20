@@ -8,12 +8,16 @@ interface CategorizationRendererProps {
     categoriesData: Array<{ name: string; items: string[] }>;
     onComplete: (isCorrect: boolean, categories: any[]) => void;
     supportMode?: boolean;
+    hint?: string;
+    showHintsSetting?: boolean;
 }
 
 export default function CategorizationRenderer({
     categoriesData,
     onComplete,
     supportMode = true,
+    hint,
+    showHintsSetting = false,
 }: CategorizationRendererProps) {
     const allItems = categoriesData.flatMap(cat => cat.items);
 
@@ -167,7 +171,9 @@ export default function CategorizationRenderer({
                     >
                         <div className="text-4xl">🦉</div>
                         <p className="font-black italic text-lg">
-                            "Bạn nhỏ ơi, mình hãy xem kỹ lại các nhóm từ nhé. Một vài từ đang đi nhầm nhà kìa!"
+                            {showHintsSetting && hint
+                                ? hint
+                                : '"Bạn nhỏ ơi, mình hãy xem kỹ lại các nhóm từ nhé. Một vài từ đang đi nhầm nhà kìa!"'}
                         </p>
                     </motion.div>
                 )}
