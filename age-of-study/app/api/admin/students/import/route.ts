@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
       if (!targetUserId) {
         // Create user via Supabase Auth Admin
         const { data: authData, error: authCreateError } = await supabaseAdmin.auth.admin.createUser({
-          email: `${username}@student.ageofstudy.com`, // Fake email suffix for uniqueness
+          email: `${username}@ageofstudy.local`, // Must match the domain used in login
           password: password,
           email_confirm: true,
           user_metadata: {
