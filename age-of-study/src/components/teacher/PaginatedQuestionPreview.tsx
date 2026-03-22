@@ -224,6 +224,15 @@ export function PaginatedQuestionPreview({
               <h4 className="text-2xl font-bold text-gray-900 mb-6 leading-relaxed">
                 {currentQuestion.questionText}
               </h4>
+              {currentQuestion.hint && (
+                <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl flex items-start gap-3">
+                  <div className="text-xl">💡</div>
+                  <div>
+                    <p className="text-xs font-black text-blue-700 uppercase tracking-wider mb-1">Gợi ý cho học sinh:</p>
+                    <p className="text-sm font-bold text-blue-800 italic">{currentQuestion.hint}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -271,9 +280,9 @@ export function PaginatedQuestionPreview({
           {/* True/False */}
           {currentQuestion.type === "TRUE_FALSE" && (
             <div className="space-y-4">
-              {currentQuestion.options.map((option) => (
+              {currentQuestion.options.map((option, index) => (
                 <button
-                  key={option.id}
+                  key={`tf-option-${currentQuestion.id}-${index}`}
                   disabled={feedback?.isCorrect}
                   onClick={() => {
                     if (option.isCorrect) {
@@ -339,6 +348,8 @@ export function PaginatedQuestionPreview({
                       confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                     }
                   }}
+                  hint={currentQuestion.hint}
+                  showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 border-2 border-green-600 rounded-xl">
@@ -359,6 +370,8 @@ export function PaginatedQuestionPreview({
                       confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                     }
                   }}
+                  hint={currentQuestion.hint}
+                  showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 border-2 border-green-600 rounded-xl">
@@ -386,6 +399,8 @@ export function PaginatedQuestionPreview({
                       confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                     }
                   }}
+                  hint={currentQuestion.hint}
+                  showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 border-2 border-green-600 rounded-xl">
@@ -412,6 +427,8 @@ export function PaginatedQuestionPreview({
                       confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                     }
                   }}
+                  hint={currentQuestion.hint}
+                  showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 gap-4">
@@ -437,6 +454,8 @@ export function PaginatedQuestionPreview({
                       confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                     }
                   }}
+                  hint={currentQuestion.hint}
+                  showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 border-2 border-green-600 rounded-xl">
@@ -461,6 +480,22 @@ export function PaginatedQuestionPreview({
               </div>
             )}
           </div>
+
+          {/* Explanation Section */}
+          {currentQuestion.explanation && (
+            <div className="mt-8 p-6 bg-yellow-50 border-2 border-yellow-200 rounded-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-400/10 rounded-full -mr-8 -mt-8 group-hover:scale-110 transition-transform"></div>
+              <h5 className="flex items-center gap-2 text-lg font-black text-yellow-800 mb-3 uppercase tracking-tight">
+                <span className="text-2xl animate-pulse">💡</span> Giải thích từ Giáo sư Cú:
+              </h5>
+              <div
+                className="text-yellow-900 font-bold leading-relaxed italic pr-4"
+                dangerouslySetInnerHTML={{
+                  __html: currentQuestion.explanation || "",
+                }}
+              />
+            </div>
+          )}
 
 
         </div>

@@ -7,13 +7,21 @@ import { Question } from "@/types/teacher";
 interface MatchingRendererProps {
     matchingPairs: Array<{ left: string; right: string }>;
     onComplete: (isCorrect: boolean, pairs: any[]) => void;
+    onUpdate?: (pairs: any[]) => void;
+    initialAnswer?: any[];
     supportMode?: boolean;
+    hint?: string;
+    showHintsSetting?: boolean;
 }
 
 export default function MatchingRenderer({
     matchingPairs,
     onComplete,
+    onUpdate,
+    initialAnswer,
     supportMode = true,
+    hint,
+    showHintsSetting = false,
 }: MatchingRendererProps) {
     const [leftItems, setLeftItems] = useState<string[]>([]);
     const [rightItems, setRightItems] = useState<string[]>([]);
@@ -26,20 +34,26 @@ export default function MatchingRenderer({
     useEffect(() => {
         setLeftItems([...matchingPairs.map(p => p.left)].sort(() => Math.random() - 0.5));
         setRightItems([...matchingPairs.map(p => p.right)].sort(() => Math.random() - 0.5));
-        setMatchedPairs([]);
+
+        if (initialAnswer && initialAnswer.length > 0) {
+            setMatchedPairs(initialAnswer);
+        } else {
+            setMatchedPairs([]);
+        }
+
         setSelectedLeft(null);
         setSelectedRight(null);
         setShowHint(false);
-    }, [matchingPairs]);
+    }, [matchingPairs, initialAnswer]);
 
     const handleLeftClick = (item: string) => {
-        if (matchedPairs.some(p => p.left === item)) return;
+        if (matchedPairs.some((p: { left: string }) => p.left === item)) return;
         setSelectedLeft(item === selectedLeft ? null : item);
         checkMatch(item, selectedRight);
     };
 
     const handleRightClick = (item: string) => {
-        if (matchedPairs.some(p => p.right === item)) return;
+        if (matchedPairs.some((p: { right: string }) => p.right === item)) return;
         setSelectedRight(item === selectedRight ? null : item);
         checkMatch(selectedLeft, item);
     };
@@ -53,6 +67,9 @@ export default function MatchingRenderer({
                 setMatchedPairs(newMatched);
                 setSelectedLeft(null);
                 setSelectedRight(null);
+
+                // Sync to parent
+                onUpdate?.(newMatched);
 
                 if (newMatched.length === matchingPairs.length) {
                     onComplete(true, newMatched);
@@ -124,7 +141,9 @@ export default function MatchingRenderer({
                     >
                         <div className="text-4xl">🦉</div>
                         <p className="font-black text-sky-800 italic">
-                            "Bạn nhỏ ơi, hãy nối hết các cặp để khám phá bí mật tiếp theo nào!"
+                            {showHintsSetting && hint
+                                ? hint
+                                : '"Bạn nhỏ ơi, hãy nối hết các cặp để khám phá bí mật tiếp theo nào!"'}
                         </p>
                     </motion.div>
                 )}

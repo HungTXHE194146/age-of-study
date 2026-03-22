@@ -14,6 +14,9 @@ export interface Node {
   volume_number?: number | null;
   week_number?: number | null;
   children?: Node[];
+  // Student specific data
+  best_xp?: number;
+  node_status?: string;
 }
 
 // Định nghĩa interface Subject để match với database schema
@@ -29,102 +32,36 @@ export interface Subject {
 
 /**
  * Server-side function: Lấy toàn bộ cây kỹ năng của một khối học
- * @param gradeCode Mã khối học (ví dụ: "10", "11", "12")
- * @returns Cấu trúc dữ liệu gồm Node Gốc (Khối) -> Các Node Môn học -> Các Node bài học con
+ * @param gradeLevel Mã khối học (vd: "1", "2", ...)
  */
-export async function fetchGradeSkillTree(gradeCode: string): Promise<{
-  gradeNode: Node;
-  subjects: Subject[];
-  nodes: Node[];
-}> {
+export async function fetchGradeSkillTree(gradeLevel: string) {
   try {
     const supabase = getSupabaseBrowserClient();
-
-    // Lấy danh sách các môn học thuộc khối
+    
+    // 1. Lấy danh sách môn học thuộc khối này
     const { data: subjects, error: subjectsError } = await supabase
       .from('subjects')
       .select('*')
-      .eq('grade_level', gradeCode)
+      .eq('grade_level', gradeLevel)
       .order('name', { ascending: true });
 
     if (subjectsError) {
-      console.error('Error fetching subjects:', subjectsError);
-      throw new Error(`Failed to fetch subjects: ${subjectsError.message}`);
+      console.error('Error fetching subjects for grade:', subjectsError);
+      return [];
     }
 
-    if (!subjects || subjects.length === 0) {
+    if (!subjects || subjects.length === 0) return [];
+
+    // 2. Với mỗi môn học, lấy danh sách nodes
+    const results = await Promise.all(subjects.map(async (subject: Subject) => {
+      const { nodes } = await fetchSubjectSkillTree(subject.id);
       return {
-        gradeNode: {
-          id: -999999,
-          title: `Khối ${gradeCode}`,
-          description: `Các môn học thuộc khối ${gradeCode}`,
-          parent_node_id: null,
-          node_type: 'grade',
-          required_xp: 0,
-          position_x: 0,
-          position_y: 0,
-          order_index: 0,
-          children: []
-        },
-        subjects: [],
-        nodes: []
+        ...subject,
+        nodes: buildSkillTree(nodes)
       };
-    }
+    }));
 
-    // Lấy danh sách tất cả các nodes thuộc các môn học đó
-    const subjectIds = subjects.map((s: Subject) => s.id);
-    const { data: nodes, error: nodesError } = await supabase
-      .from('nodes')
-      .select('*')
-      .in('subject_id', subjectIds)
-      .order('order_index', { ascending: true });
-
-    if (nodesError) {
-      console.error('Error fetching nodes:', nodesError);
-      throw new Error(`Failed to fetch nodes: ${nodesError.message}`);
-    }
-
-    // Xây dựng cấu trúc cây kỹ năng cho từng môn học
-    const subjectNodes: Node[] = [];
-    subjects.forEach((subject: Subject) => {
-      const subjectNode: Node = {
-        id: -subject.id, // Negative to prevent colliding with nodes table IDs
-        title: subject.name,
-        description: subject.description || '',
-        parent_node_id: null,
-        node_type: 'subject',
-        required_xp: 0,
-        position_x: 0,
-        position_y: 0,
-        order_index: subject.id,
-        children: []
-      };
-      subjectNodes.push(subjectNode);
-    });
-
-    // Xây dựng cây kỹ năng đầy đủ
-    const allNodes = [...subjectNodes, ...(nodes || [])];
-    const skillTree = buildSkillTree(allNodes);
-
-    // Tạo node gốc cho khối học
-    const gradeNode: Node = {
-      id: -999999,
-      title: `Khối ${gradeCode}`,
-      description: `Các môn học thuộc khối ${gradeCode}`,
-      parent_node_id: null,
-      node_type: 'grade',
-      required_xp: 0,
-      position_x: 0,
-      position_y: 0,
-      order_index: 0,
-      children: skillTree
-    };
-
-    return {
-      gradeNode,
-      subjects: subjects || [],
-      nodes: allNodes
-    };
+    return results;
   } catch (error) {
     console.error('Error in fetchGradeSkillTree:', error);
     throw error;
@@ -134,9 +71,10 @@ export async function fetchGradeSkillTree(gradeCode: string): Promise<{
 /**
  * Server-side function: Lấy toàn bộ cây kỹ năng của một môn học
  * @param subjectId ID của môn học
+ * @param studentId ID của học sinh (để lấy tiến độ XP)
  * @param volumeNumber Optional volume number (1 or 2) for subjects with volumes
  */
-export async function fetchSubjectSkillTree(subjectId: number, volumeNumber?: number): Promise<{
+export async function fetchSubjectSkillTree(subjectId: number, studentId?: string, volumeNumber?: number): Promise<{
   subject: Subject | null;
   nodes: Node[];
 }> {
@@ -155,18 +93,29 @@ export async function fetchSubjectSkillTree(subjectId: number, volumeNumber?: nu
       return { subject: null, nodes: [] };
     }
 
-    // Lấy danh sách tất cả các nodes thuộc môn học đó
+    // Lấy danh sách tất cả các nodes thuộc môn học đó kèm theo tiến độ của học sinh
     let query = supabase
       .from('nodes')
-      .select('*')
+      .select(`
+        *,
+        student_node_progress!left (
+          score,
+          status
+        )
+      `)
       .eq('subject_id', subjectId);
+
+    if (studentId) {
+      // Filter the join specifically for this student
+      query = query.eq('student_node_progress.student_id', studentId);
+    }
 
     // Filter by volume and lesson type when volume is specified
     if (volumeNumber) {
       query = query.eq('node_type', 'lesson').eq('volume_number', volumeNumber);
     }
 
-    const { data: nodes, error: nodesError } = await query
+    const { data: nodesData, error: nodesError } = await query
       .order('order_index', { ascending: true });
 
     if (nodesError) {
@@ -174,9 +123,19 @@ export async function fetchSubjectSkillTree(subjectId: number, volumeNumber?: nu
       throw new Error(`Failed to fetch nodes: ${nodesError.message}`);
     }
 
+    // Map nested student_node_progress to flat properties
+    const nodes: Node[] = (nodesData || []).map((n: any) => {
+      const progress = n.student_node_progress?.[0];
+      return {
+        ...n,
+        best_xp: progress?.score ? parseFloat(progress.score) : 0,
+        node_status: progress?.status || 'locked'
+      };
+    });
+
     return {
       subject,
-      nodes: nodes || []
+      nodes
     };
   } catch (error) {
     console.error('Error in fetchSubjectSkillTree:', error);

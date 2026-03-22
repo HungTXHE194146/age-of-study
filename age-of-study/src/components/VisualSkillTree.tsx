@@ -320,6 +320,36 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     }
   }, [nodes, edges, isTeacherMode, setNodes, setEdges]);
 
+  // Determine current week from scroll position
+  const [currentWeek, setCurrentWeek] = useState<number | null>(null);
+
+  const handleMove = useCallback((event: any, viewport: { x: number; y: number; zoom: number }) => {
+    if (!subjectNodes || isTeacherMode) return;
+
+    // Viewport Y is negative when scrolling down
+    // The nodes are positioned at positive Y. 
+    // The top of the screen in terms of node Y is roughly: -viewport.y / viewport.zoom
+    const screenTopY = -viewport.y / viewport.zoom;
+
+    // Find the node closest to this Y
+    let closestNode = null;
+    let minDistance = Infinity;
+
+    for (const node of subjectNodes) {
+      if (node.week_number) {
+        const distance = Math.abs(node.position_y! - screenTopY);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestNode = node;
+        }
+      }
+    }
+
+    if (closestNode?.week_number && closestNode.week_number !== currentWeek) {
+      setCurrentWeek(closestNode.week_number);
+    }
+  }, [subjectNodes, isTeacherMode, currentWeek]);
+
   if (!subjectNodes) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-transparent relative overflow-hidden">
@@ -333,6 +363,15 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
       <div
         className={`w-full h-full relative overflow-hidden flex flex-col ${isTeacherMode ? "max-w-[400px] mx-auto border-x-4 border-black shadow-[4px_0_0_0_rgba(0,0,0,1),-4px_0_0_0_rgba(0,0,0,1)] bg-[#fffdf8]" : "bg-transparent"}`}
       >
+        {/* Sticky Week Header for Students */}
+        {!isTeacherMode && currentWeek && (
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 duration-300">
+            <div className="bg-[#fbbf24] border-2 border-black rounded-full px-6 py-1 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-2">
+              <span className="text-xs font-black uppercase tracking-widest text-black font-handwritten">TUẦN {currentWeek}</span>
+            </div>
+          </div>
+        )}
+
         {/* Shared SVG filter – rendered once to avoid duplicate DOM nodes per edge */}
         <svg
           style={{
@@ -563,6 +602,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
             onNodeDragStop={onNodeDragStop as any}
             onNodeClick={onNodeClick as any}
             onInit={setRfInstance}
+            onMove={handleMove}
             nodeTypes={nodeTypes as any}
             edgeTypes={edgeTypes as any}
             fitView

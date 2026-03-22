@@ -1,9 +1,11 @@
 "use client";
 
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Question, TestWithQuestions, QuestionOption } from "@/types/test";
 import { Button } from "@/components/ui/button";
 import confetti from "canvas-confetti";
+import { RotateCcw } from "lucide-react";
 import WordOrderingRenderer from "@/components/student/QuestionRenderers/WordOrderingRenderer";
 import MatchingRenderer from "@/components/student/QuestionRenderers/MatchingRenderer";
 import FillInBlanksRenderer from "@/components/student/QuestionRenderers/FillInBlanksRenderer";
@@ -120,14 +122,45 @@ export default function TestInterface({
                         }}
                     />
 
-                    <motion.div animate={isWobbling ? { x: [-10, 10, -10, 10, 0] } : {}} className="space-y-4 mb-10">
+                    <motion.div
+                        key={`question-container-${currentQuestion.id}`}
+                        animate={isWobbling ? { x: [-10, 10, -10, 10, 0] } : {}}
+                        className="space-y-4 mb-10"
+                    >
                         <QuestionBodyRenderer
                             currentQuestion={currentQuestion}
                             answers={answers}
                             handleAnswerChange={handleAnswerChange}
                             setIsQuestionComplete={setIsQuestionComplete}
+                            setFriendlyMessage={setFriendlyMessage}
+                            setIsWobbling={setIsWobbling}
                             handleNextQuestion={handleNextQuestion}
+                            showHintsSetting={test.settings?.show_hints ?? false}
                         />
+
+                        {/* Nút Làm lại câu hỏi - Chỉ hiện khi đã có đáp án */}
+                        {answers[currentQuestion.id] !== undefined && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="flex justify-center mt-6"
+                            >
+                                <Button
+                                    onClick={() => {
+                                        handleAnswerChange(currentQuestion.id, undefined as any);
+                                        setIsQuestionComplete(false);
+                                        setFriendlyMessage(null);
+                                        setIsWobbling(true);
+                                        setTimeout(() => setIsWobbling(false), 500);
+                                    }}
+                                    variant="ghost"
+                                    className="text-slate-400 hover:text-indigo-600 font-bold flex items-center gap-2 px-6 py-2 rounded-xl transition-all hover:bg-indigo-50"
+                                >
+                                    <RotateCcw className="w-5 h-5" />
+                                    LÀM LẠI CÂU NÀY
+                                </Button>
+                            </motion.div>
+                        )}
                     </motion.div>
 
                     {/* Friendly Reminder Popup */}
@@ -196,13 +229,15 @@ export default function TestInterface({
     );
 }
 
-
 interface QuestionBodyRendererProps {
     currentQuestion: Question;
     answers: Record<string, number | string>;
     handleAnswerChange: (questionId: string, answer: number | string) => void;
     setIsQuestionComplete: (complete: boolean) => void;
+    setFriendlyMessage: (msg: string | null) => void;
+    setIsWobbling: (wobble: boolean) => void;
     handleNextQuestion: () => void;
+    showHintsSetting: boolean;
 }
 
 function QuestionBodyRenderer({
@@ -210,44 +245,206 @@ function QuestionBodyRenderer({
     answers,
     handleAnswerChange,
     setIsQuestionComplete,
+    setFriendlyMessage,
+    setIsWobbling,
     handleNextQuestion,
+    showHintsSetting,
 }: QuestionBodyRendererProps) {
     const qType = (currentQuestion.content?.type || currentQuestion.q_type || "").toUpperCase();
 
-    switch (qType) {
-        // ... (WORD_ORDERING, MATCHING, FILL_IN_BLANKS, CATEGORIZATION, FIND_ERROR cases remain the same)
-        case "ESSAY":
-        // ... (ESSAY case remain same)
-        default: // MULTIPLE_CHOICE or TRUE_FALSE
-            return (currentQuestion.content.options || []).map((option: string | QuestionOption, index: number) => {
-                const isSelected = answers[currentQuestion.id] === index;
-                const optionText = typeof option === "string" ? option : (option as QuestionOption)?.text || "";
-                return (
-                    <label
-                        key={index}
-                        className={`flex items-start gap-4 p-4 rounded-2xl border-4 cursor-pointer transition-all ${isSelected
-                            ? "bg-indigo-100 border-indigo-500 shadow-[4px_4px_0_0_rgba(99,102,241,1)] transform -rotate-1 scale-[1.02]"
-                            : "bg-slate-50 border-slate-200 hover:border-slate-800 hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1"
-                            }`}
-                    >
-                        <div className="flex items-center h-6 mt-1">
-                            <input
-                                type="radio"
-                                name={`question-${currentQuestion.id}`}
-                                value={index}
-                                checked={isSelected}
-                                onChange={(e) => {
-                                    handleAnswerChange(currentQuestion.id, parseInt(e.target.value));
-                                    setIsQuestionComplete(true);
-                                }}
-                                className="w-5 h-5 text-indigo-600 bg-white border-2 border-slate-800 focus:ring-indigo-500"
-                            />
-                        </div>
-                        <span className="text-lg font-bold text-slate-800 leading-snug">
-                            {String.fromCharCode(65 + index)}. {optionText}
-                        </span>
-                    </label>
-                );
+    const praises = [
+        "Tuyệt đỉnh vô đối! 🌟",
+        "Hiệp sĩ nhí giỏi quá! ⚔️",
+        "Đúng rồi! Em thông minh quá! 🧠",
+        "Xuất sắc luôn! Tiếp tục phát huy nhé! 🚀",
+        "Wow! Câu trả lời hoàn hảo! ✨"
+    ];
+
+    const encouragements = [
+        "Cố lên nào, một chút nữa thôi! 💪",
+        "Đừng bỏ cuộc nhé, hiệp sĩ nhí! 🛡️",
+        "Gần đúng rồi, em thử lại lần nữa xem! 🔄",
+        "Bình tĩnh suy nghĩ thêm chút nhé! 🤔",
+        "Lần sau chắc chắn em sẽ làm được! 💫"
+    ];
+
+    const handleFeedback = (isCorrect: boolean, hint?: string) => {
+        setIsQuestionComplete(isCorrect);
+        if (isCorrect) {
+            const randomPraise = praises[Math.floor(Math.random() * praises.length)];
+            setFriendlyMessage(randomPraise);
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
             });
+        } else {
+            const feedback = showHintsSetting && hint ? `Gợi ý: ${hint}` : encouragements[Math.floor(Math.random() * encouragements.length)];
+            setFriendlyMessage(feedback);
+            setIsWobbling(true);
+            setTimeout(() => setIsWobbling(false), 500);
+        }
+
+        // Clean up message after 3 seconds
+        setTimeout(() => {
+            setFriendlyMessage(null);
+        }, 3000);
+    };
+
+    switch (qType) {
+        case "WORD_ORDERING":
+            return (
+                <WordOrderingRenderer
+                    questionText={currentQuestion.content?.questionText || ""}
+                    orderedWords={currentQuestion.content?.metadata?.orderedWords || []}
+                    initialAnswer={answers[currentQuestion.id] ? (typeof answers[currentQuestion.id] === 'string' ? JSON.parse(answers[currentQuestion.id] as string) : answers[currentQuestion.id]) : undefined}
+                    onUpdate={(answer: string[]) => {
+                        handleAnswerChange(currentQuestion.id, JSON.stringify(answer));
+                    }}
+                    onComplete={(isCorrect, answer: string[]) => {
+                        handleAnswerChange(currentQuestion.id, JSON.stringify(answer));
+                        handleFeedback(isCorrect, currentQuestion.hint || currentQuestion.content?.hint);
+                    }}
+                    hint={currentQuestion.hint || currentQuestion.content?.hint}
+                    showHintsSetting={showHintsSetting}
+                />
+            );
+
+        case "MATCHING":
+            return (
+                <MatchingRenderer
+                    matchingPairs={currentQuestion.content?.metadata?.matchingPairs || []}
+                    initialAnswer={answers[currentQuestion.id] ? JSON.parse(answers[currentQuestion.id] as string) : undefined}
+                    onUpdate={(pairs: any[]) => {
+                        handleAnswerChange(currentQuestion.id, JSON.stringify(pairs));
+                    }}
+                    onComplete={(isCorrect, pairs) => {
+                        handleAnswerChange(currentQuestion.id, JSON.stringify(pairs));
+                        handleFeedback(isCorrect, currentQuestion.hint || currentQuestion.content?.hint);
+                    }}
+                    hint={currentQuestion.hint || currentQuestion.content?.hint}
+                    showHintsSetting={showHintsSetting}
+                />
+            );
+
+        case "FILL_IN_BLANKS":
+            return (
+                <FillInBlanksRenderer
+                    questionText={currentQuestion.content?.metadata?.sentence || currentQuestion.content?.questionText || ""}
+                    blanks={currentQuestion.content?.metadata?.blanks || []}
+                    initialAnswer={answers[currentQuestion.id] ? (answers[currentQuestion.id] as string).split("|") : undefined}
+                    onUpdate={(userAnswers: string[]) => {
+                        handleAnswerChange(currentQuestion.id, userAnswers.join("|"));
+                    }}
+                    onComplete={(isCorrect, userAnswers) => {
+                        handleAnswerChange(currentQuestion.id, userAnswers.join("|"));
+                        handleFeedback(isCorrect, currentQuestion.hint || currentQuestion.content?.hint);
+                    }}
+                    hint={currentQuestion.hint || currentQuestion.content?.hint}
+                    showHintsSetting={showHintsSetting}
+                />
+            );
+
+        case "CATEGORIZATION":
+            return (
+                <CategorizationRenderer
+                    categoriesData={currentQuestion.content?.metadata?.categories || []}
+                    initialAnswer={answers[currentQuestion.id] ? JSON.parse(answers[currentQuestion.id] as string) : undefined}
+                    onUpdate={(categories: any[]) => {
+                        handleAnswerChange(currentQuestion.id, JSON.stringify(categories));
+                    }}
+                    onComplete={(isCorrect, categories: any[]) => {
+                        handleAnswerChange(currentQuestion.id, JSON.stringify(categories));
+                        handleFeedback(isCorrect, currentQuestion.hint || currentQuestion.content?.hint);
+                    }}
+                    hint={currentQuestion.hint || currentQuestion.content?.hint}
+                    showHintsSetting={showHintsSetting}
+                />
+            );
+
+        case "FIND_ERROR":
+            return (
+                <FindErrorRenderer
+                    questionText={currentQuestion.content?.metadata?.sentence || currentQuestion.content?.questionText || ""}
+                    errorPosition={
+                        currentQuestion.content?.metadata?.errorPosition || {
+                            startIndex: 0,
+                            endIndex: 0,
+                            correctText: "",
+                        }
+                    }
+                    initialAnswer={answers[currentQuestion.id] as string}
+                    onComplete={(isCorrect, selectedText) => {
+                        handleAnswerChange(currentQuestion.id, selectedText);
+                        handleFeedback(isCorrect, currentQuestion.hint || currentQuestion.content?.hint);
+                    }}
+                    hint={currentQuestion.hint || currentQuestion.content?.hint}
+                    showHintsSetting={showHintsSetting}
+                />
+            );
+
+        case "ESSAY":
+            return (
+                <div className="space-y-4">
+                    <textarea
+                        value={(answers[currentQuestion.id] as string) || ""}
+                        onChange={(e) => {
+                            handleAnswerChange(currentQuestion.id, e.target.value);
+                            setIsQuestionComplete(e.target.value.length > 5);
+                        }}
+                        className="w-full p-6 text-xl font-medium border-4 border-slate-800 rounded-[2rem] focus:ring-4 focus:ring-indigo-200 outline-none transition-all min-h-[200px]"
+                        placeholder="Nhập câu trả lời của em tại đây..."
+                    />
+                    <p className="text-sm text-slate-400 font-bold italic">
+                        (Giáo viên sẽ chấm điểm bài này sau nhé!)
+                    </p>
+                </div>
+            );
+
+        default: // MULTIPLE_CHOICE or TRUE_FALSE
+            return (
+                <div className="space-y-4">
+                    {(currentQuestion.content.options || []).map((option: any, index: number) => {
+                        const isSelected = answers[currentQuestion.id] === index;
+                        const optionText = typeof option === "string" ? option : option?.text || "";
+                        const isCorrect = typeof option === "object" && option?.isCorrect;
+
+                        return (
+                            <button
+                                key={`opt-${currentQuestion.id}-${index}`}
+                                onClick={() => {
+                                    handleAnswerChange(currentQuestion.id, index);
+                                    handleFeedback(isCorrect, currentQuestion.hint || currentQuestion.content?.hint);
+                                }}
+                                className={`w-full p-6 rounded-2xl border-4 transition-all shadow-[6px_6px_0_0_rgba(0,0,0,1)] flex gap-6 items-center text-left ${isSelected
+                                    ? isCorrect
+                                        ? "bg-green-100 border-green-500 shadow-none translate-y-1"
+                                        : "bg-red-100 border-red-500 shadow-none translate-y-1"
+                                    : "bg-white border-slate-800 hover:bg-slate-50 hover:-translate-y-1"
+                                    }`}
+                            >
+                                <div
+                                    className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full border-4 font-black text-xl ${isSelected
+                                        ? isCorrect
+                                            ? "bg-green-500 text-white border-green-700"
+                                            : "bg-red-500 text-white border-red-700"
+                                        : "bg-slate-100 text-slate-800 border-slate-800"
+                                        }`}
+                                >
+                                    {String.fromCharCode(65 + index)}
+                                </div>
+                                <div className="flex-1">
+                                    <span className="text-xl font-bold text-slate-800">{optionText}</span>
+                                </div>
+                                {isSelected && (
+                                    <div className={`text-3xl animate-bounce`}>
+                                        {isCorrect ? "✅" : "❌"}
+                                    </div>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            );
     }
 }

@@ -20,7 +20,9 @@ export interface StudentNodeStats {
   stats: {
     completed: number;
     needsReview: number;
-    bestScore: number; // Mới
+    bestScore: number;
+    requiredXp: number;
+    bestXp: number;
   };
 }
 
@@ -86,7 +88,7 @@ export async function getStudentNodeStats(nodeId: number, studentId: string): Pr
     .eq('is_published', true);
 
   if (testsError || !tests || tests.length === 0) {
-    return { tests: [], stats: { completed: 0, needsReview: 0, bestScore: 0 } };
+    return { tests: [], stats: { completed: 0, needsReview: 0, bestScore: 0, requiredXp: 0, bestXp: 0 } };
   }
 
 
@@ -108,45 +110,37 @@ export async function getStudentNodeStats(nodeId: number, studentId: string): Pr
 
   let needsReview = 0;
 
-  // Get overall progress for this node
-  const { data: nodeProgress } = await supabase
-    .from('student_node_progress')
-    .select('score, submit_count')
-    .eq('student_id', studentId)
-    .eq('node_id', nodeId)
+  // Get overall progress and node info (required_xp)
+  const { data: nodeData } = await supabase
+    .from('nodes')
+    .select('required_xp, student_node_progress(score, submit_count)')
+    .eq('id', nodeId)
+    .eq('student_node_progress.student_id', studentId)
     .single();
+
+  const requiredXp = nodeData?.required_xp || 100;
+  const progress = (nodeData?.student_node_progress as any)?.[0];
+  const bestXp = progress?.score ? parseFloat(progress.score) : 0;
+  const submitCount = progress?.submit_count || 0;
+
+  // Calculate percentage based on XP
+  const xpPercentage = Math.min(100, Math.round((bestXp / requiredXp) * 100));
 
   const enrichedTests = tests.map((t: any) => {
     const sub = subMap.get(t.id);
     let stStatus = 'not_started';
-    let score = null;
     let percentage = 0;
 
     if (sub) {
       if (sub.status === 'completed' || sub.status === 'submitted') {
         stStatus = 'completed';
-        score = sub.score;
-        
+        // For individual tests, we still show the score percentage attained in that test
         if (sub.total_questions > 0) {
-           // Ưu tiên dùng số câu trả lời đúng
-           if (sub.correct_answers !== undefined && sub.correct_answers !== null) {
-              percentage = Math.round((sub.correct_answers / sub.total_questions) * 100);
-           } else {
-              // Nếu bảng cũ đang lưu điểm theo thang 10 (score = 10, total = 10 -> 100%)
-              // hoặc điểm đã là phần trăm (score = 100 -> 100%)
-              if (sub.score <= 10) {
-                 percentage = Math.round((sub.score / sub.total_questions) * 100);
-              } else {
-                 percentage = sub.score;
-              }
-           }
-           // Đảm bảo phần trăm không vượt quá 100
+           percentage = Math.round(((sub.correct_answers || sub.score) / sub.total_questions) * 100);
            percentage = Math.min(100, Math.max(0, percentage));
-           
            if (percentage < 50) needsReview++;
         } else {
-           // Nếu không có total_questions
-           percentage = (sub.score <= 10) ? Math.min(100, sub.score * 10) : Math.min(100, sub.score || 0);
+           percentage = (sub.score <= 10) ? Math.min(100, sub.score * 10) : Math.min(100, (sub.score || 0));
         }
       } else {
         stStatus = 'in_progress';
@@ -160,15 +154,14 @@ export async function getStudentNodeStats(nodeId: number, studentId: string): Pr
     };
   });
 
-  const bestScore = nodeProgress?.score ? parseInt(nodeProgress.score, 10) : 0;
-  const completed = nodeProgress?.submit_count || 0;
-
   return {
     tests: enrichedTests,
     stats: {
-      completed,
+      completed: submitCount,
       needsReview,
-      bestScore
+      bestScore: xpPercentage,
+      requiredXp: requiredXp,
+      bestXp: bestXp
     }
   };
 }

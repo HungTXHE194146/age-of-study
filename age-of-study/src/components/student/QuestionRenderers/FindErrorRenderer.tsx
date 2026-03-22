@@ -7,14 +7,20 @@ interface FindErrorRendererProps {
     questionText: string;
     errorPosition: { startIndex: number; endIndex: number; correctText: string };
     onComplete: (isCorrect: boolean, selectedText: string) => void;
+    initialAnswer?: string;
     supportMode?: boolean;
+    hint?: string;
+    showHintsSetting?: boolean;
 }
 
 export default function FindErrorRenderer({
     questionText,
     errorPosition,
     onComplete,
+    initialAnswer,
     supportMode = true,
+    hint,
+    showHintsSetting = false,
 }: FindErrorRendererProps) {
     const [selectedWordIndex, setSelectedWordIndex] = useState<number | null>(null);
     const [isWobbling, setIsWobbling] = useState(false);
@@ -77,9 +83,16 @@ export default function FindErrorRenderer({
     const selectableChunks = getSelectableChunks();
 
     useEffect(() => {
-        setSelectedWordIndex(null);
+        if (initialAnswer) {
+            const index = selectableChunks.findIndex(c => c.text === initialAnswer);
+            if (index !== -1) {
+                setSelectedWordIndex(index);
+            }
+        } else {
+            setSelectedWordIndex(null);
+        }
         setShowHint(false);
-    }, [questionText]);
+    }, [questionText, initialAnswer]);
 
     const handleChunkClick = (index: number, chunk: any) => {
         setSelectedWordIndex(index);
@@ -121,7 +134,9 @@ export default function FindErrorRenderer({
                     >
                         <div className="text-4xl">🦉</div>
                         <p className="font-black text-sky-800 italic text-lg">
-                            "Thám tử nhí ơi, hãy quan sát thật kỹ từng từ nhé! Có một lỗi nhỏ đang trốn ở đâu đó đấy."
+                            {showHintsSetting && hint
+                                ? hint
+                                : '"Thám tử nhí ơi, hãy quan sát thật kỹ từng từ nhé! Có một lỗi nhỏ đang trốn ở đâu đó đấy."'}
                         </p>
                     </motion.div>
                 )}

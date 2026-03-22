@@ -7,12 +7,15 @@ export const transformDBNodesToFlow = (
   dbNodes: { 
     id: number; 
     title: string; 
+    description?: string;
     node_type: string; 
     parent_node_id?: number | null; 
     position_x?: number; 
     position_y?: number; 
     order_index: number; 
     week_number?: number | null;
+    required_xp?: number;
+    best_xp?: number;
     source_position?: 'top' | 'bottom' | 'left' | 'right' | null; 
     target_position?: 'top' | 'bottom' | 'left' | 'right' | null 
   }[], 
@@ -93,11 +96,14 @@ export const transformDBNodesToFlow = (
       data: {
         id: node.id,
         title: node.title,
+        description: node.description,
         nodeType: node.node_type,
         color: branchColor,
         isLocked: isNodeLocked,
         isTeacherMode: isTeacherMode,
-        isCompleted: isCompleted
+        isCompleted: isCompleted,
+        bestXp: (node as any).best_xp || 0,
+        requiredXp: (node as any).required_xp || 100
       }
     });
 

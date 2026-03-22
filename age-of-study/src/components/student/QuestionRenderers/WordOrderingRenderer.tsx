@@ -8,14 +8,22 @@ interface WordOrderingRendererProps {
     questionText: string;
     orderedWords: string[];
     onComplete: (isCorrect: boolean, answer: string[]) => void;
+    onUpdate?: (answer: string[]) => void;
+    initialAnswer?: string[];
     supportMode?: boolean;
+    hint?: string;
+    showHintsSetting?: boolean;
 }
 
 export default function WordOrderingRenderer({
     questionText,
     orderedWords,
     onComplete,
+    onUpdate,
+    initialAnswer,
     supportMode = true,
+    hint,
+    showHintsSetting = false,
 }: WordOrderingRendererProps) {
     const [shuffledWords, setShuffledWords] = useState<string[]>([]);
     const [selectedWords, setSelectedWords] = useState<string[]>([]);
@@ -23,22 +31,39 @@ export default function WordOrderingRenderer({
     const [isWobbling, setIsWobbling] = useState(false);
 
     useEffect(() => {
-        // Trộn từ ngẫu nhiên
-        setShuffledWords([...orderedWords].sort(() => Math.random() - 0.5));
-        setSelectedWords([]);
+        if (initialAnswer && initialAnswer.length > 0) {
+            setSelectedWords(initialAnswer);
+            // Khôi phục shuffledWords bằng các từ chưa được chọn
+            let remaining = [...orderedWords];
+            initialAnswer.forEach(word => {
+                const index = remaining.indexOf(word);
+                if (index !== -1) {
+                    remaining.splice(index, 1);
+                }
+            });
+            setShuffledWords(remaining.sort(() => Math.random() - 0.5));
+        } else {
+            setShuffledWords([...orderedWords].sort(() => Math.random() - 0.5));
+            setSelectedWords([]);
+        }
         setShowHint(false);
-    }, [orderedWords]);
+    }, [orderedWords, initialAnswer]);
 
     const handleWordClick = (word: string, index: number, isFromSelected: boolean) => {
         if (isFromSelected) {
             // Bỏ chọn từ
-            setSelectedWords(prev => prev.filter((_, i) => i !== index));
+            const newSelected = selectedWords.filter((_, i) => i !== index);
+            setSelectedWords(newSelected);
             setShuffledWords(prev => [...prev, word]);
+            // Lưu trạng thái tạm thời vào parent
+            onUpdate?.(newSelected);
         } else {
             // Chọn từ
             const newSelected = [...selectedWords, word];
             setSelectedWords(newSelected);
             setShuffledWords(prev => prev.filter((_, i) => i !== index));
+            // Lưu trạng thái tạm thời vào parent
+            onUpdate?.(newSelected);
 
             // Kiểm tra nếu đã chọn hết từ
             if (newSelected.length === orderedWords.length) {
@@ -116,15 +141,15 @@ export default function WordOrderingRenderer({
                         <div className="text-4xl">🦉</div>
                         <div>
                             <p className="font-black text-yellow-800 text-lg">
-                                Ối, hiệp sĩ ơi! Còn một chút xíu nữa thôi!
+                                {showHintsSetting && hint ? "🦉 Gợi ý từ Giáo sư Cú:" : "Ối, hiệp sĩ ơi! Còn một chút xíu nữa thôi!"}
                             </p>
                             <p className="font-bold text-yellow-700">
-                                Lớp mình thử đổi chỗ các từ xem sao nhé. Cố lên nào!
+                                {showHintsSetting && hint ? hint : "Lớp mình thử đổi chỗ các từ xem sao nhé. Cố lên nào!"}
                             </p>
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 }

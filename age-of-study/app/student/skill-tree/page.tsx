@@ -48,15 +48,16 @@ export default function StudentSkillTreePage() {
   const autoSelectedSubjectIdRef = useRef<number | null>(null);
   const [subjectNodes, setSubjectNodes] = useState<
     | {
-        id: number;
-        title: string;
-        node_type: string;
-        parent_node_id?: number | null;
-        position_x?: number;
-        position_y?: number;
-        order_index: number;
-        week_number?: number | null;
-      }[]
+      id: number;
+      title: string;
+      description?: string;
+      node_type: string;
+      parent_node_id?: number | null;
+      position_x?: number;
+      position_y?: number;
+      order_index: number;
+      week_number?: number | null;
+    }[]
     | null
   >(null);
   const [completedNodeIds, setCompletedNodeIds] = useState<number[]>([]);
@@ -122,7 +123,7 @@ export default function StudentSkillTreePage() {
 
           // Fetch nodes and completion status in parallel
           const [{ nodes }, completedIds] = await Promise.all([
-            fetchSubjectSkillTree(selectedSubject.id, volumeParam),
+            fetchSubjectSkillTree(selectedSubject.id, user.id, volumeParam),
             testService.getCompletedNodeIds(user.id),
           ]);
           setSubjectNodes(nodes || []);
@@ -241,21 +242,19 @@ export default function StudentSkillTreePage() {
             <div className="flex items-center gap-1 bg-white border-2 border-black rounded-xl overflow-hidden shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               <button
                 onClick={() => setSelectedVolume(1)}
-                className={`px-4 py-2 text-sm font-bold transition-all ${
-                  selectedVolume === 1
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-600 hover:bg-gray-100"
-                }`}
+                className={`px-4 py-2 text-sm font-bold transition-all ${selectedVolume === 1
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-100"
+                  }`}
               >
                 Tập 1
               </button>
               <button
                 onClick={() => setSelectedVolume(2)}
-                className={`px-4 py-2 text-sm font-bold transition-all ${
-                  selectedVolume === 2
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-600 hover:bg-gray-100"
-                }`}
+                className={`px-4 py-2 text-sm font-bold transition-all ${selectedVolume === 2
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-100"
+                  }`}
               >
                 Tập 2
               </button>
@@ -291,82 +290,101 @@ export default function StudentSkillTreePage() {
               </div>
             )}
 
-            {/* Floating Detail Card (Duolingo Style) */}
+            {/* Lesson Card Popup (Notebook Style) */}
             {selectedNodeId && (
-              <div className="absolute bottom-37 left-1/2 -translate-x-1/2 w-full max-w-sm px-4 z-40 animate-in slide-in-from-bottom-10 fade-in duration-300">
-                <NotebookCard className="shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
-                  <NotebookCardHeader className="relative">
+              <div className="absolute inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+                <div
+                  className="absolute inset-0"
+                  onClick={() => setSelectedNodeId(null)}
+                />
+
+                <NotebookCard className="relative w-full max-w-md shadow-[12px_12px_0_0_rgba(0,0,0,1)] rotate-1 animate-in zoom-in-95 duration-300">
+                  <NotebookCardHeader className="border-b-4 border-black pb-4">
                     <button
                       onClick={() => setSelectedNodeId(null)}
-                      className="absolute top-4 right-4 text-gray-400 hover:text-black"
+                      className="absolute top-4 right-4 w-8 h-8 rounded-full border-2 border-black flex items-center justify-center hover:bg-gray-100 transition-colors z-20"
                     >
                       ✕
                     </button>
-                    <div className="flex items-center gap-3">
+
+                    <div className="flex items-center gap-4">
                       <div
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)]"
+                        className="w-16 h-16 rounded-2xl flex items-center justify-center border-4 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
                         style={{
-                          backgroundColor: completedNodeIds.includes(
-                            selectedNodeId,
-                          )
-                            ? "#22c55e"
-                            : "#fbbf24",
+                          backgroundColor: completedNodeIds.includes(selectedNodeId) ? "#22c55e" : "#fbbf24",
                         }}
                       >
-                        <Sparkles className="text-white w-6 h-6" />
+                        <Sparkles className="text-white w-8 h-8" />
                       </div>
                       <div>
-                        <NotebookCardTitle className="text-xl">
+                        <NotebookCardTitle className="text-2xl font-black uppercase tracking-tight">
                           {selectedNodeData?.title || "Bài học"}
                         </NotebookCardTitle>
-                        {completedNodeIds.includes(selectedNodeId) && (
-                          <NotebookBadge
-                            variant="success"
-                            className="text-[10px] mt-1"
-                          >
-                            Hoàn thành xuất sắc!
+                        <div className="flex gap-2 mt-1">
+                          <NotebookBadge variant="default" className="text-[10px] border-black border-2 bg-white text-black">
+                            Tuần {selectedNodeData?.week_number || "???"}
                           </NotebookBadge>
-                        )}
+                          {completedNodeIds.includes(selectedNodeId) && (
+                            <NotebookBadge variant="success" className="text-[10px] border-black border-2">
+                              ĐÃ HOÀN THÀNH!
+                            </NotebookBadge>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </NotebookCardHeader>
 
-                  <NotebookCardContent className="py-4">
-                    <div className="space-y-4">
-                      <div className="bg-gray-50 p-3 rounded-lg border-2 border-black/5">
-                        <p className="text-sm text-gray-600 italic">
-                          "{selectedNodeData?.title} giúp em rèn luyện kỹ năng
-                          và kiến thức bổ ích. Cùng bắt đầu nào!"
-                        </p>
+                  <NotebookCardContent className="py-6 space-y-6">
+                    {/* Lesson Objective */}
+                    <div className="relative p-4 bg-blue-50 border-2 border-black rounded-xl">
+                      <div className="absolute -top-3 left-4 px-2 bg-blue-600 text-white text-[10px] font-black border-2 border-black uppercase">
+                        Mục tiêu bài học
                       </div>
+                      <p className="text-sm font-bold text-blue-900 leading-relaxed italic">
+                        "{selectedNodeData?.description || "Cùng khám phá kiến thức thú vị trong bài học này nhé!"}"
+                      </p>
+                    </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="text-center p-2 bg-blue-50 rounded-lg border-2 border-blue-100">
-                          <div className="text-lg font-black text-blue-700">
-                            {nodeStats?.stats?.completed || 0}
-                          </div>
-                          <div className="text-[10px] font-bold text-blue-500 uppercase">
-                            Đã làm
-                          </div>
+                    {/* Progress Stats */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-white border-2 border-black rounded-xl p-3 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)]">
+                        <div className="text-[10px] font-black text-gray-500 uppercase mb-1">XP Đạt được</div>
+                        <div className="text-2xl font-black text-black">
+                          {nodeStats?.stats?.bestXp || 0}
+                          <span className="text-sm text-gray-400 font-bold ml-1">/ {nodeStats?.stats?.requiredXp || 100}</span>
                         </div>
-                        <div className="text-center p-2 bg-orange-50 rounded-lg border-2 border-orange-100">
-                          <div className="text-lg font-black text-orange-700">
-                            {nodeStats?.stats?.bestScore || 0}%
-                          </div>
-                          <div className="text-[10px] font-bold text-orange-500 uppercase">
-                            Điểm cao
-                          </div>
+                      </div>
+                      <div className="bg-white border-2 border-black rounded-xl p-3 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)]">
+                        <div className="text-[10px] font-black text-gray-500 uppercase mb-1">Tiến độ</div>
+                        <div className="text-2xl font-black text-green-600">
+                          {nodeStats?.stats?.bestScore || 0}%
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Encouragement Sticker */}
+                    <div className="flex justify-center">
+                      <div className="bg-pink-100 border-2 border-black px-4 py-2 rounded-lg transform -rotate-2 flex items-center gap-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                        <PlusCircle className="w-5 h-5 text-pink-500" />
+                        <span className="text-xs font-black text-pink-700 uppercase">
+                          {completedNodeIds.includes(selectedNodeId) ? "EM THẬT TUYỆT VỜI!" : "CỐ GẮNG LÊN NÀO!"}
+                        </span>
                       </div>
                     </div>
                   </NotebookCardContent>
 
-                  <NotebookButton
-                    onClick={handleStartLesson}
-                    className="w-full h-14 bg-green-500 hover:bg-green-600 !text-white text-2xl font-black border-none rounded-xl mb-6 mx-4 max-w-[90%] flex"
-                  >
-                    BẮT ĐẦU NGAY
-                  </NotebookButton>
+                  <div className="p-4 pt-0">
+                    <NotebookButton
+                      onClick={handleStartLesson}
+                      className="w-full h-16 bg-emerald-500 hover:bg-emerald-600 !text-white text-3xl font-black border-4 border-black rounded-2xl shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-y-1 hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)] transition-all flex items-center justify-center gap-3"
+                    >
+                      BẮT ĐẦU NGAY
+                      <Sparkles className="w-8 h-8 animate-pulse" />
+                    </NotebookButton>
+                    <p className="text-center mt-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest italic">
+                      Luyện tập để nhận thêm thật nhiều XP nhé!
+                    </p>
+                  </div>
                 </NotebookCard>
               </div>
             )}

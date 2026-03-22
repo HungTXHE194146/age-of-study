@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { motion } from "framer-motion";
 import { Question, TestWithQuestions, SubmissionResult, QuestionOption } from "@/types/test";
 import { Button } from "@/components/ui/button";
@@ -221,19 +222,30 @@ function QuestionReviewItem({
                         <QuestionResultRenderer qType={qType} question={question} userAnswer={userAnswer} isCorrect={isCorrect} />
                     </div>
 
-                    {(question.explanation || question.content?.explanation) && (
-                        <div className="mt-6 bg-yellow-50 p-6 rounded-2xl border-4 border-yellow-400 shadow-[4px_4px_0_0_rgba(250,204,21,1)]">
-                            <h5 className="flex items-center gap-2 text-lg font-black text-yellow-800 mb-3 uppercase">
-                                <span className="text-2xl">💡</span> Giải thích chi tiết
-                            </h5>
-                            <div
-                                className="text-yellow-900 font-medium leading-relaxed"
-                                dangerouslySetInnerHTML={{
-                                    __html: question.explanation || question.content?.explanation || "",
-                                }}
-                            />
-                        </div>
-                    )}
+                    {(() => {
+                        const explanation = question.explanation ||
+                            question.content?.explanation ||
+                            (question.content as any)?.metadata?.explanation;
+
+                        if (!explanation) return null;
+
+                        return (
+                            <div className="mt-8 bg-amber-50 p-6 rounded-[2rem] border-4 border-amber-400 shadow-[6px_6px_0_0_rgba(251,191,36,1)] relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                    <span className="text-6xl">🎓</span>
+                                </div>
+                                <h5 className="flex items-center gap-2 text-xl font-black text-amber-800 mb-4 uppercase tracking-tight">
+                                    <span className="text-3xl">💡</span> Giải thích từ Giáo sư Cú
+                                </h5>
+                                <div
+                                    className="text-amber-900 font-bold leading-relaxed text-lg"
+                                    dangerouslySetInnerHTML={{
+                                        __html: explanation,
+                                    }}
+                                />
+                            </div>
+                        );
+                    })()}
                 </div>
             </div>
         </div>
@@ -250,7 +262,9 @@ interface QuestionResultRendererProps {
 function QuestionResultRenderer({ qType, question, userAnswer, isCorrect }: QuestionResultRendererProps) {
     switch (qType) {
         case "WORD_ORDERING":
-            const studentWords = userAnswer?.text_answer?.split(" ") || [];
+            const studentWords = userAnswer?.text_answer
+                ? (userAnswer.text_answer.startsWith("[") ? JSON.parse(userAnswer.text_answer) : userAnswer.text_answer.split(" "))
+                : [];
             const correctWords = question.content?.metadata?.orderedWords || [];
             return (
                 <div className="space-y-4">

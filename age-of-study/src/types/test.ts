@@ -14,6 +14,7 @@ export interface Test {
   settings: {
     time_limit: number;
     allow_retry: boolean;
+    show_hints?: boolean;
   };
   is_published: boolean;
   created_by: string;
@@ -49,6 +50,7 @@ export interface QuestionContent {
   options: QuestionOption[] | string[];
   difficulty: string;
   explanation?: string;
+  hint?: string;
   questionText: string;
   question: string;
   passage?: string | null;          // Trích đoạn 2-3 câu (comprehension questions)
@@ -81,6 +83,7 @@ export interface Question {
   model_answer: string;
   subject_id: number | null;
   explanation: string | null;
+  hint: string | null;
   embedding: number[] | null;
   tags: string[];
   source_document_id: string | null;
@@ -133,6 +136,7 @@ export interface CreateTestRequest {
   settings: {
     time_limit: number;
     allow_retry: boolean;
+    show_hints?: boolean;
   };
   is_published: boolean;
   created_by: string;

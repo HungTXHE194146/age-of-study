@@ -190,7 +190,10 @@ export class TestService {
         status,
         created_by,
         created_at,
-        q_type
+        q_type,
+        explanation,
+        hint,
+        model_answer
       )
     `,
       )
