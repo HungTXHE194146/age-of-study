@@ -7,6 +7,8 @@ import { Question } from "@/types/teacher";
 interface CategorizationRendererProps {
     categoriesData: Array<{ name: string; items: string[] }>;
     onComplete: (isCorrect: boolean, categories: any[]) => void;
+    onUpdate?: (categories: any[]) => void;
+    initialAnswer?: any[];
     supportMode?: boolean;
     hint?: string;
     showHintsSetting?: boolean;
@@ -15,6 +17,7 @@ interface CategorizationRendererProps {
 export default function CategorizationRenderer({
     categoriesData,
     onComplete,
+    initialAnswer,
     supportMode = true,
     hint,
     showHintsSetting = false,
@@ -27,39 +30,57 @@ export default function CategorizationRenderer({
     const [showHint, setShowHint] = useState(false);
 
     useEffect(() => {
-        setUnassignedItems([...allItems].sort(() => Math.random() - 0.5));
-        const initialAssigned: Record<string, string[]> = {};
-        categoriesData.forEach(cat => {
-            initialAssigned[cat.name] = [];
-        });
-        setAssignedItems(initialAssigned);
+        if (initialAnswer && initialAnswer.length > 0) {
+            const assigned: Record<string, string[]> = {};
+            const allInitialItems = new Set<string>();
+
+            initialAnswer.forEach((cat: any) => {
+                assigned[cat.name] = cat.items || [];
+                (cat.items || []).forEach((item: string) => allInitialItems.add(item));
+            });
+
+            setAssignedItems(assigned);
+            setUnassignedItems(allItems.filter(item => !allInitialItems.has(item)).sort(() => Math.random() - 0.5));
+        } else {
+            setUnassignedItems([...allItems].sort(() => Math.random() - 0.5));
+            const initialAssigned: Record<string, string[]> = {};
+            categoriesData.forEach(cat => {
+                initialAssigned[cat.name] = [];
+            });
+            setAssignedItems(initialAssigned);
+        }
         setShowHint(false);
-    }, [categoriesData]);
+    }, [categoriesData, initialAnswer]);
 
     const handleItemClick = (item: string, fromCategory?: string) => {
         if (fromCategory) {
             // Bỏ khỏi nhóm, quay lại kho
-            setAssignedItems(prev => ({
-                ...prev,
-                [fromCategory]: prev[fromCategory].filter(i => i !== item)
-            }));
+            const newAssigned = {
+                ...assignedItems,
+                [fromCategory]: assignedItems[fromCategory].filter((i: string) => i !== item)
+            };
+            setAssignedItems(newAssigned);
             setUnassignedItems(prev => [...prev, item]);
+
+            // Sync to parent
+            const categoriesArray = Object.entries(newAssigned).map(([name, items]) => ({ name, items }));
+            onUpdate?.(categoriesArray);
         } else {
-            // Chọn nhóm đầu tiên chưa đầy hoặc nhóm hiện tại đang chọn (đơn giản hóa cho trẻ em bằng cách nhấn vào mục rồi nhấn vào nhóm)
-            // Ở đây ta dùng cơ chế đơn giản: Nhấn vào mục -> Chuyển sang nhóm tiếp theo theo vòng tròn
+            // Chọn nhóm đầu tiên chưa đầy hoặc nhóm hiện tại đang chọn
             const categoryNames = categoriesData.map(c => c.name);
-            const nextCategory = categoryNames[0]; // Tạm thời mặc định vào nhóm 1, hoặc có thể dùng state selectedCategory
+            const nextCategory = categoryNames[0];
 
-            setUnassignedItems(prev => prev.filter(i => i !== item));
-            setAssignedItems(prev => ({
-                ...prev,
-                [nextCategory]: [...prev[nextCategory], item]
-            }));
-
-            checkCompletion({
+            setUnassignedItems(prev => prev.filter((i: string) => i !== item));
+            const newAssigned = {
                 ...assignedItems,
                 [nextCategory]: [...assignedItems[nextCategory], item]
-            });
+            };
+            setAssignedItems(newAssigned);
+
+            checkCompletion(newAssigned);
+            // Sync to parent
+            const categoriesArray = Object.entries(newAssigned).map(([name, items]) => ({ name, items }));
+            onUpdate?.(categoriesArray);
         }
     };
 
@@ -72,7 +93,7 @@ export default function CategorizationRenderer({
 
     const handleAssignToCategory = (categoryName: string) => {
         if (selectedItem) {
-            setUnassignedItems(prev => prev.filter(i => i !== selectedItem));
+            setUnassignedItems(prev => prev.filter((i: string) => i !== selectedItem));
             const newAssigned = {
                 ...assignedItems,
                 [categoryName]: [...assignedItems[categoryName], selectedItem]
@@ -80,6 +101,10 @@ export default function CategorizationRenderer({
             setAssignedItems(newAssigned);
             setSelectedItem(null);
             checkCompletion(newAssigned);
+
+            // Sync to parent
+            const categoriesArray = Object.entries(newAssigned).map(([name, items]) => ({ name, items }));
+            onUpdate?.(categoriesArray);
         }
     };
 

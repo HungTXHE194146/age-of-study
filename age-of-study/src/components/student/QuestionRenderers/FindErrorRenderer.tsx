@@ -7,6 +7,7 @@ interface FindErrorRendererProps {
     questionText: string;
     errorPosition: { startIndex: number; endIndex: number; correctText: string };
     onComplete: (isCorrect: boolean, selectedText: string) => void;
+    initialAnswer?: string;
     supportMode?: boolean;
     hint?: string;
     showHintsSetting?: boolean;
@@ -16,6 +17,7 @@ export default function FindErrorRenderer({
     questionText,
     errorPosition,
     onComplete,
+    initialAnswer,
     supportMode = true,
     hint,
     showHintsSetting = false,
@@ -81,9 +83,16 @@ export default function FindErrorRenderer({
     const selectableChunks = getSelectableChunks();
 
     useEffect(() => {
-        setSelectedWordIndex(null);
+        if (initialAnswer) {
+            const index = selectableChunks.findIndex(c => c.text === initialAnswer);
+            if (index !== -1) {
+                setSelectedWordIndex(index);
+            }
+        } else {
+            setSelectedWordIndex(null);
+        }
         setShowHint(false);
-    }, [questionText]);
+    }, [questionText, initialAnswer]);
 
     const handleChunkClick = (index: number, chunk: any) => {
         setSelectedWordIndex(index);

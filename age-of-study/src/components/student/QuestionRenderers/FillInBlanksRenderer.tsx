@@ -8,6 +8,8 @@ interface FillInBlanksRendererProps {
     questionText: string;
     blanks: Array<{ index: number; answer: string }>;
     onComplete: (isCorrect: boolean, answers: string[]) => void;
+    onUpdate?: (answers: string[]) => void;
+    initialAnswer?: string[];
     supportMode?: boolean;
     hint?: string;
     showHintsSetting?: boolean;
@@ -17,6 +19,7 @@ export default function FillInBlanksRenderer({
     questionText,
     blanks,
     onComplete,
+    initialAnswer,
     supportMode = true,
     hint,
     showHintsSetting = false,
@@ -26,35 +29,41 @@ export default function FillInBlanksRenderer({
     const [showHint, setShowHint] = useState(false);
 
     useEffect(() => {
-        setUserAnswers(new Array(blanks.length).fill(""));
+        if (initialAnswer && initialAnswer.length === blanks.length) {
+            setUserAnswers(initialAnswer);
+        } else {
+            setUserAnswers(new Array(blanks.length).fill(""));
+        }
         setShowHint(false);
-    }, [blanks]);
+    }, [blanks, initialAnswer]);
+
+    // Bỏ debounce tự động, chỉ kiểm tra khi nhấn Enter theo yêu cầu người dùng
 
     const handleInputChange = (index: number, value: string) => {
         const newAnswers = [...userAnswers];
         newAnswers[index] = value;
         setUserAnswers(newAnswers);
-
-        // Kiểm tra nếu tất cả đã điền
-        if (newAnswers.every(ans => ans.trim() !== "")) {
-            const isAllCorrect = newAnswers.every((ans, i) =>
-                ans.trim().toLowerCase() === blanks[i].answer.trim().toLowerCase()
-            );
-
-            onComplete(isAllCorrect, newAnswers);
-        }
+        onUpdate?.(newAnswers);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "Enter") {
-            const isAllCorrect = userAnswers.every((ans, i) =>
-                ans.trim().toLowerCase() === blanks[i].answer.trim().toLowerCase()
-            );
+            if (userAnswers.every((ans: string) => ans.trim() !== "")) {
+                const isAllCorrect = userAnswers.every((ans: string, i: number) =>
+                    blanks[i] && ans.trim().toLowerCase() === blanks[i].answer.trim().toLowerCase()
+                );
 
-            if (!isAllCorrect) {
+                onComplete(isAllCorrect, userAnswers);
+
+                if (!isAllCorrect) {
+                    setIsWobbling(true);
+                    setTimeout(() => setIsWobbling(false), 500);
+                    if (supportMode) setShowHint(true);
+                }
+            } else {
+                // Nếu chưa điền hết mà nhấn Enter thì rung nhẹ để nhắc nhở
                 setIsWobbling(true);
                 setTimeout(() => setIsWobbling(false), 500);
-                if (supportMode) setShowHint(true);
             }
         }
     };
@@ -71,7 +80,7 @@ export default function FillInBlanksRenderer({
                 {segments.map((segment, index) => (
                     <span key={index}>
                         {segment}
-                        {index < segments.length - 1 && (
+                        {index < segments.length - 1 && index < blanks.length && (
                             <input
                                 type="text"
                                 value={userAnswers[index] || ""}

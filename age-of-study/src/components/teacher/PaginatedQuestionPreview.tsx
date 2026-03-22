@@ -280,9 +280,9 @@ export function PaginatedQuestionPreview({
           {/* True/False */}
           {currentQuestion.type === "TRUE_FALSE" && (
             <div className="space-y-4">
-              {currentQuestion.options.map((option) => (
+              {currentQuestion.options.map((option, index) => (
                 <button
-                  key={option.id}
+                  key={`tf-option-${currentQuestion.id}-${index}`}
                   disabled={feedback?.isCorrect}
                   onClick={() => {
                     if (option.isCorrect) {
@@ -480,6 +480,22 @@ export function PaginatedQuestionPreview({
               </div>
             )}
           </div>
+
+          {/* Explanation Section */}
+          {currentQuestion.explanation && (
+            <div className="mt-8 p-6 bg-yellow-50 border-2 border-yellow-200 rounded-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-400/10 rounded-full -mr-8 -mt-8 group-hover:scale-110 transition-transform"></div>
+              <h5 className="flex items-center gap-2 text-lg font-black text-yellow-800 mb-3 uppercase tracking-tight">
+                <span className="text-2xl animate-pulse">💡</span> Giải thích từ Giáo sư Cú:
+              </h5>
+              <div
+                className="text-yellow-900 font-bold leading-relaxed italic pr-4"
+                dangerouslySetInnerHTML={{
+                  __html: currentQuestion.explanation || "",
+                }}
+              />
+            </div>
+          )}
 
 
         </div>

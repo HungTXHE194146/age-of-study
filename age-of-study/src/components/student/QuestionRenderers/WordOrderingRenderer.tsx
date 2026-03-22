@@ -8,6 +8,8 @@ interface WordOrderingRendererProps {
     questionText: string;
     orderedWords: string[];
     onComplete: (isCorrect: boolean, answer: string[]) => void;
+    onUpdate?: (answer: string[]) => void;
+    initialAnswer?: string[];
     supportMode?: boolean;
     hint?: string;
     showHintsSetting?: boolean;
@@ -17,6 +19,7 @@ export default function WordOrderingRenderer({
     questionText,
     orderedWords,
     onComplete,
+    initialAnswer,
     supportMode = true,
     hint,
     showHintsSetting = false,
@@ -27,22 +30,39 @@ export default function WordOrderingRenderer({
     const [isWobbling, setIsWobbling] = useState(false);
 
     useEffect(() => {
-        // Trộn từ ngẫu nhiên
-        setShuffledWords([...orderedWords].sort(() => Math.random() - 0.5));
-        setSelectedWords([]);
+        if (initialAnswer && initialAnswer.length > 0) {
+            setSelectedWords(initialAnswer);
+            // Khôi phục shuffledWords bằng các từ chưa được chọn
+            let remaining = [...orderedWords];
+            initialAnswer.forEach(word => {
+                const index = remaining.indexOf(word);
+                if (index !== -1) {
+                    remaining.splice(index, 1);
+                }
+            });
+            setShuffledWords(remaining.sort(() => Math.random() - 0.5));
+        } else {
+            setShuffledWords([...orderedWords].sort(() => Math.random() - 0.5));
+            setSelectedWords([]);
+        }
         setShowHint(false);
-    }, [orderedWords]);
+    }, [orderedWords, initialAnswer]);
 
     const handleWordClick = (word: string, index: number, isFromSelected: boolean) => {
         if (isFromSelected) {
             // Bỏ chọn từ
-            setSelectedWords(prev => prev.filter((_, i) => i !== index));
+            const newSelected = selectedWords.filter((_, i) => i !== index);
+            setSelectedWords(newSelected);
             setShuffledWords(prev => [...prev, word]);
+            // Lưu trạng thái tạm thời vào parent
+            onUpdate?.(newSelected);
         } else {
             // Chọn từ
             const newSelected = [...selectedWords, word];
             setSelectedWords(newSelected);
             setShuffledWords(prev => prev.filter((_, i) => i !== index));
+            // Lưu trạng thái tạm thời vào parent
+            onUpdate?.(newSelected);
 
             // Kiểm tra nếu đã chọn hết từ
             if (newSelected.length === orderedWords.length) {

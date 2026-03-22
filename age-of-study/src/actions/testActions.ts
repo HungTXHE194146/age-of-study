@@ -47,7 +47,9 @@ export async function getTestWithQuestionsServer(testId: string): Promise<{ data
           created_by,
           created_at,
           q_type,
-          model_answer
+          model_answer,
+          explanation,
+          hint
         )
       `)
       .eq("test_id", testId)
@@ -58,6 +60,8 @@ export async function getTestWithQuestionsServer(testId: string): Promise<{ data
     }
 
     // 3. Transform questions to flat array
+    console.log(qData);
+    
     const questions = (qData || [])
       .map((row: any) => {
         const questionData = Array.isArray(row.questions)

@@ -4,7 +4,7 @@
     "lib": [
       "dom",
       "dom.iterable",
-      "es6"
+      "esnext"
     ],
     "allowJs": true,
     "skipLibCheck": true,
@@ -16,6 +16,12 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "types": [
+      "node",
+      "react",
+      "react-dom"
+    ],
     "incremental": true,
     "downlevelIteration": true,
     "plugins": [

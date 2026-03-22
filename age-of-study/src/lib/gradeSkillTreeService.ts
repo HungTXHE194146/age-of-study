@@ -31,8 +31,42 @@ export interface Subject {
 }
 
 /**
- * Server-side function: Lấy toàn bộ cây kỹ năng của một khối học (Cập nhật nếu cần cho giáo viên)
+ * Server-side function: Lấy toàn bộ cây kỹ năng của một khối học
+ * @param gradeLevel Mã khối học (vd: "1", "2", ...)
  */
+export async function fetchGradeSkillTree(gradeLevel: string) {
+  try {
+    const supabase = getSupabaseBrowserClient();
+    
+    // 1. Lấy danh sách môn học thuộc khối này
+    const { data: subjects, error: subjectsError } = await supabase
+      .from('subjects')
+      .select('*')
+      .eq('grade_level', gradeLevel)
+      .order('name', { ascending: true });
+
+    if (subjectsError) {
+      console.error('Error fetching subjects for grade:', subjectsError);
+      return [];
+    }
+
+    if (!subjects || subjects.length === 0) return [];
+
+    // 2. Với mỗi môn học, lấy danh sách nodes
+    const results = await Promise.all(subjects.map(async (subject: Subject) => {
+      const { nodes } = await fetchSubjectSkillTree(subject.id);
+      return {
+        ...subject,
+        nodes: buildSkillTree(nodes)
+      };
+    }));
+
+    return results;
+  } catch (error) {
+    console.error('Error in fetchGradeSkillTree:', error);
+    throw error;
+  }
+}
 
 /**
  * Server-side function: Lấy toàn bộ cây kỹ năng của một môn học

@@ -636,12 +636,43 @@ function CreateTestContent() {
                         subjectId={testDetails.subject}
                         nodeId={testDetails.node}
                         onQuestionsGenerated={(newQuestions) => {
-                          const transformed = newQuestions.map((q, index) => ({
-                            ...q,
-                            number: questions.length + index + 1,
-                            id: crypto.randomUUID(),
-                            createdAt: Date.now(),
-                          }));
+                          const transformed = newQuestions.map((q, index) => {
+                            let finalQ = { ...q };
+                            const instructionMap: Record<string, string> = {
+                              WORD_ORDERING: "Hãy sắp xếp các từ sau để tạo thành một câu hoàn chỉnh nhé!",
+                              FIND_ERROR: "Thám tử nhí ơi, hãy tìm và nhấn vào lỗi sai trong câu sau đây nhé!",
+                              FILL_IN_BLANKS: "Em hãy điền từ còn thiếu vào chỗ trống để hoàn thành câu dưới đây:",
+                              MATCHING: "Hãy nối các cụm từ ở cột bên trái với cột bên phải sao cho phù hợp nhất!",
+                              CATEGORIZATION: "Em hãy phân loại các từ ngữ sau vào nhóm tương ứng nhé!"
+                            };
+
+                            // Repair logic for interactive types that need a sentence
+                            if (q.type === 'FILL_IN_BLANKS' || q.type === 'FIND_ERROR') {
+                              const metadata = (finalQ as any).metadata || {};
+                              // If metadata.sentence is missing, move content from questionText if it looks like content
+                              if (!metadata.sentence && (q.questionText.includes('___') || q.questionText.length > 30)) {
+                                // Double check it's not already an instruction
+                                const values = Object.values(instructionMap);
+                                if (!values.includes(q.questionText)) {
+                                  metadata.sentence = q.questionText;
+                                  finalQ.questionText = instructionMap[q.type] || "Em hãy hoàn thành câu hỏi sau:";
+                                  (finalQ as any).metadata = metadata;
+                                }
+                              }
+                            } else if (q.type === 'WORD_ORDERING' || q.type === 'MATCHING' || q.type === 'CATEGORIZATION') {
+                              // Ensure there's a proper instruction if the AI didn't provide one
+                              if (!q.questionText || q.questionText.length < 10) {
+                                finalQ.questionText = instructionMap[q.type];
+                              }
+                            }
+
+                            return {
+                              ...finalQ,
+                              number: questions.length + index + 1,
+                              id: crypto.randomUUID(),
+                              createdAt: Date.now(),
+                            };
+                          });
                           setQuestions(prev => [...prev, ...transformed as Question[]]);
 
                           // Initialize points for new questions
@@ -649,7 +680,7 @@ function CreateTestContent() {
                           transformed.forEach(q => {
                             newPoints[q.id] = 10; // Default points
                           });
-                          setPoints(newPoints);
+                          transformed.forEach(q => { setPoints(p => ({ ...p, [q.id]: 10 })); });
                         }}
 
                         onBankQuestionsSelected={(selectedQuestions) => {

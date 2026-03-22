@@ -245,6 +245,21 @@ export function QuestionEditor({ question, onSave, onCancel }: QuestionEditorPro
               />
             </div>
 
+            {/* Explanation Content */}
+            <div className="bg-yellow-50 p-4 rounded-xl border-2 border-yellow-200 shadow-[4px_4px_0_0_rgba(254,240,138,0.2)]">
+              <label className="text-lg font-black text-yellow-900 mb-3 block uppercase tracking-tight flex items-center gap-2">
+                <span>🦉 Lời giải thích chi tiết (Explanation)</span>
+                <span className="text-xs font-bold bg-yellow-200 px-2 py-0.5 rounded text-yellow-700 normal-case">Xuất hiện sau khi nộp bài</span>
+              </label>
+              <textarea
+                value={editedQuestion.explanation || ''}
+                onChange={(e) => setEditedQuestion(prev => ({ ...prev, explanation: e.target.value }))}
+                rows={3}
+                className="w-full px-4 py-3 border-2 border-dashed border-yellow-300 rounded-lg focus:outline-none focus:border-yellow-500 focus:bg-white text-base font-medium transition-colors resize-none"
+                placeholder="Giải thích vì sao đáp án này đúng..."
+              />
+            </div>
+
             {/* Difficulty */}
             <div className="bg-white p-4 rounded-xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               <label className="text-lg font-black text-gray-900 mb-3 block uppercase tracking-tight">
