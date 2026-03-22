@@ -35,6 +35,7 @@ export function useStudentTest(testId: string) {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [timeWarning, setTimeWarning] = useState(false);
   const [showTimeToast, setShowTimeToast] = useState(false);
+  const [wrongAttempts, setWrongAttempts] = useState<Record<string, number>>({});
 
   const fetchTest = useCallback(async () => {
     setLoading(true);
@@ -143,6 +144,13 @@ export function useStudentTest(testId: string) {
     setAnswers((prev) => ({ ...prev, [questionId]: answer }));
   };
 
+  const handleWrongAttempt = (questionId: string) => {
+    setWrongAttempts((prev) => ({
+      ...prev,
+      [questionId]: (prev[questionId] || 0) + 1,
+    }));
+  };
+
   const handleNextQuestion = () => {
     if (!isQuestionComplete && !answers[currentQuestion?.id || ""]) {
       setIsWobbling(true);
@@ -205,5 +213,7 @@ export function useStudentTest(testId: string) {
     totalQuestions,
     answeredCount,
     unansweredCount,
+    wrongAttempts,
+    handleWrongAttempt,
   };
 }

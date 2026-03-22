@@ -272,6 +272,7 @@ CREATE TABLE public.questions (
   tags ARRAY DEFAULT '{}'::text[],
   source_document_id uuid,
   updated_at timestamp with time zone DEFAULT now(),
+  hint text,
   CONSTRAINT questions_pkey PRIMARY KEY (id),
   CONSTRAINT questions_node_id_fkey FOREIGN KEY (node_id) REFERENCES public.nodes(id),
   CONSTRAINT questions_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id),

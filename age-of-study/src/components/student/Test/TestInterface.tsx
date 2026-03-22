@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Question, TestWithQuestions, QuestionOption } from "@/types/test";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,8 @@ interface TestInterfaceProps {
     handleSubmitClick: () => void;
     handlePrevQuestion: () => void;
     handleNextQuestion: () => void;
+    wrongAttempts: Record<string, number>;
+    handleWrongAttempt: (questionId: string) => void;
 }
 
 export default function TestInterface({
@@ -52,7 +54,15 @@ export default function TestInterface({
     handleSubmitClick,
     handlePrevQuestion,
     handleNextQuestion,
+    wrongAttempts,
+    handleWrongAttempt,
 }: TestInterfaceProps) {
+    const [persistentHint, setPersistentHint] = useState<{ text: string, type: 'hint' | 'explanation' } | null>(null);
+
+    useEffect(() => {
+        setPersistentHint(null);
+    }, [currentQuestionIndex]);
+
     const currentQuestion = test.questions[currentQuestionIndex];
     const totalQuestions = test.questions.length;
     const answeredCount = Object.keys(answers).length;
@@ -136,7 +146,37 @@ export default function TestInterface({
                             setIsWobbling={setIsWobbling}
                             handleNextQuestion={handleNextQuestion}
                             showHintsSetting={test.settings?.show_hints ?? false}
+                            wrongAttempts={wrongAttempts}
+                            handleWrongAttempt={handleWrongAttempt}
+                            setPersistentHint={setPersistentHint}
                         />
+
+                        {/* Persistent Hint/Explanation Box */}
+                        <AnimatePresence>
+                            {persistentHint && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className={`p-5 rounded-2xl border-4 border-slate-800 shadow-[4px_4px_0_0_rgba(0,0,0,1)] ${persistentHint.type === 'explanation' ? 'bg-green-50' : 'bg-indigo-50'
+                                        }`}
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className={`p-2 rounded-lg border-2 border-slate-800 ${persistentHint.type === 'explanation' ? 'bg-green-200' : 'bg-indigo-200'
+                                            }`}>
+                                            {persistentHint.type === 'explanation' ? '📖' : '💡'}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-black text-slate-800 uppercase text-sm mb-1">
+                                                {persistentHint.type === 'explanation' ? 'Lời giải chi tiết' : 'Gợi ý từ Cú 🦉'}
+                                            </h4>
+                                            <p className="text-slate-700 font-bold leading-relaxed whitespace-pre-wrap">
+                                                {persistentHint.text}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* Nút Làm lại câu hỏi - Chỉ hiện khi đã có đáp án */}
                         {answers[currentQuestion.id] !== undefined && (
@@ -238,6 +278,9 @@ interface QuestionBodyRendererProps {
     setIsWobbling: (wobble: boolean) => void;
     handleNextQuestion: () => void;
     showHintsSetting: boolean;
+    wrongAttempts: Record<string, number>;
+    handleWrongAttempt: (questionId: string) => void;
+    setPersistentHint: (hint: { text: string, type: 'hint' | 'explanation' } | null) => void;
 }
 
 function QuestionBodyRenderer({
@@ -249,6 +292,9 @@ function QuestionBodyRenderer({
     setIsWobbling,
     handleNextQuestion,
     showHintsSetting,
+    wrongAttempts,
+    handleWrongAttempt,
+    setPersistentHint,
 }: QuestionBodyRendererProps) {
     const qType = (currentQuestion.content?.type || currentQuestion.q_type || "").toUpperCase();
 
@@ -279,8 +325,24 @@ function QuestionBodyRenderer({
                 origin: { y: 0.6 }
             });
         } else {
-            const feedback = showHintsSetting && hint ? `Gợi ý: ${hint}` : encouragements[Math.floor(Math.random() * encouragements.length)];
-            setFriendlyMessage(feedback);
+            // Increment wrong attempts
+            handleWrongAttempt(currentQuestion.id);
+            const currentAttempts = (wrongAttempts[currentQuestion.id] || 0) + 1;
+
+            if (showHintsSetting) {
+                if (currentAttempts >= 3 && currentQuestion.explanation) {
+                    setPersistentHint({ text: currentQuestion.explanation, type: 'explanation' });
+                    setFriendlyMessage(null); // Clear moving popup
+                } else if (hint) {
+                    setPersistentHint({ text: hint, type: 'hint' });
+                    setFriendlyMessage(null); // Clear moving popup
+                } else {
+                    setFriendlyMessage(encouragements[Math.floor(Math.random() * encouragements.length)]);
+                }
+            } else {
+                setFriendlyMessage(encouragements[Math.floor(Math.random() * encouragements.length)]);
+            }
+
             setIsWobbling(true);
             setTimeout(() => setIsWobbling(false), 500);
         }

@@ -27,7 +27,7 @@ import { NotebookCard, NotebookCardContent, NotebookButton } from "@/components/
 import { QuizGeneratorForm } from "@/components/teacher/QuizGeneratorForm";
 import { QuestionBankTab } from "@/components/teacher/QuestionBankTab";
 import { ManualQuestionTab } from "@/components/teacher/ManualQuestionTab";
-import { TestDetailsForm } from "@/components/teacher/TestDetailsForm";
+import { TestDetailsForm, TestDetails } from "@/components/teacher/TestDetailsForm";
 import { QuestionPointsGrid } from "@/components/teacher/QuestionPointsGrid";
 import { PaginatedQuestionPreview } from "@/components/teacher/PaginatedQuestionPreview";
 import { Button } from "@/components/ui/button";
@@ -126,6 +126,7 @@ const prepareQuestionsToSave = (questions: Question[], testDetails: any, userId:
       model_answer: q.model_answer || "",
       subject_id: resolveSubjectId(testDetails.subject),
       explanation: q.explanation || null,
+      hint: q.hint || null,
     };
   });
 };
@@ -140,12 +141,13 @@ function CreateTestContent() {
   const [activeTab, setActiveTab] = useState<"manual" | "ai" | "bank">(
     "manual",
   );
-  const [testDetails, setTestDetails] = useState({
+  const [testDetails, setTestDetails] = useState<TestDetails>({
     title: "",
     description: "",
     subject: "",
     node: "",
     timeLimit: 30,
+    showHints: false,
     classId: classIdParam || "",
     type: "homework", // Default to homework
   });
@@ -408,6 +410,7 @@ function CreateTestContent() {
         settings: {
           time_limit: testDetails.timeLimit,
           allow_retry: true,
+          show_hints: testDetails.showHints || false,
         },
         is_published: !isDraft,
         created_by: user?.id || "",

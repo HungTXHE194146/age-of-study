@@ -54,6 +54,8 @@ export default function StudentTestPage() {
     totalQuestions,
     answeredCount,
     unansweredCount,
+    wrongAttempts,
+    handleWrongAttempt,
   } = useStudentTest(testId);
 
   // ── Auth guard ───────────────────────────────────────────────────────────
@@ -202,6 +204,8 @@ export default function StudentTestPage() {
             handleSubmitClick={() => setShowConfirmModal(true)}
             handlePrevQuestion={handlePrevQuestion}
             handleNextQuestion={handleNextQuestion}
+            wrongAttempts={wrongAttempts}
+            handleWrongAttempt={handleWrongAttempt}
           />
         )}
       </div>
