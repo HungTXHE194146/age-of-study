@@ -31,6 +31,8 @@ interface TestInterfaceProps {
     handleSubmitClick: () => void;
     handlePrevQuestion: () => void;
     handleNextQuestion: () => void;
+    wrongAttempts: Record<string, number>;
+    handleWrongAttempt: (questionId: string) => void;
 }
 
 export default function TestInterface({
@@ -52,6 +54,8 @@ export default function TestInterface({
     handleSubmitClick,
     handlePrevQuestion,
     handleNextQuestion,
+    wrongAttempts,
+    handleWrongAttempt,
 }: TestInterfaceProps) {
     const currentQuestion = test.questions[currentQuestionIndex];
     const totalQuestions = test.questions.length;
@@ -136,6 +140,8 @@ export default function TestInterface({
                             setIsWobbling={setIsWobbling}
                             handleNextQuestion={handleNextQuestion}
                             showHintsSetting={test.settings?.show_hints ?? false}
+                            wrongAttempts={wrongAttempts}
+                            handleWrongAttempt={handleWrongAttempt}
                         />
 
                         {/* Nút Làm lại câu hỏi - Chỉ hiện khi đã có đáp án */}
@@ -238,6 +244,8 @@ interface QuestionBodyRendererProps {
     setIsWobbling: (wobble: boolean) => void;
     handleNextQuestion: () => void;
     showHintsSetting: boolean;
+    wrongAttempts: Record<string, number>;
+    handleWrongAttempt: (questionId: string) => void;
 }
 
 function QuestionBodyRenderer({
@@ -249,6 +257,8 @@ function QuestionBodyRenderer({
     setIsWobbling,
     handleNextQuestion,
     showHintsSetting,
+    wrongAttempts,
+    handleWrongAttempt,
 }: QuestionBodyRendererProps) {
     const qType = (currentQuestion.content?.type || currentQuestion.q_type || "").toUpperCase();
 
@@ -279,7 +289,23 @@ function QuestionBodyRenderer({
                 origin: { y: 0.6 }
             });
         } else {
-            const feedback = showHintsSetting && hint ? `Gợi ý: ${hint}` : encouragements[Math.floor(Math.random() * encouragements.length)];
+            // Increment wrong attempts
+            handleWrongAttempt(currentQuestion.id);
+            const currentAttempts = (wrongAttempts[currentQuestion.id] || 0) + 1; // +1 because the state hasn't updated yet
+
+            let feedback = "";
+            if (showHintsSetting) {
+                if (currentAttempts >= 3 && currentQuestion.explanation) {
+                    feedback = `Lời giải: ${currentQuestion.explanation}`;
+                } else if (hint) {
+                    feedback = `Gợi ý: ${hint}`;
+                } else {
+                    feedback = encouragements[Math.floor(Math.random() * encouragements.length)];
+                }
+            } else {
+                feedback = encouragements[Math.floor(Math.random() * encouragements.length)];
+            }
+
             setFriendlyMessage(feedback);
             setIsWobbling(true);
             setTimeout(() => setIsWobbling(false), 500);

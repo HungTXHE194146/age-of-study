@@ -1,7 +1,0 @@
-{
-  "name": "age-of-study-workspace",
-  "private": true,
-  "workspaces": [
-    "age-of-study"
-  ]
-}
