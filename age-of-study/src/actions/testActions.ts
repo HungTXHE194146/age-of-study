@@ -60,8 +60,6 @@ export async function getTestWithQuestionsServer(testId: string): Promise<{ data
     }
 
     // 3. Transform questions to flat array
-    console.log(qData);
-    
     const questions = (qData || [])
       .map((row: any) => {
         const questionData = Array.isArray(row.questions)
