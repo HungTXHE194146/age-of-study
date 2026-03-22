@@ -20,7 +20,7 @@ import {
 import { QuizGeneratorForm } from "@/components/teacher/QuizGeneratorForm";
 import { QuestionBankTab } from "@/components/teacher/QuestionBankTab";
 import { ManualQuestionTab } from "@/components/teacher/ManualQuestionTab";
-import { TestDetailsForm } from "@/components/teacher/TestDetailsForm";
+import { TestDetailsForm, TestDetails } from "@/components/teacher/TestDetailsForm";
 import { QuestionPointsGrid } from "@/components/teacher/QuestionPointsGrid";
 import { PaginatedQuestionPreview } from "@/components/teacher/PaginatedQuestionPreview";
 import { Button } from "@/components/ui/button";
@@ -120,6 +120,7 @@ const prepareQuestionsToSave = (questions: Question[], testDetails: any, userId:
       model_answer: q.model_answer || "",
       subject_id: resolveSubjectId(testDetails.subject),
       explanation: q.explanation || null,
+      hint: q.hint || null,
     };
   });
 };
@@ -141,12 +142,13 @@ function TestEditContent() {
   const { user } = useAuthStore();
 
   const [activeTab, setActiveTab] = useState<"manual" | "ai" | "bank">("manual");
-  const [testDetails, setTestDetails] = useState({
+  const [testDetails, setTestDetails] = useState<TestDetails>({
     title: "",
     description: "",
     subject: "",
     node: "",
     timeLimit: 30,
+    showHints: false,
     classId: classIdParam || "",
     type: "homework",
   });
@@ -187,6 +189,7 @@ function TestEditContent() {
           subject: testData.subject_id?.toString() || "",
           node: testData.node_id?.toString() || "",
           timeLimit: testData.settings.time_limit || 30,
+          showHints: testData.settings.show_hints || false,
           classId: testData.class_id?.toString() || classIdParam || "",
           type: testData.type || "homework",
         });
@@ -211,7 +214,7 @@ function TestEditContent() {
           explanation: q.explanation || q.content.explanation || "",
           model_answer: q.model_answer || "",
           metadata: q.content.metadata,
-          hint: q.content.hint || "",
+          hint: q.hint || q.content.hint || "",
           points: q.points || 10,
         }));
 
@@ -367,6 +370,7 @@ function TestEditContent() {
         settings: {
           time_limit: testDetails.timeLimit,
           allow_retry: true,
+          show_hints: testDetails.showHints || false,
         },
         is_published: !isDraft,
         class_id: testDetails.classId ? parseInt(testDetails.classId) : null,
