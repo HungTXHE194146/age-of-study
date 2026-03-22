@@ -19,6 +19,7 @@ export default function FillInBlanksRenderer({
     questionText,
     blanks,
     onComplete,
+    onUpdate,
     initialAnswer,
     supportMode = true,
     hint,

@@ -17,6 +17,7 @@ interface MatchingRendererProps {
 export default function MatchingRenderer({
     matchingPairs,
     onComplete,
+    onUpdate,
     initialAnswer,
     supportMode = true,
     hint,

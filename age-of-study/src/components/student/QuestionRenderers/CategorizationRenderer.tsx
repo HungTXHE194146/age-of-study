@@ -17,6 +17,7 @@ interface CategorizationRendererProps {
 export default function CategorizationRenderer({
     categoriesData,
     onComplete,
+    onUpdate,
     initialAnswer,
     supportMode = true,
     hint,

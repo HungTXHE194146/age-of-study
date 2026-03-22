@@ -19,6 +19,7 @@ export default function WordOrderingRenderer({
     questionText,
     orderedWords,
     onComplete,
+    onUpdate,
     initialAnswer,
     supportMode = true,
     hint,
