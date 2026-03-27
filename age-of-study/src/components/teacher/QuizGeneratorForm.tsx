@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Loading from "@/components/ui/loading";
 import { AIQuestionService } from "@/lib/aiQuestionService";
 
+import { Tooltip } from "@/components/ui/tooltip";
 import {
   PlusCircle,
   FileText,
@@ -135,13 +136,6 @@ export function QuizGeneratorForm({
           <Wand2 className="w-5 h-5" />
           Tạo bằng AI
         </button>
-        <button
-          onClick={() => setActiveTab("bank")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${activeTab === "bank" ? "bg-emerald-600 text-white shadow-[2px_2px_0_0_rgba(0,0,0,1)]" : "text-gray-600 hover:bg-gray-200"}`}
-        >
-          <Database className="w-5 h-5" />
-          Ngân hàng đề
-        </button>
       </div>
 
       {activeTab === "ai" ? (
@@ -152,34 +146,45 @@ export function QuizGeneratorForm({
               Nguồn học liệu đầu vào
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <button
-                onClick={() => setSource("topic")}
-                className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "topic" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
-              >
-                <span className="text-2xl">📝</span>
-                <span className="text-[10px] uppercase">Chủ đề</span>
-              </button>
-              <button
-                onClick={() => setSource("file")}
-                className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "file" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
-              >
-                <span className="text-2xl">📁</span>
-                <span className="text-[10px] uppercase">Tệp tin</span>
-              </button>
-              <button
-                onClick={() => setSource("kb")}
-                className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "kb" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
-              >
-                <span className="text-2xl">🧠</span>
-                <span className="text-[10px] uppercase">Học liệu</span>
-              </button>
-              <button
-                onClick={() => setSource("bank")}
-                className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "bank" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
-              >
-                <span className="text-2xl">🏛️</span>
-                <span className="text-[10px] uppercase">Kho đề</span>
-              </button>
+              <Tooltip content="Tạo câu hỏi từ chủ đề hoặc yêu cầu bạn nhập vào trực tiếp.">
+                <button
+                  onClick={() => setSource("topic")}
+                  className={`p-3 w-full rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "topic" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
+                >
+                  <span className="text-2xl">📝</span>
+                  <span className="text-[10px] uppercase">Chủ đề</span>
+                </button>
+              </Tooltip>
+
+              <Tooltip content="Tải lên tệp PDF/DOCX/TXT để AI tự phân tích và tạo câu hỏi.">
+                <button
+                  onClick={() => setSource("file")}
+                  className={`p-3 w-full rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "file" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
+                >
+                  <span className="text-2xl">📁</span>
+                  <span className="text-[10px] uppercase">Tệp tin</span>
+                </button>
+              </Tooltip>
+
+              <Tooltip content="Sử dụng các học liệu và bài giảng đã lưu trữ trong hệ thống của bạn.">
+                <button
+                  onClick={() => setSource("kb")}
+                  className={`p-3 w-full rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "kb" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
+                >
+                  <span className="text-2xl">🧠</span>
+                  <span className="text-[10px] uppercase">Học liệu</span>
+                </button>
+              </Tooltip>
+
+              <Tooltip content="Lấy các câu hỏi đã có sẵn từ ngân hàng đề thi chung hoặc cá nhân.">
+                <button
+                  onClick={() => setSource("bank")}
+                  className={`p-3 w-full rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "bank" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
+                >
+                  <span className="text-2xl">🏛️</span>
+                  <span className="text-[10px] uppercase">Kho đề</span>
+                </button>
+              </Tooltip>
             </div>
           </div>
 
@@ -280,31 +285,33 @@ export function QuizGeneratorForm({
                 <label className="block text-[10px] font-black text-indigo-900 uppercase tracking-wider">Các loại câu hỏi muốn tạo</label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { id: 'MULTIPLE_CHOICE', label: 'Trắc nghiệm' },
-                    { id: 'TRUE_FALSE', label: 'Đúng/Sai' },
-                    { id: 'WORD_ORDERING', label: 'Sắp xếp từ' },
-                    { id: 'MATCHING', label: 'Nối cặp' },
-                    { id: 'FILL_IN_BLANKS', label: 'Điền trống' },
-                    { id: 'CATEGORIZATION', label: 'Phân loại' },
-                    { id: 'FIND_ERROR', label: 'Tìm lỗi sai' },
-                    { id: 'ESSAY', label: 'Tự luận' }
+                    { id: 'MULTIPLE_CHOICE', label: 'Trắc nghiệm', desc: 'Câu hỏi có nhiều lựa chọn, chỉ có 1 đáp án đúng.' },
+                    { id: 'TRUE_FALSE', label: 'Đúng/Sai', desc: 'Học sinh chọn xem nhận định là Đúng hay Sai.' },
+                    { id: 'WORD_ORDERING', label: 'Sắp xếp từ', desc: 'Sắp xếp các từ xáo trộn thành câu hoàn chỉnh.' },
+                    { id: 'MATCHING', label: 'Nối cặp', desc: 'Nối các mục ở cột A với các mục ở cột B tương ứng.' },
+                    { id: 'FILL_IN_BLANKS', label: 'Điền trống', desc: 'Điền từ hoặc cụm từ còn thiếu vào chỗ trống.' },
+                    { id: 'CATEGORIZATION', label: 'Phân loại', desc: 'Sắp xếp các đối tượng vào các nhóm phù hợp.' },
+                    { id: 'FIND_ERROR', label: 'Tìm lỗi sai', desc: 'Xác định và sửa lỗi sai trong câu văn.' },
+                    { id: 'ESSAY', label: 'Tự luận', desc: 'Câu hỏi mở yêu cầu viết câu trả lời chi tiết.' }
                   ].map(type => (
-                    <label key={type.id} className="flex items-center gap-2 cursor-pointer group">
-                      <div
-                        onClick={() => {
-                          setQuestionTypesCount(prev => ({
-                            ...prev,
-                            [type.id]: prev[type.id] > 0 ? 0 : 1
-                          }));
-                        }}
-                        className={`w-4 h-4 rounded border-2 border-black flex items-center justify-center transition-all ${questionTypesCount[type.id] > 0 ? 'bg-indigo-500' : 'bg-white'}`}
-                      >
-                        {questionTypesCount[type.id] > 0 && <div className="w-2 h-2 bg-white rounded-sm" />}
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-700 group-hover:text-indigo-600 transition-colors uppercase tracking-tighter">
-                        {type.label}
-                      </span>
-                    </label>
+                    <Tooltip key={type.id} content={type.desc} className="w-48">
+                      <label className="flex items-center gap-2 cursor-pointer group w-full">
+                        <div
+                          onClick={() => {
+                            setQuestionTypesCount(prev => ({
+                              ...prev,
+                              [type.id]: prev[type.id] > 0 ? 0 : 1
+                            }));
+                          }}
+                          className={`w-4 h-4 rounded border-2 border-black flex items-center justify-center transition-all ${questionTypesCount[type.id] > 0 ? "bg-indigo-500" : "bg-white"}`}
+                        >
+                          {questionTypesCount[type.id] > 0 && <div className="w-2 h-2 bg-white rounded-sm" />}
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-700 group-hover:text-indigo-600 transition-colors uppercase tracking-tighter">
+                          {type.label}
+                        </span>
+                      </label>
+                    </Tooltip>
                   ))}
                 </div>
                 <p className="text-[9px] text-gray-400 font-bold italic mt-2">* AI sẽ cố gắng điều phối tỷ lệ câu hỏi phù hợp.</p>

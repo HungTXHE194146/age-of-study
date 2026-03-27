@@ -26,6 +26,7 @@ import Loading from "@/components/ui/loading";
 import { AddStudentModal, AddStudentFromExcelModal, EditStudentModal } from "@/components/student-management-modals";
 import { NotebookCard, NotebookCardHeader, NotebookCardTitle, NotebookCardContent, NotebookButton, NotebookBadge } from "@/components/ui/notebook-card";
 import { Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export default function ClassDetailPage() {
   const { classId } = useParams();
@@ -345,28 +346,36 @@ export default function ClassDetailPage() {
               </h2>
               <div className="flex flex-wrap gap-3">
                 <Link href={`/teacher/classes/${classId}/attendance`}>
-                  <NotebookButton className="flex items-center gap-2 bg-blue-100 border-blue-800 text-blue-900 font-bold hover:bg-blue-200">
-                    <Calendar className="w-5 h-5" />
-                    Điểm danh
-                  </NotebookButton>
+                  <Tooltip content="Ghi nhận chuyên cần và sự hiện diện của học sinh trong buổi học.">
+                    <NotebookButton className="flex items-center gap-2 bg-blue-100 border-blue-800 text-blue-900 font-bold hover:bg-blue-200">
+                      <Calendar className="w-5 h-5" />
+                      Điểm danh
+                    </NotebookButton>
+                  </Tooltip>
                 </Link>
                 <Link href={`/teacher/classes/${classId}/qr-codes`}>
-                  <NotebookButton className="flex items-center gap-2 bg-purple-100 border-purple-800 text-purple-900 font-bold hover:bg-purple-200">
-                    <Users className="w-5 h-5" />
-                    Quản lý QR
-                  </NotebookButton>
+                  <Tooltip content="Quản lý và in mã QR đăng nhập cho từng học sinh trong lớp.">
+                    <NotebookButton className="flex items-center gap-2 bg-purple-100 border-purple-800 text-purple-900 font-bold hover:bg-purple-200">
+                      <Users className="w-5 h-5" />
+                      Quản lý QR
+                    </NotebookButton>
+                  </Tooltip>
                 </Link>
                 <Link href={`/teacher/classes/${classId}/reports`}>
-                  <NotebookButton className="flex items-center gap-2 bg-yellow-100 border-yellow-800 text-yellow-900 font-bold hover:bg-yellow-200">
-                    <Eye className="w-5 h-5" />
-                    Báo cáo
-                  </NotebookButton>
+                  <Tooltip content="Xem báo cáo chi tiết về kết quả học tập và tiến độ của cả lớp.">
+                    <NotebookButton className="flex items-center gap-2 bg-yellow-100 border-yellow-800 text-yellow-900 font-bold hover:bg-yellow-200">
+                      <Eye className="w-5 h-5" />
+                      Báo cáo
+                    </NotebookButton>
+                  </Tooltip>
                 </Link>
                 <Link href={`/teacher/tests/create?classId=${classId}`}>
-                  <NotebookButton className="flex items-center gap-2 border-gray-800 font-bold">
-                    <Plus className="w-5 h-5" />
-                    Tạo bài kiểm tra
-                  </NotebookButton>
+                  <Tooltip content="Tạo bài kiểm tra hoặc bài luyện tập mới áp dụng cho lớp học này.">
+                    <NotebookButton className="flex items-center gap-2 border-gray-800 font-bold">
+                      <Plus className="w-5 h-5" />
+                      Tạo bài kiểm tra
+                    </NotebookButton>
+                  </Tooltip>
                 </Link>
               </div>
             </NotebookCardContent>
@@ -522,14 +531,18 @@ export default function ClassDetailPage() {
           </div>
           {isHomeroomTeacher && (
             <div className="hidden sm:flex gap-3">
-              <NotebookButton onClick={() => setIsAddModalOpen(true)} className="bg-emerald-100 text-emerald-900 border-emerald-900 py-2">
-                <UserPlus className="w-5 h-5 mr-2" />
-                Thêm thủ công
-              </NotebookButton>
-              <NotebookButton onClick={() => setIsExcelModalOpen(true)} className="bg-blue-100 text-blue-900 border-blue-900 py-2">
-                <Users className="w-5 h-5 mr-2" />
-                Thêm từ Excel
-              </NotebookButton>
+              <Tooltip content="Thêm tài khoản học sinh mới vào hệ thống một cách thủ công.">
+                <NotebookButton onClick={() => setIsAddModalOpen(true)} className="bg-emerald-100 text-emerald-900 border-emerald-900 py-2 whitespace-nowrap">
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  Thêm thủ công
+                </NotebookButton>
+              </Tooltip>
+              <Tooltip content="Tải lên danh sách học sinh từ tệp Excel để thêm nhanh số lượng lớn.">
+                <NotebookButton onClick={() => setIsExcelModalOpen(true)} className="bg-blue-100 text-blue-900 border-blue-900 py-2">
+                  <Users className="w-5 h-5 mr-2" />
+                  Thêm từ Excel
+                </NotebookButton>
+              </Tooltip>
             </div>
           )}
         </div>
@@ -659,17 +672,24 @@ export default function ClassDetailPage() {
                       href={`/teacher/classes/${classId}/students/${student.student_id}`}
                       className="flex-1"
                     >
-                      <NotebookButton className="w-full text-base py-1 bg-gray-100 border-gray-800 hover:bg-gray-200">
-                        <Eye className="w-4 h-4 mr-1" /> Xem
-                      </NotebookButton>
+                      <Tooltip content="Xem hồ sơ, tiến độ học tập và các hoạt động của học sinh này.">
+                        <NotebookButton className="w-full text-base py-1 bg-gray-100 border-gray-800 hover:bg-gray-200">
+                          <Eye className="w-4 h-4 mr-1" /> Xem
+                        </NotebookButton>
+                      </Tooltip>
                     </Link>
                     {isHomeroomTeacher && (
-                      <NotebookButton
-                        onClick={() => { setSelectedStudent(student); setIsEditModalOpen(true); }}
-                        className="aspect-square p-2 bg-yellow-100 border-yellow-800 text-yellow-900 hover:bg-yellow-200"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </NotebookButton>
+                      <div>
+
+                        <Tooltip content="Chỉnh sửa thông tin cá nhân của học sinh này.">
+                          <NotebookButton
+                            onClick={() => { setSelectedStudent(student); setIsEditModalOpen(true); }}
+                            className="h-full p-2 bg-yellow-100 border-yellow-800 text-yellow-900 hover:bg-yellow-200"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </NotebookButton>
+                        </Tooltip>
+                      </div>
                     )}
                   </div>
                 </NotebookCardContent>
