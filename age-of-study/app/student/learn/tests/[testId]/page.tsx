@@ -54,6 +54,8 @@ export default function StudentTestPage() {
     totalQuestions,
     answeredCount,
     unansweredCount,
+    wrongAttempts,
+    handleWrongAttempt,
   } = useStudentTest(testId);
 
   // ── Auth guard ───────────────────────────────────────────────────────────
@@ -178,7 +180,14 @@ export default function StudentTestPage() {
           )}
         </AnimatePresence>
 
-        <TestHeader test={test} totalQuestions={totalQuestions} isStarted={isStarted} timeWarning={timeWarning} timeLeft={timeLeft} formatTime={formatTime} />
+        <TestHeader
+          test={test}
+          totalQuestions={totalQuestions}
+          isStarted={isStarted}
+          timeWarning={timeWarning}
+          timeLeft={timeLeft}
+          formatTime={formatTime}
+        />
 
         {!isStarted ? (
           <TestStartScreen test={test} onStart={handleStartTest} />
@@ -202,6 +211,8 @@ export default function StudentTestPage() {
             handleSubmitClick={() => setShowConfirmModal(true)}
             handlePrevQuestion={handlePrevQuestion}
             handleNextQuestion={handleNextQuestion}
+            wrongAttempts={wrongAttempts}
+            handleWrongAttempt={handleWrongAttempt}
           />
         )}
       </div>
