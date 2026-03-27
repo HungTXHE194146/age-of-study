@@ -323,32 +323,43 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   // Determine current week from scroll position
   const [currentWeek, setCurrentWeek] = useState<number | null>(null);
 
-  const handleMove = useCallback((event: any, viewport: { x: number; y: number; zoom: number }) => {
-    if (!subjectNodes || isTeacherMode) return;
+  // Debounced so rapid pan/scroll events don't cause continuous re-renders.
+  // Uses functional setState to drop `currentWeek` from the dependency array,
+  // which would otherwise force a new callback on every scroll tick.
+  const handleMove = useMemo(
+    () =>
+      debounce(
+        (event: any, viewport: { x: number; y: number; zoom: number }) => {
+          if (!subjectNodes || isTeacherMode) return;
 
-    // Viewport Y is negative when scrolling down
-    // The nodes are positioned at positive Y. 
-    // The top of the screen in terms of node Y is roughly: -viewport.y / viewport.zoom
-    const screenTopY = -viewport.y / viewport.zoom;
+          const screenTopY = -viewport.y / viewport.zoom;
 
-    // Find the node closest to this Y
-    let closestNode = null;
-    let minDistance = Infinity;
+          let closestNode = null;
+          let minDistance = Infinity;
 
-    for (const node of subjectNodes) {
-      if (node.week_number) {
-        const distance = Math.abs(node.position_y! - screenTopY);
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestNode = node;
-        }
-      }
-    }
+          for (const node of subjectNodes) {
+            if (node.week_number) {
+              const distance = Math.abs(node.position_y! - screenTopY);
+              if (distance < minDistance) {
+                minDistance = distance;
+                closestNode = node;
+              }
+            }
+          }
 
-    if (closestNode?.week_number && closestNode.week_number !== currentWeek) {
-      setCurrentWeek(closestNode.week_number);
-    }
-  }, [subjectNodes, isTeacherMode, currentWeek]);
+          if (closestNode?.week_number) {
+            // Functional update: only triggers re-render when the week actually changes
+            setCurrentWeek((prev) =>
+              closestNode.week_number !== prev
+                ? (closestNode.week_number ?? prev)
+                : prev,
+            );
+          }
+        },
+        150,
+      ),
+    [subjectNodes, isTeacherMode],
+  );
 
   if (!subjectNodes) {
     return (
@@ -367,7 +378,9 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
         {!isTeacherMode && currentWeek && (
           <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 duration-300">
             <div className="bg-[#fbbf24] border-2 border-black rounded-full px-6 py-1 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-widest text-black font-handwritten">TUẦN {currentWeek}</span>
+              <span className="text-xs font-black uppercase tracking-widest text-black font-handwritten">
+                TUẦN {currentWeek}
+              </span>
             </div>
           </div>
         )}
@@ -619,43 +632,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
             nodesDraggable={isTeacherMode}
             nodesConnectable={isTeacherMode}
             elementsSelectable={true}
-            translateExtent={(() => {
-              if (!nodes || nodes.length === 0) {
-                return [
-                  [-1000, -Infinity],
-                  [1000, Infinity],
-                ];
-              }
-
-              let minY = Infinity;
-              let maxY = -Infinity;
-              let minX = Infinity;
-              let maxX = -Infinity;
-
-              nodes.forEach((node) => {
-                const x = node.position.x;
-                const y = node.position.y;
-                if (y < minY) minY = y;
-                if (y > maxY) maxY = y;
-                if (x < minX) minX = x;
-                if (x > maxX) maxX = x;
-              });
-
-              const centerX = (minX + maxX) / 2 + 75; // 75 is half node width
-
-              // For students, we want to lock horizontal scroll.
-              // To prevent the 'snapping' issue, the X range should be centered around the nodes.
-              // We use a safe margin that prevents significant horizontal movement but avoids snapping.
-              const horizontalRange = 1;
-
-              const headerMarginY = 150;
-              const bottomMarginY = 250;
-
-              return [
-                [centerX - horizontalRange, minY - headerMarginY],
-                [centerX + horizontalRange, maxY + bottomMarginY],
-              ] as any;
-            })()}
+            translateExtent={calculatedTranslateExtent}
             defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
             selectionMode={isTeacherMode ? SelectionMode.Partial : undefined}
             onlyRenderVisibleElements={true}

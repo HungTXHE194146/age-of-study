@@ -23,9 +23,8 @@ function LoginContent() {
     clearError,
     clearMFAChallenge,
     user,
-    requiresMFA
+    requiresMFA,
   } = useAuthStore();
-
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -46,31 +45,33 @@ function LoginContent() {
     if (hasAttemptedAutoLogin || user || isLoading) return;
 
     // Sử dụng window.location.search nếu searchParams từ Next.js chưa sẵn sàng
-    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : "");
-    const action = params.get('action') || searchParams?.get('action');
-    const u = params.get('u') || searchParams?.get('u');
-    const p = params.get('p') || searchParams?.get('p');
-    const encodedData = params.get('qr_data') || searchParams?.get('qr_data');
+    const params = new URLSearchParams(
+      typeof window !== "undefined" ? window.location.search : "",
+    );
+    const action = params.get("action") || searchParams?.get("action");
+    const u = params.get("u") || searchParams?.get("u");
+    const p = params.get("p") || searchParams?.get("p");
+    const encodedData = params.get("qr_data") || searchParams?.get("qr_data");
 
-    // Thêm log để giáo viên kiểm tra trong console
-    if (action || u || p || encodedData) {
-      console.log("💎 [Login] Phát hiện tham số đăng nhập:", { action, u, p: p ? "****" : null, hasData: !!encodedData });
-    }
+    // // Thêm log để giáo viên kiểm tra trong console
+    // if (action || u || p || encodedData) {
+    //   console.log("💎 [Login] Phát hiện tham số đăng nhập:", { action, u, p: p ? "****" : null, hasData: !!encodedData });
+    // }
 
-    if ((action === 'qr_login_v1' && u && p) || encodedData) {
+    if ((action === "qr_login_v1" && u && p) || encodedData) {
       setHasAttemptedAutoLogin(true);
       setIsAutoLoggingIn(true);
 
       const performAutoLogin = async () => {
         try {
-          if (action === 'qr_login_v1' && u && p) {
+          if (action === "qr_login_v1" && u && p) {
             await login(u, p);
           } else if (encodedData) {
             const decoded = atob(encodedData);
             const parsed = JSON.parse(decoded);
             const username = parsed.username || parsed.u;
             const password = parsed.password || parsed.p;
-            if (parsed.action === 'qr_login_v1' && username && password) {
+            if (parsed.action === "qr_login_v1" && username && password) {
               await login(username, password);
             }
           }
@@ -83,7 +84,14 @@ function LoginContent() {
 
       performAutoLogin();
     }
-  }, [searchParams, login, user, isLoading, hasAttemptedAutoLogin, setIsAutoLoggingIn]);
+  }, [
+    searchParams,
+    login,
+    user,
+    isLoading,
+    hasAttemptedAutoLogin,
+    setIsAutoLoggingIn,
+  ]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -116,30 +124,30 @@ function LoginContent() {
   }, [user, router]);
 
   const handleQRScanSuccess = async (decodedText: string) => {
-    console.log("🔍 [Scanner] Dữ liệu quét được:", decodedText);
+    // console.log("🔍 [Scanner] Dữ liệu quét được:", decodedText);
     try {
       setScanError(null);
       let usernameToLogin = "";
       let passwordToLogin = "";
 
       // Kiểm tra xem dữ liệu có phải là một URL đầy đủ không
-      if (decodedText.startsWith('http')) {
+      if (decodedText.startsWith("http")) {
         const url = new URL(decodedText);
 
         // Ưu tiên định dạng tham số u/p trực tiếp
-        const u = url.searchParams.get('u');
-        const p = url.searchParams.get('p');
-        const action = url.searchParams.get('action');
+        const u = url.searchParams.get("u");
+        const p = url.searchParams.get("p");
+        const action = url.searchParams.get("action");
 
-        if (action === 'qr_login_v1' && u && p) {
+        if (action === "qr_login_v1" && u && p) {
           usernameToLogin = u;
           passwordToLogin = p;
         } else {
           // Kiểm tra định dạng cũ qr_data trong URL
-          const encodedData = url.searchParams.get('qr_data');
+          const encodedData = url.searchParams.get("qr_data");
           if (encodedData) {
             const parsed = JSON.parse(atob(encodedData));
-            if (parsed.action === 'qr_login_v1') {
+            if (parsed.action === "qr_login_v1") {
               usernameToLogin = parsed.username || parsed.u;
               passwordToLogin = parsed.password || parsed.p;
             }
@@ -150,26 +158,30 @@ function LoginContent() {
       else {
         try {
           const parsed = JSON.parse(decodedText);
-          if (parsed.action === 'qr_login_v1') {
+          if (parsed.action === "qr_login_v1") {
             usernameToLogin = parsed.username || parsed.u;
             passwordToLogin = parsed.password || parsed.p;
           }
         } catch {
           // Thử tìm thủ công nếu scanner trả về chuỗi có chứa u= và p= (một số scanner chỉ trả về query part)
-          if (decodedText.includes('u=') && decodedText.includes('p=')) {
-            const mockUrl = new URL(`http://x?${decodedText.includes('?') ? decodedText.split('?')[1] : decodedText}`);
-            usernameToLogin = mockUrl.searchParams.get('u') || "";
-            passwordToLogin = mockUrl.searchParams.get('p') || "";
+          if (decodedText.includes("u=") && decodedText.includes("p=")) {
+            const mockUrl = new URL(
+              `http://x?${decodedText.includes("?") ? decodedText.split("?")[1] : decodedText}`,
+            );
+            usernameToLogin = mockUrl.searchParams.get("u") || "";
+            passwordToLogin = mockUrl.searchParams.get("p") || "";
           }
         }
       }
 
       if (usernameToLogin && passwordToLogin) {
-        console.log("✅ [Scanner] Thông tin hợp lệ, đang đăng nhập:", usernameToLogin);
+        // console.log("✅ [Scanner] Thông tin hợp lệ, đang đăng nhập:", usernameToLogin);
         setIsScanningQR(false);
         await login(usernameToLogin, passwordToLogin);
       } else {
-        console.warn("⚠️ [Scanner] Không tìm thấy thông tin đăng nhập hợp lệ trong mã QR");
+        console.warn(
+          "⚠️ [Scanner] Không tìm thấy thông tin đăng nhập hợp lệ trong mã QR",
+        );
         setScanError("Thẻ này không chứa thông tin đăng nhập hợp lệ.");
       }
     } catch (err: any) {
@@ -180,12 +192,12 @@ function LoginContent() {
 
   // Handle MFA verification
   const handleMFAVerify = async (code: string) => {
-    const success = await verifyMFA(code)
-    return { success, error: error || undefined }
+    const success = await verifyMFA(code);
+    return { success, error: error || undefined };
   };
 
   const handleMFAClose = () => {
-    clearMFAChallenge()
+    clearMFAChallenge();
   };
 
   return (
@@ -272,7 +284,9 @@ function LoginContent() {
               <LoadingSpinner size="md" />
             </div>
             <p className="font-bold text-blue-700">Đang nhận diện thẻ bài...</p>
-            <p className="text-sm text-blue-500 mt-1">Đợi một chút để hệ thống đưa em vào lớp nhé!</p>
+            <p className="text-sm text-blue-500 mt-1">
+              Đợi một chút để hệ thống đưa em vào lớp nhé!
+            </p>
           </motion.div>
         )}
 
@@ -475,7 +489,6 @@ function LoginContent() {
 
       {/* Footer */}
       <div className="text-center text-xs text-gray-600 mt-6 pb-6">
-
         {/* MFA Verification Modal */}
         {requiresMFA && (
           <VerifyMFAModal
@@ -504,11 +517,13 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <LoadingSpinner size="lg" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <LoadingSpinner size="lg" />
+        </div>
+      }
+    >
       <LoginContent />
     </Suspense>
   );

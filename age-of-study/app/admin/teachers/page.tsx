@@ -28,7 +28,9 @@ export default function TeacherActivityPage() {
   const [data, setData] = useState<TeacherActivityReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive" | "never">("all");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "active" | "inactive" | "never"
+  >("all");
   const [sortBy, setSortBy] = useState<keyof TeacherActivity>("lastActive");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
@@ -89,7 +91,6 @@ export default function TeacherActivityPage() {
       data.teachers.map((t) => ({
         "Họ tên": t.fullName || t.username || "N/A",
         Email: t.email || "N/A",
-        "Tổng lớp": t.totalClasses,
         "Lớp chủ nhiệm": t.homeroomClasses,
         "Lớp bộ môn": t.subjectClasses,
         "Tổng học sinh": t.totalStudents,
@@ -98,25 +99,30 @@ export default function TeacherActivityPage() {
           t.activityStatus === "active"
             ? "Hoạt động"
             : t.activityStatus === "inactive"
-            ? "Không hoạt động"
-            : "Chưa đăng nhập",
+              ? "Không hoạt động"
+              : "Chưa đăng nhập",
         "Số ngày không hoạt động": t.daysInactive,
         "Lần cuối hoạt động": t.lastActive
           ? new Date(t.lastActive).toLocaleDateString("vi-VN")
           : "Chưa bao giờ",
-      }))
+      })),
     );
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Hoạt động giáo viên");
-    XLSX.writeFile(workbook, `hoat-dong-giao-vien-${new Date().toISOString().split("T")[0]}.xlsx`);
+    XLSX.writeFile(
+      workbook,
+      `hoat-dong-giao-vien-${new Date().toISOString().split("T")[0]}.xlsx`,
+    );
   };
 
   const exportToCSV = () => {
     if (!data?.teachers) return;
 
     const csv = exportTeacherDataToCSV(data.teachers);
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\uFEFF" + csv], {
+      type: "text/csv;charset=utf-8;",
+    });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `hoat-dong-giao-vien-${new Date().toISOString().split("T")[0]}.csv`;
@@ -208,8 +214,12 @@ export default function TeacherActivityPage() {
               <Users className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600 font-medium">Tổng giáo viên</p>
-              <p className="text-2xl font-bold text-gray-900">{data.summary.totalTeachers}</p>
+              <p className="text-sm text-gray-600 font-medium">
+                Tổng giáo viên
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {data.summary.totalTeachers}
+              </p>
             </div>
           </div>
         </div>
@@ -221,7 +231,9 @@ export default function TeacherActivityPage() {
             </div>
             <div>
               <p className="text-sm text-gray-600 font-medium">Hoạt động</p>
-              <p className="text-2xl font-bold text-gray-900">{data.summary.activeTeachers}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {data.summary.activeTeachers}
+              </p>
             </div>
           </div>
         </div>
@@ -232,8 +244,12 @@ export default function TeacherActivityPage() {
               <AlertCircle className="w-6 h-6 text-yellow-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600 font-medium">Không hoạt động</p>
-              <p className="text-2xl font-bold text-gray-900">{data.summary.inactiveTeachers}</p>
+              <p className="text-sm text-gray-600 font-medium">
+                Không hoạt động
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {data.summary.inactiveTeachers}
+              </p>
             </div>
           </div>
         </div>
@@ -244,8 +260,12 @@ export default function TeacherActivityPage() {
               <UserX className="w-6 h-6 text-gray-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600 font-medium">Chưa đăng nhập</p>
-              <p className="text-2xl font-bold text-gray-900">{data.summary.neverLoggedIn}</p>
+              <p className="text-sm text-gray-600 font-medium">
+                Chưa đăng nhập
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {data.summary.neverLoggedIn}
+              </p>
             </div>
           </div>
         </div>
@@ -302,7 +322,10 @@ export default function TeacherActivityPage() {
         {sortedTeachers.map((teacher) => {
           const badge = getStatusBadge(teacher.activityStatus);
           return (
-            <div key={teacher.teacherId} className="bg-white rounded-lg border-2 border-gray-200 p-4">
+            <div
+              key={teacher.teacherId}
+              className="bg-white rounded-lg border-2 border-gray-200 p-4"
+            >
               <div className="flex items-start gap-3 mb-3">
                 <UserAvatar
                   name={teacher.fullName || teacher.username || "?"}
@@ -333,19 +356,27 @@ export default function TeacherActivityPage() {
               <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
                 <div>
                   <p className="text-xs text-gray-500">Lớp chủ nhiệm</p>
-                  <p className="text-lg font-bold text-gray-900">{teacher.homeroomClasses}</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {teacher.homeroomClasses}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Lớp bộ môn</p>
-                  <p className="text-lg font-bold text-gray-900">{teacher.subjectClasses}</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {teacher.subjectClasses}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Tổng học sinh</p>
-                  <p className="text-lg font-bold text-gray-900">{teacher.totalStudents}</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {teacher.totalStudents}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Không hoạt động</p>
-                  <p className="text-lg font-bold text-gray-900">{teacher.daysInactive} ngày</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {teacher.daysInactive} ngày
+                  </p>
                 </div>
               </div>
 
@@ -382,19 +413,18 @@ export default function TeacherActivityPage() {
                   onClick={() => handleSort("activityStatus")}
                   className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Trạng thái {sortBy === "activityStatus" && (sortOrder === "asc" ? "↑" : "↓")}
+                  Trạng thái{" "}
+                  {sortBy === "activityStatus" &&
+                    (sortOrder === "asc" ? "↑" : "↓")}
                 </th>
-                <th
-                  onClick={() => handleSort("totalClasses")}
-                  className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                >
-                  Tổng lớp {sortBy === "totalClasses" && (sortOrder === "asc" ? "↑" : "↓")}
-                </th>
+
                 <th
                   onClick={() => handleSort("totalStudents")}
                   className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Học sinh {sortBy === "totalStudents" && (sortOrder === "asc" ? "↑" : "↓")}
+                  Học sinh{" "}
+                  {sortBy === "totalStudents" &&
+                    (sortOrder === "asc" ? "↑" : "↓")}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                   Môn
@@ -403,13 +433,16 @@ export default function TeacherActivityPage() {
                   onClick={() => handleSort("daysInactive")}
                   className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Không hoạt động {sortBy === "daysInactive" && (sortOrder === "asc" ? "↑" : "↓")}
+                  Không hoạt động{" "}
+                  {sortBy === "daysInactive" &&
+                    (sortOrder === "asc" ? "↑" : "↓")}
                 </th>
                 <th
                   onClick={() => handleSort("lastActive")}
                   className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Lần cuối {sortBy === "lastActive" && (sortOrder === "asc" ? "↑" : "↓")}
+                  Lần cuối{" "}
+                  {sortBy === "lastActive" && (sortOrder === "asc" ? "↑" : "↓")}
                 </th>
               </tr>
             </thead>
@@ -430,7 +463,9 @@ export default function TeacherActivityPage() {
                             {teacher.fullName || teacher.username}
                           </p>
                           {teacher.email && (
-                            <p className="text-xs text-gray-500 truncate">{teacher.email}</p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {teacher.email}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -443,16 +478,7 @@ export default function TeacherActivityPage() {
                         {badge.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-2 text-sm">
-                        <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded font-semibold">
-                          CN: {teacher.homeroomClasses}
-                        </span>
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-semibold">
-                          BM: {teacher.subjectClasses}
-                        </span>
-                      </div>
-                    </td>
+
                     <td className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
                       {teacher.totalStudents}
                     </td>
@@ -468,7 +494,9 @@ export default function TeacherActivityPage() {
                             </span>
                           ))
                         ) : (
-                          <span className="text-xs text-gray-400 italic">Chưa có</span>
+                          <span className="text-xs text-gray-400 italic">
+                            Chưa có
+                          </span>
                         )}
                       </div>
                     </td>
@@ -491,7 +519,9 @@ export default function TeacherActivityPage() {
       {sortedTeachers.length === 0 && (
         <div className="bg-white rounded-lg border-2 border-gray-200 p-8 text-center">
           <UserX className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600 font-medium">Không tìm thấy giáo viên phù hợp</p>
+          <p className="text-gray-600 font-medium">
+            Không tìm thấy giáo viên phù hợp
+          </p>
         </div>
       )}
     </div>

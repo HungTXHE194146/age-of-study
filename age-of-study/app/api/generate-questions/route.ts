@@ -14,14 +14,12 @@ interface QuestionType {
   }>
   difficulty: 'Easy' | 'Medium' | 'Hard' | 'Mixed'
   explanation: string
-  hint: string
   metadata?: {
     orderedWords?: string[]
     matchingPairs?: Array<{ left: string; right: string }>
     blanks?: Array<{ index: number; answer: string }>
     categories?: Array<{ name: string; items: string[] }>;
     errorPosition?: { startIndex: number; endIndex: number; correctText: string };
-    sentence?: string;
   }
 
 }
@@ -77,27 +75,23 @@ async function getAIQuestionSettings(supabase: SupabaseClient) {
 const SYSTEM_PROMPT = `Bạn là Giáo sư Cú, một chuyên gia giáo dục tiểu học tại Việt Nam, cực kỳ yêu mến trẻ em. Nhiệm vụ của bạn là tạo các câu hỏi Tiếng Việt thú vị dựa trên tài liệu được cung cấp.
 
 **PHONG CÁCH GIAO TIẾP:**
-- Khi viết trường \`explanation\`, hãy dùng giọng văn ngọt ngào, khích lệ. Gọi học sinh là "Hiệp sĩ nhỏ", "Bạn nhỏ ơi", "Nhà thông thái nhí".
-- **Lời giải thích (\`explanation\`)**: PHẢI giải thích rõ ràng tại sao đáp án đó là đúng hoặc quy tắc ngôn ngữ được áp dụng (VD: quy tắc chính tả, nghĩa của từ, cấu trúc câu). Đây là nội dung cốt lõi để học sinh học hỏi khi xem lại bài làm.
-- **Gợi ý (\`hint\`)**: Sẽ hiển thị ngay khi học sinh làm sai để giúp các em tự tư duy. Gợi ý phải mang tính gợi mở, khơi gợi trí nhớ, tuyệt đối không cho biết đáp án trực tiếp.
-
-**QUY TẮC VỀ TRƯỜNG \`questionText\` VÀ \`metadata.sentence\`:**
-- Trường \`questionText\` LUÔN LUÔN phải là lời dẫn hoặc hướng dẫn làm bài thân thiện (VD: "Thám tử nhí ơi, hãy tìm lỗi sai...", "Hãy sắp xếp các từ sau...").
-- Đối với các loại câu hỏi có nội dung văn bản (WORD_ORDERING, FILL_IN_BLANKS, FIND_ERROR), tuyệt đối KHÔNG để nội dung văn bản đó vào \`questionText\`. Hãy đưa nó vào trường tương ứng trong \`metadata\`.
+- Khi viết trường \`explanation\`, hãy dùng giọng văn ngọt ngào, khích lệ. Gọi học sinh là "Hiệp sĩ nhỏ", "Bạn nhỏ ơi", "Nhà thông thái nhí". (Gợi ý: Tối đa 2 câu để tránh phản hồi quá dài).
+- Nếu học sinh trả lời sai, lời giải thích không được phê bình mà phải gợi mở: "Ôi gần đúng rồi đấy! Hiệp sĩ thử nhớ lại xem...", "Nhà thông thái ơi, mình hãy nhìn kỹ từ này nhé...".
 
 **CÁC LOẠI CÂU HỎI BẠN CÓ THỂ TẠO:**
-1. MULTIPLE_CHOICE: Trắc nghiệm truyền thống. Trường \`questionText\` là nội dung câu hỏi.
-2. TRUE_FALSE: Đúng hoặc Sai. Trường \`questionText\` là nội dung câu khẳng định cần kiểm tra.
-3. ESSAY: Tự luận ngắn. Trường \`questionText\` là chủ đề/yêu cầu viết.
-4. WORD_ORDERING: Sắp xếp các từ thành câu hoàn chỉnh. Trường \`questionText\` là lời dẫn. Yêu cầu có mảng \`metadata.orderedWords\`.
-5. MATCHING: Nối các cặp từ. Trường \`questionText\` là lời dẫn. Yêu cầu có mảng \`metadata.matchingPairs\`.
-6. FILL_IN_BLANKS: Điền từ vào chỗ trống (___). Trường \`questionText\` là lời dẫn. Yêu cầu có \`metadata.sentence\` và mảng \`metadata.blanks\`.
-7. CATEGORIZATION: Phân loại từ vào các nhóm. Trường \`questionText\` là lời dẫn. Yêu cầu có \`metadata.categories\`.
-8. FIND_ERROR: Tìm một lỗi sai. Trường \`questionText\` là lời dẫn. Yêu cầu có \`metadata.sentence\` và \`metadata.errorPosition\`.
+1. MULTIPLE_CHOICE: Trắc nghiệm truyền thống.
+2. TRUE_FALSE: Đúng hoặc Sai.
+3. ESSAY: Tự luận ngắn.
+4. WORD_ORDERING: Sắp xếp các từ thành câu hoàn chỉnh. Yêu cầu có mảng \`metadata.orderedWords\`.
+5. MATCHING: Nối các cặp từ (ví dụ: từ đồng nghĩa, từ trái nghĩa, tên con vật - tiếng kêu). Yêu cầu có mảng \`metadata.matchingPairs\`.
+6. FILL_IN_BLANKS: Điền từ vào chỗ trống. Yêu cầu có \`metadata.blanks\`. LƯU Ý: Trường \`questionText\` CHỈ được chứa đoạn văn có các ô trống (___), KHÔNG bao gồm lời dẫn như "Hãy điền từ...".
+7. CATEGORIZATION: Phân loại từ vào các nhóm (ví dụ: nhóm từ chỉ người, nhóm từ chỉ vật). Yêu cầu có \`metadata.categories\`.
+8. FIND_ERROR: Tìm một lỗi sai. Yêu cầu có \`metadata.errorPosition\` chứa \`startIndex\`, \`endIndex\` (vị trí ký tự CHÍNH XÁC trong chuỗi, bắt đầu từ 0, trong đó \`endIndex\` là vị trí ký tự cuối cùng của lỗi - inclusive) và \`correctText\` (từ/cụm từ đúng). LƯU Ý: Trường \`questionText\` CHỈ được chứa câu văn cần tìm lỗi, KHÔNG bao gồm lời dẫn.
 
 **YÊU CẦU BẮT BUỘC:**
-- Trả về kết quả CHỈ DƯỚI DẠNG MỘT MẢNG JSON.
-- Nội dung phải thuần Việt, chuẩn sư phạm tiểu học, giàu tính giáo dục và nhân văn.
+1. Trả về kết quả CHỈ DƯỚI DẠNG MỘT MẢNG JSON.
+2. Cấu trúc JSON phải chính xác theo schema, đặc biệt là phần \`metadata\` cho các loại câu hỏi mới.
+3. Nội dung phải thuần Việt, phù hợp tâm lý và trình độ tiểu học.
 `
 
 
@@ -111,7 +105,6 @@ const JSON_SCHEMA = `
     "questionText": "Nội dung câu hỏi...",
     "difficulty": "Easy | Medium | Hard | Mixed",
     "explanation": "Lời nhắn nhủ thân thiện và giải thích kiến thức từ Giáo sư Cú...",
-    "hint": "Gợi ý nhỏ để học sinh tự làm lại câu hỏi...",
     "options": [
       {"label": "A", "text": "...", "isCorrect": true},
       ...
@@ -121,8 +114,7 @@ const JSON_SCHEMA = `
       "matchingPairs": [{"left": "Từ A", "right": "Nghĩa A"}, ...],
       "blanks": [{"index": 0, "answer": "từ đúng"}],
       "categories": [{"name": "Nhóm 1", "items": ["Từ X", "Từ Y"]}],
-      "errorPosition": {"startIndex": 10, "endIndex": 15, "correctText": "từ đúng"},
-      "sentence": "Nội dung câu văn hoặc đoạn văn chứa ô trống/lỗi sai..."
+      "errorPosition": {"startIndex": 10, "endIndex": 15, "correctText": "từ đúng"}
     }
 
   }
@@ -439,17 +431,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Chỉ giáo viên mới có thể sử dụng tính năng này' }, { status: 403 })
     }
 
+    // Fetch subject name for better AI context
+    let subjectNameInput = subject;
+    try {
+      if (subject && !isNaN(parseInt(subject))) {
+        const { data: subjectData } = await supabase
+          .from('subjects')
+          .select('name')
+          .eq('id', parseInt(subject))
+          .single();
+        if (subjectData && subjectData.name) {
+          subjectNameInput = subjectData.name;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch subject name', e);
+    }
+
+    // Determine if we have actual source materials (file, KB, QB)
+    const hasSourceMaterials = !!file || fromKnowledgeBase || fromQuestionBank;
+
     // 7. Build prompt for Gemini
     let prompt = `${SYSTEM_PROMPT}
 
-**NGUỒN DỮ LIỆU ĐƯỢC CUNG CẤP (CHỈ SỬ DỤNG NỘI DUNG NÀY):**
+**${hasSourceMaterials ? 'NGUỒN DỮ LIỆU ĐƯỢC CUNG CẤP (CHỈ SỬ DỤNG NỘI DUNG NÀY):' : 'CHỦ ĐỀ/YÊU CẦU:'}**
 ${finalContext}
 
 **YÊU CẦU NGHIÊM NGẶT:**
-1. KHÔNG ĐƯỢC sử dụng kiến thức bên ngoài tài liệu được cung cấp ở trên.
+${hasSourceMaterials ? `1. KHÔNG ĐƯỢC sử dụng kiến thức bên ngoài tài liệu được cung cấp ở trên.
 2. Bạn CHỈ được phép tạo các loại câu hỏi sau: ${questionTypes.join(', ')}.
-3. Nếu tài liệu không đủ thông tin để tạo đủ số lượng câu hỏi, chỉ tạo số lượng tối đa có thể (không được bịa thêm).
-4. Nếu tài liệu hoàn toàn không liên quan đến môn học ${subject}, hãy trả về mảng rỗng [].
+3. Nếu tài liệu không đủ thông tin để tạo đủ số lượng câu hỏi, chỉ tạo số lượng tối đa có thể (không được bịa thêm).` : `1. Bạn được phép sử dụng kiến thức chuyên môn của mình dựa trên tiêu chuẩn giáo dục tiểu học Việt Nam để tạo bộ câu hỏi chất lượng nhất về chủ đề yêu cầu.
+2. Bạn CHỈ được phép tạo các loại câu hỏi sau: ${questionTypes.join(', ')}.`}
+4. Nếu chủ đề hoàn toàn không liên quan đến môn học ${subjectNameInput}, và là một nội dung vi phạm tiêu chuẩn giáo dục, hãy trả về mảng rỗng [].
 `;
 
     if (action === 'edit' && existingQuestions) {
@@ -467,7 +480,7 @@ Hãy trả về danh sách câu hỏi ĐÃ ĐƯỢC CHỈNH SỬA theo đúng y�
 Yêu cầu cụ thể:
 - Số lượng câu hỏi cần tạo: ${action === 'edit' ? 'Linh hoạt theo yêu cầu chỉnh sửa hoặc giữ nguyên số lượng cũ' : questionCount}
 - Độ khó: ${difficulty}
-- Môn học: ${subject}
+- Môn học: ${subjectNameInput}
 - Prompt/Yêu cầu người dùng (nếu có): ${textPrompt || 'Không có yêu cầu thêm'}
 
 Schema JSON:
@@ -496,17 +509,35 @@ Hãy trả về JSON theo đúng schema trên, không thêm bất kỳ nội dun
 
     })
 
-    // 9. Generate response
     let result;
-    try {
-        result = await model.generateContent(prompt)
-    } catch (apiError: any) {
-        if (apiError.status === 429) {
-            return NextResponse.json({ 
-                error: 'Hệ thống AI đang bận (Quá giới hạn lượt gọi). Vui lòng thử lại sau khoảng 1 phút.'
-            }, { status: 429 })
+    const maxRetries = 2;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            result = await model.generateContent(prompt)
+            break; // Success, exit retry loop
+        } catch (apiError: any) {
+            console.warn(`[API] Gemini API Error on attempt ${attempt + 1}:`, apiError?.status || apiError?.message);
+            
+            if (attempt === maxRetries) {
+                if (apiError.status === 429) {
+                    return NextResponse.json({ 
+                        error: 'Hệ thống AI đang bận (Quá giới hạn lượt gọi). Vui lòng thử lại sau khoảng 1 phút.'
+                    }, { status: 429 })
+                }
+                if (apiError.status === 503 || apiError.message?.includes('503 Service Unavailable')) {
+                    return NextResponse.json({ 
+                        error: 'Hệ thống AI hiện đang quá tải do truy cập cao. Vui lòng thử lại sau giây lát.'
+                    }, { status: 503 })
+                }
+                throw apiError;
+            }
+            // Wait for 2 seconds before retrying
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
-        throw apiError;
+    }
+
+    if (!result) {
+        throw new Error('Failed to generate content after retries');
     }
     const response = await result.response
     let text = response.text()

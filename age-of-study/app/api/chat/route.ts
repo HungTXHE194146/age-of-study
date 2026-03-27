@@ -20,6 +20,14 @@ function getServerSupabase() {
   )
 }
 
+// --- Singleton anon client for JWT verification ---
+// Reused across requests to avoid instantiation overhead on every call.
+const anonClientSingleton = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+  { auth: { autoRefreshToken: false, persistSession: false } }
+)
+
 // --- System Prompt (from SRS Section 6.2) ---
 const SYSTEM_PROMPT = `Bạn là Cú Mèo 🦉 - trợ giảng vui tính dành cho học sinh tiểu học (6-10 tuổi).
 
@@ -41,8 +49,21 @@ const MAX_CONTEXT_DOCUMENTS = 5
 const MAX_CONVERSATION_HISTORY = 10
 const CACHE_TTL_HOURS = 24
 
-// --- Fetch system settings from DB (with fallback defaults) ---
+// --- Module-level settings cache (5-min TTL) ---
+// system_settings rarely changes; querying DB on every chat message is wasteful.
+const SETTINGS_CACHE_TTL_MS = 5 * 60 * 1000
+let settingsCache: {
+  value: { temperature: number; maxTokens: number; rateLimit: number; bannedWords: string }
+  expiresAt: number
+} | null = null
+
+// --- Fetch system settings from DB (with module-level cache + fallback defaults) ---
 async function getAIChatSettings(supabase: SupabaseClient) {
+  // Return cached value if still fresh
+  if (settingsCache && Date.now() < settingsCache.expiresAt) {
+    return settingsCache.value
+  }
+
   try {
     const { data } = await supabase
       .from('system_settings')
@@ -51,21 +72,28 @@ async function getAIChatSettings(supabase: SupabaseClient) {
       .single()
 
     if (data) {
-      return {
+      const value = {
         temperature: parseFloat(data.ai_chat_temperature) || DEFAULT_AI_CHAT_TEMPERATURE,
         maxTokens: parseInt(data.ai_chat_max_tokens, 10) || DEFAULT_AI_CHAT_MAX_TOKENS,
         rateLimit: parseInt(data.ai_chat_rate_limit_per_minute, 10) || DEFAULT_RATE_LIMIT_PER_MINUTE,
         bannedWords: data.ai_chat_banned_words || '',
-      }    }
+      }
+      settingsCache = { value, expiresAt: Date.now() + SETTINGS_CACHE_TTL_MS }
+      return value
+    }
   } catch {
     // Fall through to defaults
   }
-  return {
+
+  const defaults = {
     temperature: DEFAULT_AI_CHAT_TEMPERATURE,
     maxTokens: DEFAULT_AI_CHAT_MAX_TOKENS,
     rateLimit: DEFAULT_RATE_LIMIT_PER_MINUTE,
     bannedWords: '',
   }
+  // Cache defaults too so we don't hammer DB on repeated failures
+  settingsCache = { value: defaults, expiresAt: Date.now() + SETTINGS_CACHE_TTL_MS }
+  return defaults
 }
 
 // ============================================================================
@@ -98,12 +126,8 @@ export async function POST(request: NextRequest) {
     const token = authHeader.replace('Bearer ', '')
     const supabase = getServerSupabase()
 
-    // Verify the JWT token and get user
-    const { data: { user: authUser }, error: authError } = await createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    ).auth.getUser(token)
+    // Verify the JWT token using the singleton anon client (no new client per request)
+    const { data: { user: authUser }, error: authError } = await anonClientSingleton.auth.getUser(token)
 
     if (authError || !authUser) {
       return NextResponse.json({ error: 'Phiên đăng nhập hết hạn' }, { status: 401 })
@@ -298,13 +322,8 @@ export async function DELETE(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
 
-    // Verify JWT using anon client
-    const anonClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    )
-    const { data: { user: authUser }, error: authError } = await anonClient.auth.getUser(token)
+    // Verify JWT using the singleton anon client
+    const { data: { user: authUser }, error: authError } = await anonClientSingleton.auth.getUser(token)
 
     if (authError || !authUser) {
       return NextResponse.json({ error: 'Phiên đăng nhập hết hạn' }, { status: 401 })
@@ -390,13 +409,7 @@ async function retrieveContext(
     topSearchTerms.push(...fallbackTerms)
   }
   
-  // Debug logging (gated by environment variable to avoid PII leaks)
-  const DEBUG = process.env.DEBUG === 'true'
-  if (DEBUG) {
-    console.log('[CHAT-API] Original message:', message?.substring(0, 100))
-    console.log('[CHAT-API] Tokens:', tokens)
-    console.log('[CHAT-API] Top Search terms:', topSearchTerms)
-  }
+  
 
   // --- Retrieve relevant LESSON SECTIONS with Q&A pairs ---
   try {
@@ -414,9 +427,6 @@ async function retrieveContext(
         .eq('subject_id', subjectId)
       
       nodeIds = (nodes || []).map((n: { id: number }) => n.id)
-      if (DEBUG) console.log(`[CHAT-API] Subject ID: ${subjectId}, Found ${nodeIds.length} nodes`)
-    } else {
-      if (DEBUG) console.log('[CHAT-API] No subject ID provided, searching all subjects')
     }
 
     // Query lesson_sections with ILIKE search on both title and content
@@ -489,10 +499,7 @@ async function retrieveContext(
       return bScore - aScore
     }).slice(0, MAX_CONTEXT_DOCUMENTS)  // Take top 5 after sorting
 
-    if (DEBUG) {
-      console.log(`[DEBUG] Found ${sectionsRaw?.length || 0} sections from DB, selected top ${sections?.length || 0}`)
-      console.log(`[DEBUG] Top Section Titles: ${sections?.map(s => s.title).join(', ')}`)
-    }
+  
 
     if (sections && sections.length > 0) {
       contextParts.push('📖 Kiến thức bài học:')
@@ -509,7 +516,8 @@ async function retrieveContext(
         const nodeTitle = Array.isArray(section.nodes) 
           ? section.nodes[0]?.title 
           : section.nodes?.title || 'Bài học'
-        if (DEBUG) console.log(`[DEBUG] Section: ${section.title} (Node: ${nodeTitle})`)
+
+
         
         // Add main content
         if (section.content && section.content.length > 0) {
@@ -548,7 +556,6 @@ async function retrieveContext(
       return topSearchTerms.some(term => qaStr.includes(term.toLowerCase()))
     }).slice(0, 5) || []
 
-    if (DEBUG) console.log(`[DEBUG] Found ${qaMatches?.length || 0} Q&A matches`)
 
     if (qaMatches && qaMatches.length > 0) {
       for (const match of qaMatches) {

@@ -133,80 +133,79 @@ export async function getClassComparisonData(): Promise<{
       };
     }
 
-    // Get analytics for each class
+    // --- BATCH QUERIES: Replace N+1 loops with 3 parallel batch queries ---
+    const allClassIds = classes.map((c: { id: number }) => c.id);
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Batch 1: All active students across all classes
+    const { data: allClassStudents, error: classStudentsError } = await supabase
+      .from('class_students')
+      .select('class_id, student_id')
+      .in('class_id', allClassIds)
+      .eq('status', 'active');
+
+    if (classStudentsError) {
+      return { data: null, error: classStudentsError.message };
+    }
+
+    // Build map: classId -> studentIds
+    const classStudentMap: Record<number, string[]> = {};
+    for (const row of allClassStudents || []) {
+      if (!classStudentMap[row.class_id]) classStudentMap[row.class_id] = [];
+      classStudentMap[row.class_id].push(row.student_id);
+    }
+
+    // Collect all unique student IDs
+    const allStudentIds = [...new Set((allClassStudents || []).map((s: { student_id: string }) => s.student_id))];
+
+    // Batch 2 & 3: Run in parallel — profiles and progress for all students at once
+    const [profilesResult, progressResult] = await Promise.all([
+      allStudentIds.length > 0
+        ? supabase.from('profiles').select('id, total_xp, last_active_at').in('id', allStudentIds)
+        : Promise.resolve({ data: [], error: null }),
+      allStudentIds.length > 0
+        ? supabase.from('student_node_progress').select('status, score, student_id').in('student_id', allStudentIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    // Build lookup maps for O(1) access
+    const profileMap: Record<string, { total_xp: number; last_active_at: string | null }> = {};
+    for (const p of profilesResult.data || []) {
+      profileMap[p.id] = { total_xp: p.total_xp, last_active_at: p.last_active_at };
+    }
+
+    // Group progress rows by student_id
+    const progressByStudent: Record<string, { status: string; score: number | null }[]> = {};
+    for (const row of progressResult.data || []) {
+      if (!progressByStudent[row.student_id]) progressByStudent[row.student_id] = [];
+      progressByStudent[row.student_id].push({ status: row.status, score: row.score });
+    }
+
+    // Compute per-class analytics from in-memory maps
     const classAnalytics: ClassAnalytics[] = [];
-
     for (const cls of classes) {
-      // Get student IDs in this class
-      const { data: classStudents, error: classStudentsError } = await supabase
-        .from('class_students')
-        .select('student_id')
-        .eq('class_id', cls.id)
-        .eq('status', 'active');
-
-      if (classStudentsError) {
-        console.error(`Error fetching students for class ${cls.id}:`, classStudentsError.message || classStudentsError);
-        continue;
-      }
-
-      const studentIds = classStudents?.map((s: { student_id: string }) => s.student_id) || [];
+      const studentIds = classStudentMap[cls.id] || [];
       const studentCount = studentIds.length;
       let totalXP = 0;
       let activeStudents = 0;
-      const now = new Date();
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-      // Get profiles for students in this class
-      if (studentIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, total_xp, last_active_at')
-          .in('id', studentIds);
-
-        if (profiles) {
-          for (const profile of profiles) {
-            totalXP += profile.total_xp || 0;
-            if (profile.last_active_at && new Date(profile.last_active_at) > weekAgo) {
-              activeStudents++;
-            }
-          }
-        }
-      }
-
-      // Get completion data from student_node_progress
-      let progressData: { status: string; score: number | null; student_id: string }[] | null = null;
-      let progressError: { message: string } | null = null;
-
-      if (studentIds.length > 0) {
-        const { data: pd, error: pe } = await supabase
-          .from('student_node_progress')
-          .select('status, score, student_id')
-          .in('student_id', studentIds);
-        progressData = pd;
-        progressError = pe;
-      }
-
       let completedNodes = 0;
       let totalNodes = 0;
       let totalScore = 0;
       let scoreCount = 0;
 
-      if (progressData) {
-        totalNodes = progressData.length;
-        for (const progress of progressData) {
-          if (progress.status === 'completed') {
-            completedNodes++;
-          }
-          if (progress.score !== null && progress.score > 0) {
-            totalScore += progress.score;
-            scoreCount++;
-          }
+      for (const sid of studentIds) {
+        const profile = profileMap[sid];
+        if (profile) {
+          totalXP += profile.total_xp || 0;
+          if (profile.last_active_at && new Date(profile.last_active_at) > weekAgo) activeStudents++;
+        }
+        for (const prog of progressByStudent[sid] || []) {
+          totalNodes++;
+          if (prog.status === 'completed') completedNodes++;
+          if (prog.score !== null && prog.score > 0) { totalScore += prog.score; scoreCount++; }
         }
       }
-
-      const averageScore = scoreCount > 0 ? totalScore / scoreCount : 0;
-      const completionRate = totalNodes > 0 ? (completedNodes / totalNodes) * 100 : 0;
-      const averageXP = studentCount > 0 ? totalXP / studentCount : 0;
 
       classAnalytics.push({
         classId: cls.id,
@@ -214,10 +213,10 @@ export async function getClassComparisonData(): Promise<{
         grade: cls.grade,
         schoolYear: cls.school_year,
         studentCount,
-        averageScore,
-        completionRate,
+        averageScore: scoreCount > 0 ? totalScore / scoreCount : 0,
+        completionRate: totalNodes > 0 ? (completedNodes / totalNodes) * 100 : 0,
         totalXP,
-        averageXP,
+        averageXP: studentCount > 0 ? totalXP / studentCount : 0,
         activeStudents,
         completedNodes,
         totalAssignedNodes: totalNodes,
@@ -353,7 +352,7 @@ export async function getTeacherActivityReport(): Promise<{
       const totalClasses = assignments.length;
 
       // Calculate total students
-      const classIds = assignments.map((a: any) => a.classes?.id).filter(Boolean);
+      const classIds = [...new Set(assignments.map((a: any) => a.classes?.id).filter(Boolean))] as number[];
       const totalStudents = classIds.reduce((sum: number, classId: number) => sum + (studentCountMap[classId] || 0), 0);
 
       // Get unique subjects
@@ -476,7 +475,6 @@ export function exportTeacherDataToCSV(teachers: TeacherActivity[]): string {
   const headers = [
     'Họ tên',
     'Email',
-    'Tổng lớp',
     'Lớp chủ nhiệm',
     'Lớp bộ môn',
     'Tổng học sinh',
@@ -498,7 +496,6 @@ export function exportTeacherDataToCSV(teachers: TeacherActivity[]): string {
     return [
       escapeCSVField(t.fullName || t.username || 'N/A'),
       escapeCSVField(t.email || 'N/A'),
-      escapeCSVField(t.totalClasses.toString()),
       escapeCSVField(t.homeroomClasses.toString()),
       escapeCSVField(t.subjectClasses.toString()),
       escapeCSVField(t.totalStudents.toString()),
@@ -560,66 +557,84 @@ export async function getTeacherClassAnalytics(teacherId: string): Promise<{
       return { data: null, error: classesError.message };
     }
 
-    // 3. Get analytics for each class
+    // 3. --- BATCH QUERIES: Replace N+1 loop with 3 parallel batch queries ---
+    const activeClasses = classes || [];
+    const activeClassIds = activeClasses.map((c: { id: number }) => c.id);
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    // Batch 1: All students across all assigned classes
+    const { data: allClassStudents } = await supabase
+      .from('class_students')
+      .select('class_id, student_id')
+      .in('class_id', activeClassIds)
+      .eq('status', 'active');
+
+    // Build map: classId -> studentIds
+    const classStudentMap: Record<number, string[]> = {};
+    for (const row of allClassStudents || []) {
+      if (!classStudentMap[row.class_id]) classStudentMap[row.class_id] = [];
+      classStudentMap[row.class_id].push(row.student_id);
+    }
+
+    const allStudentIds = [...new Set((allClassStudents || []).map((s: { student_id: string }) => s.student_id))];
+
+    // Batch 2 & 3: Run in parallel
+    const [profilesResult, progressResult] = await Promise.all([
+      allStudentIds.length > 0
+        ? supabase.from('profiles').select('id, total_xp, last_active_at').in('id', allStudentIds)
+        : Promise.resolve({ data: [], error: null }),
+      allStudentIds.length > 0
+        ? supabase.from('student_node_progress').select('status, score, student_id').in('student_id', allStudentIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    const profileMap: Record<string, { total_xp: number; last_active_at: string | null }> = {};
+    for (const p of profilesResult.data || []) {
+      profileMap[p.id] = { total_xp: p.total_xp, last_active_at: p.last_active_at };
+    }
+
+    const progressByStudent: Record<string, { status: string; score: number | null }[]> = {};
+    for (const row of progressResult.data || []) {
+      if (!progressByStudent[row.student_id]) progressByStudent[row.student_id] = [];
+      progressByStudent[row.student_id].push({ status: row.status, score: row.score });
+    }
+
+    // Compute per-class analytics from in-memory maps
     const classAnalytics: ClassAnalytics[] = [];
-    for (const cls of (classes || [])) {
-      const { data: classStudents } = await supabase
-        .from('class_students')
-        .select('student_id')
-        .eq('class_id', cls.id)
-        .eq('status', 'active');
+    for (const cls of activeClasses) {
+      const studentIds = classStudentMap[cls.id] || [];
+      if (studentIds.length === 0) continue;
 
-      const studentIds = classStudents?.map((s: { student_id: string }) => s.student_id) || [];
       const studentCount = studentIds.length;
-      let totalXP = 0;
-      let activeStudents = 0;
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      let totalXP = 0, activeStudents = 0, completedNodes = 0, totalNodes = 0, totalScore = 0, scoreCount = 0;
 
-      if (studentIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, total_xp, last_active_at')
-          .in('id', studentIds);
-
-        if (profiles) {
-          for (const profile of profiles) {
-            totalXP += profile.total_xp || 0;
-            if (profile.last_active_at && new Date(profile.last_active_at) > weekAgo) activeStudents++;
-          }
+      for (const sid of studentIds) {
+        const profile = profileMap[sid];
+        if (profile) {
+          totalXP += profile.total_xp || 0;
+          if (profile.last_active_at && new Date(profile.last_active_at) > weekAgo) activeStudents++;
         }
-
-        const { data: pd } = await supabase
-          .from('student_node_progress')
-          .select('status, score')
-          .in('student_id', studentIds);
-
-        let completedNodes = 0;
-        let totalScore = 0;
-        let scoreCount = 0;
-        const totalNodes = pd?.length || 0;
-
-        if (pd) {
-          pd.forEach((p: { status: string; score: number | null }) => {
-            if (p.status === 'completed') completedNodes++;
-            if (p.score) { totalScore += p.score; scoreCount++; }
-          });
+        for (const prog of progressByStudent[sid] || []) {
+          totalNodes++;
+          if (prog.status === 'completed') completedNodes++;
+          if (prog.score) { totalScore += prog.score; scoreCount++; }
         }
-
-        classAnalytics.push({
-          classId: cls.id,
-          className: cls.name,
-          grade: cls.grade,
-          schoolYear: cls.school_year,
-          studentCount,
-          averageScore: scoreCount > 0 ? totalScore / scoreCount : 0,
-          completionRate: totalNodes > 0 ? (completedNodes / totalNodes) * 100 : 0,
-          totalXP,
-          averageXP: studentCount > 0 ? totalXP / studentCount : 0,
-          activeStudents,
-          completedNodes,
-          totalAssignedNodes: totalNodes,
-        });
       }
+
+      classAnalytics.push({
+        classId: cls.id,
+        className: cls.name,
+        grade: cls.grade,
+        schoolYear: cls.school_year,
+        studentCount,
+        averageScore: scoreCount > 0 ? totalScore / scoreCount : 0,
+        completionRate: totalNodes > 0 ? (completedNodes / totalNodes) * 100 : 0,
+        totalXP,
+        averageXP: studentCount > 0 ? totalXP / studentCount : 0,
+        activeStudents,
+        completedNodes,
+        totalAssignedNodes: totalNodes,
+      });
     }
 
     return {
