@@ -56,10 +56,12 @@ export const useAuthStore = create<AuthState>()(
           if (authError) throw new Error('Tên đăng nhập hoặc mật khẩu không đúng')
           if (!authData.user) throw new Error('Đăng nhập thất bại')
 
-          // Lấy profile từ database
+          // Lấy profile từ database — chỉ select fields cần thiết cho auth/display
+          // Tránh fetch những column nặng (ethnicity, phone_number, ...)
+          // vì profile được persist vào localStorage
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('*')
+            .select('id, username, full_name, avatar_url, role, age, grade, favorite_subject, total_xp, weekly_xp, monthly_xp, current_streak, last_study_date, freeze_count, daily_limit_minutes, is_blocked, profile_completed_reward_claimed, must_change_password, last_active_at, created_at, updated_at')
             .eq('id', authData.user.id)
             .single()
 
@@ -159,10 +161,10 @@ export const useAuthStore = create<AuthState>()(
             return false
           }
 
-          // Get profile after successful MFA
+          // Get profile after successful MFA — same minimal field list as login
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('*')
+            .select('id, username, full_name, avatar_url, role, age, grade, favorite_subject, total_xp, weekly_xp, monthly_xp, current_streak, last_study_date, freeze_count, daily_limit_minutes, is_blocked, profile_completed_reward_claimed, must_change_password, last_active_at, created_at, updated_at')
             .eq('id', mfaChallenge.userId)
             .single()
 
@@ -271,10 +273,10 @@ export const useAuthStore = create<AuthState>()(
               return
             }
 
-            // Fetch user profile
+            // Fetch user profile — minimal fields only (persisted to localStorage)
             const { data: profile, error: profileError } = await supabase
               .from('profiles')
-              .select('*')
+              .select('id, username, full_name, avatar_url, role, age, grade, favorite_subject, total_xp, weekly_xp, monthly_xp, current_streak, last_study_date, freeze_count, daily_limit_minutes, is_blocked, profile_completed_reward_claimed, must_change_password, last_active_at, created_at, updated_at')
               .eq('id', authUser.id)
               .single()
 

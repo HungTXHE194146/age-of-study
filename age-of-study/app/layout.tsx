@@ -6,14 +6,14 @@ const splineSans = Spline_Sans({
   variable: "--font-spline-sans",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
-  preload: false,
+  display: "swap", // Show fallback font while loading, swap when ready — eliminates invisible text
 });
 
 const splineSansMono = Spline_Sans_Mono({
   variable: "--font-spline-sans-mono",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
-  preload: false,
+  display: "swap",
 });
 
 export const metadata: Metadata = {

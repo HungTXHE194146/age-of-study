@@ -88,7 +88,11 @@ export async function getStudentLeaderboard(
 }
 
 /**
- * Get a specific student's rank in the leaderboard
+ * Get a specific student's rank in the leaderboard.
+ * Uses 2 lightweight DB queries instead of fetching the full leaderboard:
+ *   1. Fetch the student's own XP value.
+ *   2. COUNT students with higher XP → rank = count + 1.
+ *
  * @param studentId - The student's user ID
  * @param period - Time period for ranking
  * @returns The student's rank or null if not found
@@ -97,9 +101,36 @@ export async function getStudentRank(
   studentId: string,
   period: LeaderboardPeriod = 'all-time'
 ): Promise<number | null> {
-  const leaderboard = await getStudentLeaderboard(period, 1000); // Get more entries to find rank
-  const entry = leaderboard.find(e => e.id === studentId);
-  return entry ? entry.rank : null;
+  const supabase = getSupabaseBrowserClient();
+  const xpField = period === 'weekly' ? 'weekly_xp' : period === 'monthly' ? 'monthly_xp' : 'total_xp';
+
+  try {
+    // Query 1: Get the student's own XP value (1 row)
+    const { data: student, error: studentError } = await supabase
+      .from('profiles')
+      .select(`id, ${xpField}`)
+      .eq('id', studentId)
+      .eq('role', 'student')
+      .single();
+
+    if (studentError || !student) return null;
+
+    const studentXP: number = (student as Record<string, number>)[xpField] ?? 0;
+
+    // Query 2: COUNT students with strictly higher XP (1 aggregate row)
+    const { count, error: countError } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'student')
+      .gt(xpField, studentXP);
+
+    if (countError) return null;
+
+    // rank = number of people ahead + 1
+    return (count ?? 0) + 1;
+  } catch {
+    return null;
+  }
 }
 
 /**
