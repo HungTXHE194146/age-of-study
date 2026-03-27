@@ -180,7 +180,14 @@ export default function StudentTestPage() {
           )}
         </AnimatePresence>
 
-        <TestHeader test={test} totalQuestions={totalQuestions} isStarted={isStarted} timeWarning={timeWarning} timeLeft={timeLeft} formatTime={formatTime} />
+        <TestHeader
+          test={test}
+          totalQuestions={totalQuestions}
+          isStarted={isStarted}
+          timeWarning={timeWarning}
+          timeLeft={timeLeft}
+          formatTime={formatTime}
+        />
 
         {!isStarted ? (
           <TestStartScreen test={test} onStart={handleStartTest} />

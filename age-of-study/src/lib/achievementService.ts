@@ -617,45 +617,47 @@ export async function getAchievementSummary(
   const supabase = getSupabaseBrowserClient();
 
   try {
-    // Get badge stats
-    const { data: allBadges, count: totalBadges } = await supabase
-      .from('badges')
-      .select('*', { count: 'exact' });
-
-    const { data: earnedBadges, count: earnedCount } = await supabase
-      .from('user_badges')
-      .select('*, badge:badges(*)', { count: 'exact' })
-      .eq('user_id', userId)
-      .order('earned_at', { ascending: false })
-      .limit(3);
-
-    // Get avatar stats
-    const { data: allAvatars, count: totalAvatars } = await supabase
-      .from('avatar_shop')
-      .select('*', { count: 'exact' })
-      .eq('is_active', true);
-
-    const { data: unlockedAvatars, count: unlockedCount } = await supabase
-      .from('user_avatars')
-      .select('*', { count: 'exact' })
-      .eq('user_id', userId)
-      .eq('is_unlocked', true)
-      .order('unlocked_at', { ascending: false })
-      .limit(3);
-
-    // Get certificate stats
-    const { data: allCertificates, count: totalCertificates } = await supabase
-      .from('certificates')
-      .select('*', { count: 'exact' })
-      .eq('student_id', userId)
-      .order('issued_at', { ascending: false })
-      .limit(3);
-
-    const { count: unviewedCount } = await supabase
-      .from('certificates')
-      .select('*', { count: 'exact', head: true })
-      .eq('student_id', userId)
-      .is('viewed_at', null);
+    // Run all 6 queries in parallel — reduces total latency from sum → slowest query
+    const [
+      { count: totalBadges },
+      { data: earnedBadges, count: earnedCount },
+      { count: totalAvatars },
+      { data: unlockedAvatars, count: unlockedCount },
+      { data: allCertificates, count: totalCertificates },
+      { count: unviewedCount },
+    ] = await Promise.all([
+      supabase
+        .from('badges')
+        .select('*', { count: 'exact', head: true }),
+      supabase
+        .from('user_badges')
+        .select('*, badge:badges(*)', { count: 'exact' })
+        .eq('user_id', userId)
+        .order('earned_at', { ascending: false })
+        .limit(3),
+      supabase
+        .from('avatar_shop')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true),
+      supabase
+        .from('user_avatars')
+        .select('*', { count: 'exact' })
+        .eq('user_id', userId)
+        .eq('is_unlocked', true)
+        .order('unlocked_at', { ascending: false })
+        .limit(3),
+      supabase
+        .from('certificates')
+        .select('*', { count: 'exact' })
+        .eq('student_id', userId)
+        .order('issued_at', { ascending: false })
+        .limit(3),
+      supabase
+        .from('certificates')
+        .select('*', { count: 'exact', head: true })
+        .eq('student_id', userId)
+        .is('viewed_at', null),
+    ]);
 
     const summary: AchievementSummary = {
       badges: {

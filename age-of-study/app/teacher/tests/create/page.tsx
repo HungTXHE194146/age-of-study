@@ -23,11 +23,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { NotebookCard, NotebookCardContent, NotebookButton } from "@/components/ui/notebook-card";
+import {
+  NotebookCard,
+  NotebookCardContent,
+  NotebookButton,
+} from "@/components/ui/notebook-card";
 import { QuizGeneratorForm } from "@/components/teacher/QuizGeneratorForm";
 import { QuestionBankTab } from "@/components/teacher/QuestionBankTab";
 import { ManualQuestionTab } from "@/components/teacher/ManualQuestionTab";
-import { TestDetailsForm, TestDetails } from "@/components/teacher/TestDetailsForm";
+import {
+  TestDetailsForm,
+  TestDetails,
+} from "@/components/teacher/TestDetailsForm";
 import { QuestionPointsGrid } from "@/components/teacher/QuestionPointsGrid";
 import { PaginatedQuestionPreview } from "@/components/teacher/PaginatedQuestionPreview";
 import { Button } from "@/components/ui/button";
@@ -46,7 +53,10 @@ const isValidSubject = (subject: string | undefined | null): boolean => {
   return Boolean(subject && subject !== "" && subject !== "0");
 };
 
-const validateTestDetails = (testDetails: any, questions: any[]): string | null => {
+const validateTestDetails = (
+  testDetails: any,
+  questions: any[],
+): string | null => {
   if (!testDetails.title.trim()) {
     return "Vui lòng nhập tiêu đề bài kiểm tra";
   }
@@ -59,11 +69,16 @@ const validateTestDetails = (testDetails: any, questions: any[]): string | null 
   return null;
 };
 
-const resolveSubjectId = (subject: string | undefined | null): number | null => {
+const resolveSubjectId = (
+  subject: string | undefined | null,
+): number | null => {
   return isValidSubject(subject) ? parseInt(subject as string) : null;
 };
 
-const resolveNodeId = (subject: string | undefined | null, node: string | undefined | null): number | null => {
+const resolveNodeId = (
+  subject: string | undefined | null,
+  node: string | undefined | null,
+): number | null => {
   if (!isValidSubject(subject)) return null;
   return node ? parseInt(node) : null;
 };
@@ -85,14 +100,20 @@ const fetchTeacherClassesData = async (userId: string) => {
       ...(data?.homeroom_classes || []),
       ...(data?.subject_classes || []),
     ];
-    return Array.from(new Map(allTeacherClasses.map((c: any) => [c.id, c])).values());
+    return Array.from(
+      new Map(allTeacherClasses.map((c: any) => [c.id, c])).values(),
+    );
   } catch (error) {
     console.error("Failed to fetch teacher classes:", error);
     return [];
   }
 };
 
-const prepareQuestionsToSave = (questions: Question[], testDetails: any, userId: string | undefined) => {
+const prepareQuestionsToSave = (
+  questions: Question[],
+  testDetails: any,
+  userId: string | undefined,
+) => {
   return questions.map((q) => {
     let qType = q.type.toLowerCase();
 
@@ -113,12 +134,15 @@ const prepareQuestionsToSave = (questions: Question[], testDetails: any, userId:
         options: (q.options || []).map((opt) => ({
           label: opt.label,
           text: opt.text,
-          isCorrect: opt.isCorrect
+          isCorrect: opt.isCorrect,
         })),
-        metadata: q.metadata
+        metadata: q.metadata,
       },
       correct_option_index: correctIndex !== -1 ? correctIndex : null,
-      difficulty: (q.difficulty || "Medium").toLowerCase() as "easy" | "medium" | "hard",
+      difficulty: (q.difficulty || "Medium").toLowerCase() as
+        | "easy"
+        | "medium"
+        | "hard",
       status: "available",
       created_by: userId || null,
       created_at: new Date().toISOString(),
@@ -130,8 +154,6 @@ const prepareQuestionsToSave = (questions: Question[], testDetails: any, userId:
     };
   });
 };
-
-
 
 function CreateTestContent() {
   const router = useRouter();
@@ -167,8 +189,6 @@ function CreateTestContent() {
   const [isOffline, setIsOffline] = useState(false);
   const [pendingSync, setPendingSync] = useState(false);
 
-
-
   // State for question management
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [points, setPoints] = useState<{ [questionId: string]: number }>({});
@@ -181,7 +201,6 @@ function CreateTestContent() {
     setTotalPoints(total);
   }, [questions, points]);
 
-
   const [teacherClasses, setTeacherClasses] = useState<any[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
 
@@ -190,7 +209,7 @@ function CreateTestContent() {
       setTestDetails((prev) => ({
         ...prev,
         classId: classIdParam,
-        type: "homework"
+        type: "homework",
       }));
     }
   }, [classIdParam]);
@@ -240,21 +259,20 @@ function CreateTestContent() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ctrl + S: Save Draft
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
         handleSave(true);
       }
       // Ctrl + Enter: Save Test
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
         handleSave(false);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [testDetails, questions, isSaving]); // Re-bind when data changes to ensure handleSave has latest state
-
 
   // Check for existing draft on mount
   useEffect(() => {
@@ -286,7 +304,7 @@ function CreateTestContent() {
         testDetails,
         questions,
         points,
-        savedAt: new Date().toISOString()
+        savedAt: new Date().toISOString(),
       };
       localStorage.setItem("teacher-test-draft", JSON.stringify(dataToSave));
     }, 2000); // 2 second debounce
@@ -308,26 +326,26 @@ function CreateTestContent() {
     setShowRestoreDialog(false);
   };
 
-
   const handleAddQuestion = (question: Question) => {
     setQuestions((prev) => [...prev, question]);
     setPoints((prev) => ({
       ...prev,
-      [question.id]: question.points || 10
+      [question.id]: question.points || 10,
     }));
   };
-
 
   const handleRemoveQuestion = (id: string) => {
     setQuestions((prev) => prev.filter((q) => q.id !== id));
   };
 
   const handleEditQuestion = (updatedQuestion: Question) => {
-    setQuestions(prev => prev.map(q => q.id === updatedQuestion.id ? updatedQuestion : q));
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === updatedQuestion.id ? updatedQuestion : q)),
+    );
   };
 
   const handleReplaceQuestion = async (id: string) => {
-    const questionToReplace = questions.find(q => q.id === id);
+    const questionToReplace = questions.find((q) => q.id === id);
     if (!questionToReplace) return;
 
     setIsReplacing(true);
@@ -351,40 +369,61 @@ function CreateTestContent() {
         let newQuestion = response.questions[0];
 
         const instructionMap: Record<string, string> = {
-          WORD_ORDERING: "Hãy sắp xếp các từ sau để tạo thành một câu hoàn chỉnh nhé!",
-          FIND_ERROR: "Thám tử nhí ơi, hãy tìm và nhấn vào lỗi sai trong câu sau đây nhé!",
-          FILL_IN_BLANKS: "Em hãy điền từ còn thiếu vào chỗ trống để hoàn thành câu dưới đây:",
-          MATCHING: "Hãy nối các cụm từ ở cột bên trái với cột bên phải sao cho phù hợp nhất!",
-          CATEGORIZATION: "Em hãy phân loại các từ ngữ sau vào nhóm tương ứng nhé!"
+          WORD_ORDERING:
+            "Hãy sắp xếp các từ sau để tạo thành một câu hoàn chỉnh nhé!",
+          FIND_ERROR:
+            "Thám tử nhí ơi, hãy tìm và nhấn vào lỗi sai trong câu sau đây nhé!",
+          FILL_IN_BLANKS:
+            "Em hãy điền từ còn thiếu vào chỗ trống để hoàn thành câu dưới đây:",
+          MATCHING:
+            "Hãy nối các cụm từ ở cột bên trái với cột bên phải sao cho phù hợp nhất!",
+          CATEGORIZATION:
+            "Em hãy phân loại các từ ngữ sau vào nhóm tương ứng nhé!",
         };
 
         // Quan trọng: Lưu lại nội dung câu văn gốc vào metadata nếu AI trả về trong questionText
         const rawMetadata = (newQuestion as any).metadata || {};
         let finalMetadata = { ...rawMetadata };
-        let finalQuestionText = instructionMap[newQuestion.type] || newQuestion.questionText || "Hãy hoàn thành câu hỏi sau:";
+        let finalQuestionText =
+          instructionMap[newQuestion.type] ||
+          newQuestion.questionText ||
+          "Hãy hoàn thành câu hỏi sau:";
 
-        if (newQuestion.type === "FILL_IN_BLANKS" || newQuestion.type === "FIND_ERROR") {
+        if (
+          newQuestion.type === "FILL_IN_BLANKS" ||
+          newQuestion.type === "FIND_ERROR"
+        ) {
           // Nếu questionText chứa dấu gạch chân hoặc lỗi sai, di chuyển nó vào metadata.sentence
-          if (!finalMetadata.sentence && (newQuestion.questionText.includes('_') || newQuestion.questionText.length > 20)) {
+          if (
+            !finalMetadata.sentence &&
+            (newQuestion.questionText.includes("_") ||
+              newQuestion.questionText.length > 20)
+          ) {
             finalMetadata.sentence = newQuestion.questionText;
           }
         }
 
         const transformed: Question = {
-          ...newQuestion as any,
+          ...(newQuestion as any),
           id: crypto.randomUUID(),
           number: questionToReplace.number,
           createdAt: Date.now(),
           questionText: finalQuestionText,
-          metadata: finalMetadata
+          metadata: finalMetadata,
         };
 
-        setQuestions(prev => prev.map(q => q.id === id ? transformed : q));
-        setPoints(prev => ({ ...prev, [transformed.id]: prev[id] || 10 }));
+        setQuestions((prev) =>
+          prev.map((q) => (q.id === id ? transformed : q)),
+        );
+        setPoints((prev) => ({ ...prev, [transformed.id]: prev[id] || 10 }));
       }
     } catch (error) {
       console.error("Failed to replace question:", error);
-      alert("Không thể tạo câu hỏi thay thế lúc này. Vui lòng thử lại sau.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Không thể tạo câu hỏi thay thế lúc này. Vui lòng thử lại sau.",
+      );
     } finally {
       setIsReplacing(false);
     }
@@ -420,7 +459,11 @@ function CreateTestContent() {
       const createdTest = await testService.createTest(createTestRequest);
       const supabase = await getSupabaseBrowserClient();
 
-      const questionsToSave = prepareQuestionsToSave(questions, testDetails, user?.id);
+      const questionsToSave = prepareQuestionsToSave(
+        questions,
+        testDetails,
+        user?.id,
+      );
 
       try {
         const { error: questionsError } = await supabase
@@ -428,11 +471,17 @@ function CreateTestContent() {
           .upsert(questionsToSave, { onConflict: "id" });
 
         if (questionsError) {
-          console.error(`Error upserting questions for ${isDraft ? "draft" : "test"}:`, questionsError);
+          console.error(
+            `Error upserting questions for ${isDraft ? "draft" : "test"}:`,
+            questionsError,
+          );
           throw questionsError;
         }
       } catch (error) {
-        console.error(`Error saving questions for ${isDraft ? "draft" : "test"}:`, error);
+        console.error(
+          `Error saving questions for ${isDraft ? "draft" : "test"}:`,
+          error,
+        );
         throw error;
       }
 
@@ -442,8 +491,7 @@ function CreateTestContent() {
           question_id: q.id,
           points: points[q.id] || 10,
           display_order: index,
-        })
-
+        }),
       );
 
       const { error: testQuestionsError } = await supabase
@@ -466,7 +514,9 @@ function CreateTestContent() {
     } catch (error) {
       if (isOffline) {
         setPendingSync(true);
-        alert("Hiện không có kết nối mạng. Bài kiểm tra đã được lưu tạm vào trình duyệt và sẽ tự động đồng bộ khi có mạng trở lại.");
+        alert(
+          "Hiện không có kết nối mạng. Bài kiểm tra đã được lưu tạm vào trình duyệt và sẽ tự động đồng bộ khi có mạng trở lại.",
+        );
       } else {
         console.error(`Error saving ${isDraft ? "draft" : "test"}:`, error);
         alert(`Có lỗi xảy ra khi lưu ${isDraft ? "nháp " : ""}bài kiểm tra`);
@@ -474,7 +524,6 @@ function CreateTestContent() {
     } finally {
       setIsSaving(false);
     }
-
   };
 
   const handleSaveTest = () => handleSave(false);
@@ -495,9 +544,12 @@ function CreateTestContent() {
                 Khôi phục bản nháp?
               </DialogTitle>
               <DialogDescription className="text-lg font-bold text-gray-700 pt-4">
-                Chúng tôi tìm thấy một bản nháp bài kiểm tra chưa được lưu từ lần trước (
+                Chúng tôi tìm thấy một bản nháp bài kiểm tra chưa được lưu từ
+                lần trước (
                 <span className="text-blue-700 italic">
-                  {draftData?.savedAt ? new Date(draftData.savedAt).toLocaleString('vi-VN') : 'vừa xong'}
+                  {draftData?.savedAt
+                    ? new Date(draftData.savedAt).toLocaleString("vi-VN")
+                    : "vừa xong"}
                 </span>
                 ). Bạn có muốn tiếp tục chỉnh sửa không?
               </DialogDescription>
@@ -520,8 +572,10 @@ function CreateTestContent() {
           </DialogContent>
         </Dialog>
 
-
-        <NotebookButton onClick={() => router.back()} className="mb-6 bg-white border-2 border-black text-gray-800 hover:bg-gray-100 px-4 py-1 text-sm font-bold flex items-center gap-2">
+        <NotebookButton
+          onClick={() => router.back()}
+          className="mb-6 bg-white border-2 border-black text-gray-800 hover:bg-gray-100 px-4 py-1 text-sm font-bold flex items-center gap-2"
+        >
           Quay lại
         </NotebookButton>
         <h1 className="text-5xl font-black text-gray-900 mb-4 font-handwritten tracking-tight drop-shadow-sm leading-10 pl-6">
@@ -547,7 +601,9 @@ function CreateTestContent() {
                     <h2 className="text-2xl font-black text-gray-900 font-handwritten tracking-tight">
                       Chi tiết bài kiểm tra
                     </h2>
-                    <p className="text-gray-700 font-bold text-sm">Cấu hình các thông số cơ bản</p>
+                    <p className="text-gray-700 font-bold text-sm">
+                      Cấu hình các thông số cơ bản
+                    </p>
                   </div>
                 </div>
 
@@ -577,15 +633,21 @@ function CreateTestContent() {
                       <Plus className="w-6 h-6 text-green-700" />
                     </div>
                     <div>
-                      <h2 className="text-3xl font-black text-gray-900 font-handwritten tracking-tight">Câu Hỏi</h2>
-                      <p className="text-gray-700 font-bold text-sm">Thêm và quản lý câu hỏi</p>
+                      <h2 className="text-3xl font-black text-gray-900 font-handwritten tracking-tight">
+                        Câu Hỏi
+                      </h2>
+                      <p className="text-gray-700 font-bold text-sm">
+                        Thêm và quản lý câu hỏi
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <span className="text-3xl font-black text-blue-700 font-handwritten drop-shadow-sm">
                       {questions.length}
                     </span>
-                    <p className="text-sm font-bold text-gray-600 uppercase">câu hỏi</p>
+                    <p className="text-sm font-bold text-gray-600 uppercase">
+                      câu hỏi
+                    </p>
                   </div>
                 </div>
 
@@ -594,30 +656,33 @@ function CreateTestContent() {
                   <nav className="-mb-[2px] flex space-x-2">
                     <button
                       onClick={() => setActiveTab("manual")}
-                      className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${activeTab === "manual"
-                        ? "border-black border-b-white bg-white text-gray-900 z-10"
-                        : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                        }`}
+                      className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${
+                        activeTab === "manual"
+                          ? "border-black border-b-white bg-white text-gray-900 z-10"
+                          : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                      }`}
                     >
                       <FileText className="w-5 h-5" />
                       Nhập thủ công
                     </button>
                     <button
                       onClick={() => setActiveTab("ai")}
-                      className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${activeTab === "ai"
-                        ? "border-black border-b-white bg-white text-gray-900 z-10"
-                        : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                        }`}
+                      className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${
+                        activeTab === "ai"
+                          ? "border-black border-b-white bg-white text-gray-900 z-10"
+                          : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                      }`}
                     >
                       <LinkIcon className="w-5 h-5" />
                       AI Generator
                     </button>
                     <button
                       onClick={() => setActiveTab("bank")}
-                      className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${activeTab === "bank"
-                        ? "border-black border-b-white bg-white text-gray-900 z-10"
-                        : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                        }`}
+                      className={`flex items-center gap-2 py-3 px-4 border-2 font-bold text-sm rounded-t-lg transition-colors ${
+                        activeTab === "bank"
+                          ? "border-black border-b-white bg-white text-gray-900 z-10"
+                          : "border-transparent bg-gray-100/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                      }`}
                     >
                       <Book className="w-5 h-5" />
                       Ngân hàng câu hỏi
@@ -642,29 +707,50 @@ function CreateTestContent() {
                           const transformed = newQuestions.map((q, index) => {
                             let finalQ = { ...q };
                             const instructionMap: Record<string, string> = {
-                              WORD_ORDERING: "Hãy sắp xếp các từ sau để tạo thành một câu hoàn chỉnh nhé!",
-                              FIND_ERROR: "Thám tử nhí ơi, hãy tìm và nhấn vào lỗi sai trong câu sau đây nhé!",
-                              FILL_IN_BLANKS: "Em hãy điền từ còn thiếu vào chỗ trống để hoàn thành câu dưới đây:",
-                              MATCHING: "Hãy nối các cụm từ ở cột bên trái với cột bên phải sao cho phù hợp nhất!",
-                              CATEGORIZATION: "Em hãy phân loại các từ ngữ sau vào nhóm tương ứng nhé!"
+                              WORD_ORDERING:
+                                "Hãy sắp xếp các từ sau để tạo thành một câu hoàn chỉnh nhé!",
+                              FIND_ERROR:
+                                "Thám tử nhí ơi, hãy tìm và nhấn vào lỗi sai trong câu sau đây nhé!",
+                              FILL_IN_BLANKS:
+                                "Em hãy điền từ còn thiếu vào chỗ trống để hoàn thành câu dưới đây:",
+                              MATCHING:
+                                "Hãy nối các cụm từ ở cột bên trái với cột bên phải sao cho phù hợp nhất!",
+                              CATEGORIZATION:
+                                "Em hãy phân loại các từ ngữ sau vào nhóm tương ứng nhé!",
                             };
 
                             // Repair logic for interactive types that need a sentence
-                            if (q.type === 'FILL_IN_BLANKS' || q.type === 'FIND_ERROR') {
+                            if (
+                              q.type === "FILL_IN_BLANKS" ||
+                              q.type === "FIND_ERROR"
+                            ) {
                               const metadata = (finalQ as any).metadata || {};
                               // If metadata.sentence is missing, move content from questionText if it looks like content
-                              if (!metadata.sentence && (q.questionText.includes('___') || q.questionText.length > 30)) {
+                              if (
+                                !metadata.sentence &&
+                                (q.questionText.includes("___") ||
+                                  q.questionText.length > 30)
+                              ) {
                                 // Double check it's not already an instruction
                                 const values = Object.values(instructionMap);
                                 if (!values.includes(q.questionText)) {
                                   metadata.sentence = q.questionText;
-                                  finalQ.questionText = instructionMap[q.type] || "Em hãy hoàn thành câu hỏi sau:";
+                                  finalQ.questionText =
+                                    instructionMap[q.type] ||
+                                    "Em hãy hoàn thành câu hỏi sau:";
                                   (finalQ as any).metadata = metadata;
                                 }
                               }
-                            } else if (q.type === 'WORD_ORDERING' || q.type === 'MATCHING' || q.type === 'CATEGORIZATION') {
+                            } else if (
+                              q.type === "WORD_ORDERING" ||
+                              q.type === "MATCHING" ||
+                              q.type === "CATEGORIZATION"
+                            ) {
                               // Ensure there's a proper instruction if the AI didn't provide one
-                              if (!q.questionText || q.questionText.length < 10) {
+                              if (
+                                !q.questionText ||
+                                q.questionText.length < 10
+                              ) {
                                 finalQ.questionText = instructionMap[q.type];
                               }
                             }
@@ -676,19 +762,27 @@ function CreateTestContent() {
                               createdAt: Date.now(),
                             };
                           });
-                          setQuestions(prev => [...prev, ...transformed as Question[]]);
+                          setQuestions((prev) => [
+                            ...prev,
+                            ...(transformed as Question[]),
+                          ]);
 
                           // Initialize points for new questions
                           const newPoints = { ...points };
-                          transformed.forEach(q => {
+                          transformed.forEach((q) => {
                             newPoints[q.id] = 10; // Default points
                           });
-                          transformed.forEach(q => { setPoints(p => ({ ...p, [q.id]: 10 })); });
+                          transformed.forEach((q) => {
+                            setPoints((p) => ({ ...p, [q.id]: 10 }));
+                          });
                         }}
-
                         onBankQuestionsSelected={(selectedQuestions) => {
-                          const existingIds = new Set(questions.map(q => q.id));
-                          const unique = selectedQuestions.filter(q => !existingIds.has(q.id));
+                          const existingIds = new Set(
+                            questions.map((q) => q.id),
+                          );
+                          const unique = selectedQuestions.filter(
+                            (q) => !existingIds.has(q.id),
+                          );
 
                           const transformed = unique.map((q, index) => ({
                             ...q,
@@ -696,9 +790,14 @@ function CreateTestContent() {
                             createdAt: q.createdAt || Date.now(),
                           }));
 
-                          setQuestions(prev => [...prev, ...transformed as Question[]]);
+                          setQuestions((prev) => [
+                            ...prev,
+                            ...(transformed as Question[]),
+                          ]);
                           if (unique.length < selectedQuestions.length) {
-                            alert(`Đã thêm ${unique.length} câu hỏi. ${selectedQuestions.length - unique.length} câu đã tồn tại.`);
+                            alert(
+                              `Đã thêm ${unique.length} câu hỏi. ${selectedQuestions.length - unique.length} câu đã tồn tại.`,
+                            );
                           }
                         }}
                         bankQuestions={[]} // This would ideally come from a separate hook/fetch
@@ -732,7 +831,9 @@ function CreateTestContent() {
                             }),
                           );
 
-                          transformedQuestions.forEach((q) => handleAddQuestion(q));
+                          transformedQuestions.forEach((q) =>
+                            handleAddQuestion(q),
+                          );
 
                           if (uniqueQuestions.length < newQuestions.length) {
                             const duplicateCount =
@@ -744,7 +845,9 @@ function CreateTestContent() {
                         }}
                         selectedSubjectId={testDetails.subject}
                         selectedNodeId={testDetails.node}
-                        existingQuestionIds={new Set(questions.map((q) => q.id))}
+                        existingQuestionIds={
+                          new Set(questions.map((q) => q.id))
+                        }
                       />
                     </div>
                   )}
@@ -778,7 +881,9 @@ function CreateTestContent() {
                     <span className="text-3xl font-black text-blue-700 font-handwritten drop-shadow-sm">
                       {questions.length}
                     </span>
-                    <p className="text-sm font-bold text-gray-600 uppercase">câu hỏi</p>
+                    <p className="text-sm font-bold text-gray-600 uppercase">
+                      câu hỏi
+                    </p>
                   </div>
                 </div>
 
@@ -797,13 +902,17 @@ function CreateTestContent() {
                         [questionId]: points,
                       }));
                     }}
-                    onNavigateToQuestion={(index) => setCurrentQuestionIndex(index)}
+                    onNavigateToQuestion={(index) =>
+                      setCurrentQuestionIndex(index)
+                    }
                     currentQuestionIndex={currentQuestionIndex}
                     points={points}
                   />
                 ) : (
                   <div className="text-center py-12 bg-white border-2 border-dashed border-gray-400 rounded-lg">
-                    <div className="text-gray-600 font-bold mb-2">Chưa có câu hỏi nào</div>
+                    <div className="text-gray-600 font-bold mb-2">
+                      Chưa có câu hỏi nào
+                    </div>
                     <p className="text-sm text-gray-500 font-bold">
                       Hãy thêm câu hỏi để thiết lập điểm số
                     </p>
@@ -826,14 +935,18 @@ function CreateTestContent() {
                       <h2 className="text-3xl font-black text-gray-900 font-handwritten tracking-tight">
                         Xem trước câu hỏi
                       </h2>
-                      <p className="text-gray-700 font-bold text-sm">Xem chi tiết từng câu hỏi</p>
+                      <p className="text-gray-700 font-bold text-sm">
+                        Xem chi tiết từng câu hỏi
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <span className="text-3xl font-black text-blue-700 font-handwritten drop-shadow-sm">
                       {questions.length > 0 ? currentQuestionIndex + 1 : 0}
                     </span>
-                    <p className="text-sm font-bold text-gray-600 uppercase">câu hỏi hiện tại</p>
+                    <p className="text-sm font-bold text-gray-600 uppercase">
+                      câu hỏi hiện tại
+                    </p>
                   </div>
                 </div>
 
@@ -853,8 +966,10 @@ function CreateTestContent() {
                       <Button
                         onClick={() => {
                           setActiveTab("manual");
-                          const element = document.getElementById("manual-tab-trigger");
-                          if (element) element.scrollIntoView({ behavior: 'smooth' });
+                          const element =
+                            document.getElementById("manual-tab-trigger");
+                          if (element)
+                            element.scrollIntoView({ behavior: "smooth" });
                         }}
                         className="bg-green-100 text-green-700 border-2 border-green-600 font-bold hover:bg-green-200"
                       >
@@ -863,10 +978,11 @@ function CreateTestContent() {
                       </Button>
                     </div>
                   </div>
-
                 ) : (
                   <div className="text-center py-12 bg-white border-2 border-dashed border-gray-400 rounded-lg">
-                    <div className="text-gray-600 font-bold mb-2">Chưa có câu hỏi nào</div>
+                    <div className="text-gray-600 font-bold mb-2">
+                      Chưa có câu hỏi nào
+                    </div>
                     <p className="text-sm text-gray-500 font-bold">
                       Hãy thêm câu hỏi để xem trước
                     </p>
@@ -923,18 +1039,19 @@ function CreateTestContent() {
           </button>
         </div>
       )}
-
     </div>
   );
 }
 
 export default function CreateTestPage() {
   return (
-    <Suspense fallback={
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-xl font-bold text-gray-600">Đang tải...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="text-xl font-bold text-gray-600">Đang tải...</div>
+        </div>
+      }
+    >
       <CreateTestContent />
     </Suspense>
   );

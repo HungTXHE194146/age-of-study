@@ -251,14 +251,16 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
   const supabase = getSupabaseBrowserClient();
 
   try {
-    // Execute all queries in parallel for better performance
+    // Step 1: Fetch class info, teachers, and students in parallel
+    // Students query intentionally excludes activity_logs / student_node_progress
+    // to avoid over-fetching (40 students × 100 records = 4000 unnecessary rows)
     const [classResult, teachersResult, studentsResult] = await Promise.all([
       supabase
         .from('classes')
         .select('*')
         .eq('id', classId)
         .single(),
-      
+
       supabase
         .from('class_teachers')
         .select(`
@@ -267,21 +269,14 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
           subject:subjects(id, name)
         `)
         .eq('class_id', classId),
-      
+
       supabase
         .from('class_students')
         .select(`
           *,
           profile:profiles!inner(
             id, username, full_name, avatar_url, grade, total_xp, last_study_date,
-            dob, gender, ethnicity, phone_number, enroll_status, sessions_per_week,
-            activity_logs (
-              id, activity_type, description, xp_earned, created_at
-            ),
-            student_node_progress (
-              node_id, status, score, last_accessed_at, completed_at,
-              nodes ( title )
-            )
+            dob, gender, ethnicity, phone_number, enroll_status, sessions_per_week
           )
         `)
         .eq('class_id', classId)
@@ -289,27 +284,57 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
         .order('joined_at', { ascending: true })
     ]);
 
-    // Check for errors
     if (classResult.error) {
       console.error('Get class error:', classResult.error);
       return { data: null, error: classResult.error.message };
     }
-
     if (teachersResult.error) {
       console.error('Get class teachers error:', teachersResult.error);
       return { data: null, error: teachersResult.error.message };
     }
-
     if (studentsResult.error) {
       console.error('Get class students error:', studentsResult.error);
       return { data: null, error: studentsResult.error.message };
     }
 
+    const studentsData = studentsResult.data || [];
+    const studentIds = studentsData.map((s: any) => s.profile.id as string);
+
+    // Step 2: Fetch latest activity & latest progress for all students in 2 batch queries
+    // ORDER BY DESC so the first record per student_id is already the latest
+    const [activitiesResult, progressResult] = await Promise.all([
+      studentIds.length > 0
+        ? supabase
+            .from('activity_logs')
+            .select('id, student_id, activity_type, description, xp_earned, created_at')
+            .in('student_id', studentIds)
+            .order('created_at', { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
+
+      studentIds.length > 0
+        ? supabase
+            .from('student_node_progress')
+            .select('student_id, node_id, status, score, last_accessed_at, completed_at, nodes(title)')
+            .in('student_id', studentIds)
+            .order('last_accessed_at', { ascending: false, nullsFirst: false })
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    // Dedup: keep only the first (= latest) record per student_id
+    const latestActivityMap = new Map<string, any>();
+    for (const row of activitiesResult.data || []) {
+      if (!latestActivityMap.has(row.student_id)) latestActivityMap.set(row.student_id, row);
+    }
+
+    const latestProgressMap = new Map<string, any>();
+    for (const row of progressResult.data || []) {
+      if (!latestProgressMap.has(row.student_id)) latestProgressMap.set(row.student_id, row);
+    }
+
+    // Step 3: Build response — same shape as before
     const classData = classResult.data;
     const teachersData = teachersResult.data || [];
-    const studentsData = studentsResult.data || [];
 
-    // Find homeroom teacher
     const homeroomTeachers = teachersData.filter((ct: any) => ct.is_homeroom);
     const homeroomTeacher = homeroomTeachers.length > 0 ? {
       id: homeroomTeachers[0].teacher.id,
@@ -317,50 +342,22 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
       subjects: homeroomTeachers.map((ct: any) => ct.subject).filter(Boolean),
     } : null;
 
-    // Get subject teachers (not homeroom)
     const subjectTeachers = teachersData
       .filter((ct: any) => !ct.is_homeroom)
-      .map((ct: any) => ({
-        teacher: ct.teacher,
-        subject: ct.subject,
-      }));
+      .map((ct: any) => ({ teacher: ct.teacher, subject: ct.subject }));
 
     const classDetail: ClassDetail = {
       ...classData,
       homeroom_teacher: homeroomTeacher,
       subject_teachers: subjectTeachers,
-      students: studentsData.map((s: any) => {
-        // Find the latest activity
-        let latestActivity = null;
-        if (s.profile.activity_logs && s.profile.activity_logs.length > 0) {
-          // Sort descending by created_at just to be safe
-          const sortedActs = [...s.profile.activity_logs].sort((a, b) => 
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-          latestActivity = sortedActs[0];
-        }
-
-        // Find the latest progress node
-        let latestProgress = null;
-        if (s.profile.student_node_progress && s.profile.student_node_progress.length > 0) {
-          // Sort descending by last_accessed_at or completed_at
-          const sortedProg = [...s.profile.student_node_progress].sort((a, b) => {
-            const timeA = new Date(a.last_accessed_at || a.completed_at || 0).getTime();
-            const timeB = new Date(b.last_accessed_at || b.completed_at || 0).getTime();
-            return timeB - timeA;
-          });
-          latestProgress = sortedProg[0];
-        }
-
-        return {
-          ...s,
-          profile: {
-            ...s.profile,
-            latest_activity: latestActivity,
-            latest_progress: latestProgress
-          }
-        };
-      }),
+      students: studentsData.map((s: any) => ({
+        ...s,
+        profile: {
+          ...s.profile,
+          latest_activity: latestActivityMap.get(s.profile.id) ?? null,
+          latest_progress: latestProgressMap.get(s.profile.id) ?? null,
+        },
+      })),
     };
 
     console.log('Class detail loaded:', {
@@ -378,6 +375,7 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
     return { data: null, error: message };
   }
 }
+
 
 /**
  * Get all subjects taught in a class

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from "react";
 import Loading from "@/components/ui/loading";
@@ -12,9 +12,13 @@ import {
   Wand2,
   ChevronDown,
   ChevronUp,
-  CheckCircle2
+  CheckCircle2,
 } from "lucide-react";
-import { NotebookBadge, NotebookButton, NotebookCard } from "@/components/ui/notebook-card";
+import {
+  NotebookBadge,
+  NotebookButton,
+  NotebookCard,
+} from "@/components/ui/notebook-card";
 import { Question } from "@/types/teacher";
 
 interface QuizGeneratorFormProps {
@@ -34,13 +38,16 @@ export function QuizGeneratorForm({
   bankQuestions = [],
   isLoadingBank = false,
 }: QuizGeneratorFormProps) {
-  const [activeTab, setActiveTab] = useState<"ai" | "bank">("ai");
-  const [source, setSource] = useState<"file" | "kb" | "bank" | "topic">("topic");
+  const [source, setSource] = useState<"file" | "kb" | "topic">("topic");
   const [topic, setTopic] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">("Medium");
+  const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">(
+    "Medium",
+  );
   const [numQuestions, setNumQuestions] = useState(10);
-  const [questionTypesCount, setQuestionTypesCount] = useState<Record<string, number>>({
+  const [questionTypesCount, setQuestionTypesCount] = useState<
+    Record<string, number>
+  >({
     MULTIPLE_CHOICE: 10,
     TRUE_FALSE: 0,
     ESSAY: 0,
@@ -48,17 +55,12 @@ export function QuizGeneratorForm({
     MATCHING: 0,
     FILL_IN_BLANKS: 0,
     CATEGORIZATION: 0,
-    FIND_ERROR: 0
+    FIND_ERROR: 0,
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [selectedBankQuestionIds, setSelectedBankQuestionIds] = useState<string[]>([]);
 
   const aiService = new AIQuestionService();
-
-
-  // Filter bank questions based on subject/node if needed
-  const filteredBankQuestions = bankQuestions;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -90,9 +92,8 @@ export function QuizGeneratorForm({
         subject: subjectId,
         questionTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
         fromKnowledgeBase: source === "kb",
-        fromQuestionBank: source === "bank",
         onlyFromFile: source === "file",
-        file: source === "file" ? files[0] : undefined
+        file: source === "file" ? files[0] : undefined,
       });
 
       if (response.questions && response.questions.length > 0) {
@@ -103,296 +104,234 @@ export function QuizGeneratorForm({
           createdAt: Date.now(),
           number: idx + 1,
           type: q.type as any,
-          difficulty: q.difficulty as any
+          difficulty: q.difficulty as any,
         }));
         onQuestionsGenerated(formattedQuestions as any);
       } else {
-        alert("AI không tạo được câu hỏi nào. Vui lòng thử lại với yêu cầu khác.");
+        alert(
+          "AI không tạo được câu hỏi nào. Vui lòng thử lại với yêu cầu khác.",
+        );
       }
     } catch (error) {
       console.error("Error generating questions:", error);
-      alert(error instanceof Error ? error.message : "Đã có lỗi xảy ra khi tạo câu hỏi.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Đã có lỗi xảy ra khi tạo câu hỏi.",
+      );
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const toggleBankQuestion = (id: string) => {
-    setSelectedBankQuestionIds(prev =>
-      prev.includes(id) ? prev.filter(qId => qId !== id) : [...prev, id]
-    );
-  };
-
-
   return (
     <div className="space-y-6">
-      {/* Tab Selection */}
-      <div className="flex bg-gray-100 p-1.5 rounded-2xl border-2 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+      <div className="space-y-6 animate-in fade-in duration-300">
+        <div className="bg-blue-50 border-2 border-black p-4 rounded-2xl shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+          <h4 className="font-black text-blue-900 border-b-2 border-blue-200 pb-2 mb-4 uppercase text-xs tracking-widest flex items-center gap-2">
+            <Brain className="w-4 h-4" />
+            Nguồn học liệu đầu vào
+          </h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <button
+              onClick={() => setSource("topic")}
+              className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "topic" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
+            >
+              <span className="text-2xl">📝</span>
+              <span className="text-[10px] uppercase">Chủ đề</span>
+            </button>
+            <button
+              onClick={() => setSource("file")}
+              className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "file" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
+            >
+              <span className="text-2xl">📁</span>
+              <span className="text-[10px] uppercase">Tệp tin</span>
+            </button>
+            <button
+              onClick={() => setSource("kb")}
+              className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "kb" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
+            >
+              <span className="text-2xl">🧠</span>
+              <span className="text-[10px] uppercase">Học liệu</span>
+            </button>
+          </div>
+        </div>
+
+        {source === "topic" && (
+          <div className="space-y-2">
+            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest ml-1">
+              Nhập nội dung/yêu cầu
+            </label>
+            <textarea
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              rows={3}
+              className="w-full px-4 py-3 bg-white border-2 border-black rounded-xl focus:ring-0 shadow-[4px_4px_0_0_rgba(0,0,0,1)] font-bold text-gray-900"
+              placeholder="Ví dụ: Tạo trắc nghiệm về danh từ, động từ, tính từ..."
+            />
+          </div>
+        )}
+
+        {source === "file" && (
+          <div className="space-y-2">
+            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest ml-1">
+              Kéo thả tài liệu (.pdf, .docx)
+            </label>
+            <div className="border-2 border-dashed border-black rounded-2xl p-8 bg-white flex flex-col items-center gap-4 hover:bg-blue-50 cursor-pointer relative transition-colors shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.docx,.doc,.txt"
+                onChange={handleFileChange}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+              />
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center border-2 border-blue-200">
+                <FileText className="w-8 h-8 text-blue-600" />
+              </div>
+              <div className="text-center">
+                <p className="font-black text-gray-900">Chọn tệp từ máy tính</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
+                  Hỗ trợ PDF, DOCX tối đa 10MB
+                </p>
+              </div>
+            </div>
+            {files.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {files.map((f, i) => (
+                  <div
+                    key={i}
+                    className="px-3 py-1 bg-blue-100 border-2 border-black rounded-lg text-xs font-black flex items-center gap-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+                  >
+                    {f.name}
+                    <button
+                      onClick={() =>
+                        setFiles(files.filter((_, idx) => idx !== i))
+                      }
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest ml-1">
+              Số lượng câu hỏi
+            </label>
+            <div className="flex items-center gap-4">
+              <input
+                type="range"
+                min="5"
+                max="40"
+                step="5"
+                value={numQuestions}
+                onChange={(e) => setNumQuestions(parseInt(e.target.value))}
+                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+              />
+              <span className="w-12 h-10 flex items-center justify-center bg-white text-indigo-900 font-black rounded-xl border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+                {numQuestions}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-end pb-1">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-indigo-600 font-black text-xs uppercase tracking-wider flex items-center gap-1 hover:underline"
+            >
+              {showAdvanced ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+              {showAdvanced ? "Cài đặt cơ bản" : "Cài đặt nâng cao"}
+            </button>
+          </div>
+        </div>
+
+        {showAdvanced && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-indigo-50/50 border-2 border-dashed border-indigo-200 rounded-2xl animate-in slide-in-from-top-4 duration-300">
+            <div className="space-y-3">
+              <label className="block text-[10px] font-black text-indigo-900 uppercase tracking-wider">
+                Mức độ khó của đề
+              </label>
+              <div className="flex gap-2">
+                {(["Easy", "Medium", "Hard"] as const).map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setDifficulty(d)}
+                    className={`flex-1 py-2 rounded-lg border-2 font-black text-[10px] uppercase tracking-tighter transition-all ${difficulty === d ? "bg-indigo-600 text-white border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] -translate-y-0.5" : "bg-white border-gray-200 text-gray-400 hover:border-gray-300"}`}
+                  >
+                    {d === "Easy" ? "Dễ" : d === "Medium" ? "Vừa" : "Khó"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-3 text-left">
+              <label className="block text-[10px] font-black text-indigo-900 uppercase tracking-wider">
+                Các loại câu hỏi muốn tạo
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: "MULTIPLE_CHOICE", label: "Trắc nghiệm" },
+                  { id: "TRUE_FALSE", label: "Đúng/Sai" },
+                  { id: "WORD_ORDERING", label: "Sắp xếp từ" },
+                  { id: "MATCHING", label: "Nối cặp" },
+                  { id: "FILL_IN_BLANKS", label: "Điền trống" },
+                  { id: "CATEGORIZATION", label: "Phân loại" },
+                  { id: "FIND_ERROR", label: "Tìm lỗi sai" },
+                  { id: "ESSAY", label: "Tự luận" },
+                ].map((type) => (
+                  <label
+                    key={type.id}
+                    className="flex items-center gap-2 cursor-pointer group"
+                  >
+                    <div
+                      onClick={() => {
+                        setQuestionTypesCount((prev) => ({
+                          ...prev,
+                          [type.id]: prev[type.id] > 0 ? 0 : 1,
+                        }));
+                      }}
+                      className={`w-4 h-4 rounded border-2 border-black flex items-center justify-center transition-all ${questionTypesCount[type.id] > 0 ? "bg-indigo-500" : "bg-white"}`}
+                    >
+                      {questionTypesCount[type.id] > 0 && (
+                        <div className="w-2 h-2 bg-white rounded-sm" />
+                      )}
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-700 group-hover:text-indigo-600 transition-colors uppercase tracking-tighter">
+                      {type.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-[9px] text-gray-400 font-bold italic mt-2">
+                * AI sẽ cố gắng điều phối tỷ lệ câu hỏi phù hợp.
+              </p>
+            </div>
+          </div>
+        )}
+
         <button
-          onClick={() => setActiveTab("ai")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${activeTab === "ai" ? "bg-indigo-600 text-white shadow-[2px_2px_0_0_rgba(0,0,0,1)]" : "text-gray-600 hover:bg-gray-200"}`}
+          onClick={handleGenerate}
+          disabled={isGenerating}
+          className="w-full py-5 bg-indigo-600 text-white font-black border-2 border-black rounded-2xl shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:bg-indigo-500 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all uppercase tracking-[0.2em] disabled:opacity-50 flex items-center justify-center gap-3"
         >
-          <Wand2 className="w-5 h-5" />
-          Tạo bằng AI
-        </button>
-        <button
-          onClick={() => setActiveTab("bank")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${activeTab === "bank" ? "bg-emerald-600 text-white shadow-[2px_2px_0_0_rgba(0,0,0,1)]" : "text-gray-600 hover:bg-gray-200"}`}
-        >
-          <Database className="w-5 h-5" />
-          Ngân hàng đề
+          {isGenerating ? (
+            <>
+              <Loading size="sm" message="ĐANG PHÂN TÍCH..." />
+            </>
+          ) : (
+            <>✨ BẮT ĐẦU TẠO ĐỀ</>
+          )}
         </button>
       </div>
-
-      {activeTab === "ai" ? (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          <div className="bg-blue-50 border-2 border-black p-4 rounded-2xl shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
-            <h4 className="font-black text-blue-900 border-b-2 border-blue-200 pb-2 mb-4 uppercase text-xs tracking-widest flex items-center gap-2">
-              <Brain className="w-4 h-4" />
-              Nguồn học liệu đầu vào
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <button
-                onClick={() => setSource("topic")}
-                className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "topic" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
-              >
-                <span className="text-2xl">📝</span>
-                <span className="text-[10px] uppercase">Chủ đề</span>
-              </button>
-              <button
-                onClick={() => setSource("file")}
-                className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "file" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
-              >
-                <span className="text-2xl">📁</span>
-                <span className="text-[10px] uppercase">Tệp tin</span>
-              </button>
-              <button
-                onClick={() => setSource("kb")}
-                className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "kb" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
-              >
-                <span className="text-2xl">🧠</span>
-                <span className="text-[10px] uppercase">Học liệu</span>
-              </button>
-              <button
-                onClick={() => setSource("bank")}
-                className={`p-3 rounded-xl border-2 font-bold text-sm flex flex-col items-center gap-2 transition-all ${source === "bank" ? "bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] -translate-x-0.5 -translate-y-0.5" : "bg-transparent border-transparent text-gray-400 hover:bg-blue-100/50"}`}
-              >
-                <span className="text-2xl">🏛️</span>
-                <span className="text-[10px] uppercase">Kho đề</span>
-              </button>
-            </div>
-          </div>
-
-          {source === "topic" && (
-            <div className="space-y-2">
-              <label className="block text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Nhập nội dung/yêu cầu</label>
-              <textarea
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                rows={3}
-                className="w-full px-4 py-3 bg-white border-2 border-black rounded-xl focus:ring-0 shadow-[4px_4px_0_0_rgba(0,0,0,1)] font-bold text-gray-900"
-                placeholder="Ví dụ: 10 câu trắc nghiệm Phép cộng phạm vi 100, tập trung vào các số có 2 chữ số..."
-              />
-            </div>
-          )}
-
-          {source === "file" && (
-            <div className="space-y-2">
-              <label className="block text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Kéo thả tài liệu (.pdf, .docx)</label>
-              <div className="border-2 border-dashed border-black rounded-2xl p-8 bg-white flex flex-col items-center gap-4 hover:bg-blue-50 cursor-pointer relative transition-colors shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
-                <input
-                  type="file"
-                  multiple
-                  accept=".pdf,.docx,.doc,.txt"
-                  onChange={handleFileChange}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                />
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center border-2 border-blue-200">
-                  <FileText className="w-8 h-8 text-blue-600" />
-                </div>
-                <div className="text-center">
-                  <p className="font-black text-gray-900">Chọn tệp từ máy tính</p>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">Hỗ trợ PDF, DOCX tối đa 10MB</p>
-                </div>
-              </div>
-              {files.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {files.map((f, i) => (
-                    <div key={i} className="px-3 py-1 bg-blue-100 border-2 border-black rounded-lg text-xs font-black flex items-center gap-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
-                      {f.name}
-                      <button onClick={() => setFiles(files.filter((_, idx) => idx !== i))} className="text-red-500 hover:text-red-700">×</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="block text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Số lượng câu hỏi</label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="5"
-                  max="40"
-                  step="5"
-                  value={numQuestions}
-                  onChange={(e) => setNumQuestions(parseInt(e.target.value))}
-                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-                <span className="w-12 h-10 flex items-center justify-center bg-white text-indigo-900 font-black rounded-xl border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
-                  {numQuestions}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-end pb-1">
-              <button
-                type="button"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="text-indigo-600 font-black text-xs uppercase tracking-wider flex items-center gap-1 hover:underline"
-              >
-                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                {showAdvanced ? "Cài đặt cơ bản" : "Cài đặt nâng cao"}
-              </button>
-            </div>
-          </div>
-
-          {showAdvanced && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-indigo-50/50 border-2 border-dashed border-indigo-200 rounded-2xl animate-in slide-in-from-top-4 duration-300">
-              <div className="space-y-3">
-                <label className="block text-[10px] font-black text-indigo-900 uppercase tracking-wider">Mức độ khó của đề</label>
-                <div className="flex gap-2">
-                  {(['Easy', 'Medium', 'Hard'] as const).map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => setDifficulty(d)}
-                      className={`flex-1 py-2 rounded-lg border-2 font-black text-[10px] uppercase tracking-tighter transition-all ${difficulty === d ? 'bg-indigo-600 text-white border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)] -translate-y-0.5' : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'}`}
-                    >
-                      {d === 'Easy' ? 'Dễ' : d === 'Medium' ? 'Vừa' : 'Khó'}
-                    </button>
-                  ))}
-
-                </div>
-              </div>
-              <div className="space-y-3 text-left">
-                <label className="block text-[10px] font-black text-indigo-900 uppercase tracking-wider">Các loại câu hỏi muốn tạo</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: 'MULTIPLE_CHOICE', label: 'Trắc nghiệm' },
-                    { id: 'TRUE_FALSE', label: 'Đúng/Sai' },
-                    { id: 'WORD_ORDERING', label: 'Sắp xếp từ' },
-                    { id: 'MATCHING', label: 'Nối cặp' },
-                    { id: 'FILL_IN_BLANKS', label: 'Điền trống' },
-                    { id: 'CATEGORIZATION', label: 'Phân loại' },
-                    { id: 'FIND_ERROR', label: 'Tìm lỗi sai' },
-                    { id: 'ESSAY', label: 'Tự luận' }
-                  ].map(type => (
-                    <label key={type.id} className="flex items-center gap-2 cursor-pointer group">
-                      <div
-                        onClick={() => {
-                          setQuestionTypesCount(prev => ({
-                            ...prev,
-                            [type.id]: prev[type.id] > 0 ? 0 : 1
-                          }));
-                        }}
-                        className={`w-4 h-4 rounded border-2 border-black flex items-center justify-center transition-all ${questionTypesCount[type.id] > 0 ? 'bg-indigo-500' : 'bg-white'}`}
-                      >
-                        {questionTypesCount[type.id] > 0 && <div className="w-2 h-2 bg-white rounded-sm" />}
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-700 group-hover:text-indigo-600 transition-colors uppercase tracking-tighter">
-                        {type.label}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-                <p className="text-[9px] text-gray-400 font-bold italic mt-2">* AI sẽ cố gắng điều phối tỷ lệ câu hỏi phù hợp.</p>
-              </div>
-
-            </div>
-          )}
-
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="w-full py-5 bg-indigo-600 text-white font-black border-2 border-black rounded-2xl shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:bg-indigo-500 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all uppercase tracking-[0.2em] disabled:opacity-50 flex items-center justify-center gap-3"
-          >
-            {isGenerating ? (
-              <>
-                <Loading size="sm" message="ĐANG PHÂN TÍCH..." />
-              </>
-            ) : (
-              <>✨ BẮT ĐẦU TẠO ĐỀ</>
-            )}
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-4 animate-in fade-in duration-300">
-          <div className="flex items-center justify-between px-2">
-            <div className="space-y-0.5">
-              <h3 className="font-black text-gray-900 uppercase text-sm">Kho câu hỏi sẵn có</h3>
-              <p className="text-[10px] font-bold text-gray-400 uppercase">Chọn những câu hỏi thầy cô đã biên soạn</p>
-            </div>
-            <NotebookBadge variant="success" className="border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
-              {filteredBankQuestions.length} Câu
-            </NotebookBadge>
-          </div>
-
-          <div className="max-h-[460px] overflow-y-auto pr-3 space-y-3 custom-scrollbar">
-            {isLoadingBank ? (
-              <div className="py-20 flex flex-col items-center gap-4">
-                <Loading size="md" />
-                <p className="font-black text-gray-400 uppercase text-[10px] tracking-widest">Đang tải học liệu...</p>
-              </div>
-            ) : filteredBankQuestions.length > 0 ? (
-              filteredBankQuestions.map((q) => (
-                <div
-                  key={q.id}
-                  onClick={() => toggleBankQuestion(q.id)}
-                  className={`p-4 border-2 rounded-2xl cursor-pointer transition-all relative ${selectedBankQuestionIds.includes(q.id) ? "bg-emerald-50 border-emerald-600 shadow-[4px_4px_0_0_rgba(16,185,129,1)] -translate-x-0.5 -translate-y-0.5" : "bg-white border-black hover:bg-gray-50 shadow-[2px_2px_0_0_rgba(0,0,0,1)]"}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`mt-1 flex-shrink-0 w-6 h-6 rounded-lg border-2 border-black flex items-center justify-center transition-colors ${selectedBankQuestionIds.includes(q.id) ? "bg-emerald-500" : "bg-white"}`}>
-                      {selectedBankQuestionIds.includes(q.id) && <CheckCircle2 className="w-4 h-4 text-white" />}
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className={`font-bold text-gray-900 transition-colors ${selectedBankQuestionIds.includes(q.id) ? "text-emerald-900" : ""}`}>{q.questionText}</p>
-                      <div className="flex gap-2 mt-3">
-                        <span className="text-[9px] font-black px-2 py-0.5 bg-gray-100 border border-black rounded uppercase text-gray-600">
-                          {q.type === 'MULTIPLE_CHOICE' ? 'Trắc nghiệm' : q.type === 'TRUE_FALSE' ? 'Đúng/Sai' : 'Tự luận'}
-                        </span>
-                        <span className={`text-[9px] font-black px-2 py-0.5 border border-black rounded uppercase ${q.difficulty === 'Easy' ? 'bg-green-100' : q.difficulty === 'Medium' ? 'bg-yellow-100' : q.difficulty === 'Hard' ? 'bg-red-100' : ''}`}>
-                          {q.difficulty}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="py-20 text-center bg-gray-50 border-4 border-dashed border-gray-200 rounded-3xl">
-                <Database className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-                <p className="font-black text-gray-400 italic uppercase text-[10px]">Chưa có câu hỏi trong kho</p>
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={() => {
-              if (selectedBankQuestionIds.length > 0) {
-                const selectedQuestions = bankQuestions.filter(q => selectedBankQuestionIds.includes(q.id));
-                onBankQuestionsSelected(selectedQuestions);
-                setSelectedBankQuestionIds([]);
-              }
-            }}
-            disabled={selectedBankQuestionIds.length === 0}
-            className="w-full py-5 bg-emerald-600 text-white font-black border-2 border-black rounded-2xl shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:bg-emerald-500 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all uppercase tracking-widest disabled:opacity-50"
-          >
-            THÊM {selectedBankQuestionIds.length} CÂU HỎI VÀO BÀI
-          </button>
-        </div>
-      )}
     </div>
   );
 }

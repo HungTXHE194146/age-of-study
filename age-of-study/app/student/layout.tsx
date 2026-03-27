@@ -86,7 +86,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <GameHeader />
-      <main>{children}</main>
+      <main className="pb-20 md:pb-8">{children}</main>
 
       {/* Floating Chatbot - only for students, not during tests */}
       {showChatbot && <FloatingChatbot />}
