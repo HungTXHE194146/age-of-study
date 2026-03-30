@@ -1,8 +1,9 @@
 import { Node, Edge } from '@xyflow/react';
+import { random } from 'lodash';
 
 // Dimensions and Spacing
-const Y_SPACING = 200; // Khoảng cách dọc giữa các node
-const X_OFFSET = 70; // Độ lệch so le trái/phải
+const Y_SPACING = 300; // Khoảng cách dọc giữa các node
+const X_OFFSET = 70 + random(0, 30); // Độ lệch so le trái/phải
 const COMPONENT_GAP = 250; // Khoảng cách giữa các cụm (chương) độc lập
 
 /**

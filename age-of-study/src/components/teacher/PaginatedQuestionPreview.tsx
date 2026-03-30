@@ -142,7 +142,7 @@ export function PaginatedQuestionPreview({
                 onClick={() => onQuestionReplace(currentQuestion.id)}
                 disabled={isReplacing}
                 className={`flex items-center gap-2 px-3 py-1.5 bg-blue-100 border-2 border-black text-blue-900 font-bold rounded-lg hover:bg-blue-200 transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,1)] disabled:opacity-50`}
-                title="Đổi sang câu hỏi khác cùng dạng"
+                title="AI sẽ đổi sang câu hỏi khác cùng dạng"
               >
                 {isReplacing ? <Loading size="sm" /> : <RefreshCw className="w-4 h-4" />}
                 <span className="hidden sm:inline">Đổi câu</span>
