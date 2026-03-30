@@ -1,7 +1,14 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import GameHeader from "@/components/GameHeader";
-import FloatingChatbot from "@/components/student/FloatingChatbot";
+
+const FloatingChatbot = dynamic(
+  () => import("@/components/student/FloatingChatbot"),
+  {
+    ssr: false,
+  },
+);
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";

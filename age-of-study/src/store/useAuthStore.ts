@@ -21,6 +21,7 @@ interface AuthState {
   signUp: (username: string, password: string, fullName: string) => Promise<void>  // Removed email param
   logout: () => Promise<void>
   checkAuth: () => Promise<void>
+  updateUser: (partial: Partial<Profile>) => void
   updateUserXP: (xp: number) => void
   clearError: () => void
   clearMFAChallenge: () => void
@@ -315,6 +316,13 @@ export const useAuthStore = create<AuthState>()(
         })()
 
         return checkAuthPromise
+      },
+
+      updateUser: (partial: Partial<Profile>) => {
+        const user = get().user
+        if (user) {
+          set({ user: { ...user, ...partial } })
+        }
       },
 
       // NOTE: This is an optimistic local update only.

@@ -334,6 +334,16 @@ export async function getTeacherActivityReport(): Promise<{
     }
 
 
+    // Group assignments by teacher for O(1) lookup (M-9 optimization)
+    const assignmentsByTeacher: Record<string, any[]> = {};
+    if (classAssignments) {
+      for (const assignment of classAssignments) {
+        if (!assignmentsByTeacher[assignment.teacher_id]) {
+          assignmentsByTeacher[assignment.teacher_id] = [];
+        }
+        assignmentsByTeacher[assignment.teacher_id].push(assignment);
+      }
+    }
 
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -345,8 +355,8 @@ export async function getTeacherActivityReport(): Promise<{
     let neverLoggedInCount = 0;
 
     for (const teacher of teachers) {
-      // Get class assignments for this teacher
-      const assignments = classAssignments?.filter((a: any) => a.teacher_id === teacher.id) || [];
+      // Get class assignments for this teacher from pre-built Map
+      const assignments = assignmentsByTeacher[teacher.id] || [];
       const homeroomCount = assignments.filter((a: any) => a.is_homeroom).length;
       const subjectCount = assignments.filter((a: any) => !a.is_homeroom).length;
       const totalClasses = assignments.length;

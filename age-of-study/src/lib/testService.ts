@@ -71,6 +71,20 @@ export class TestService {
     return data || [];
   }
 
+  async getPendingTestsByClass(
+    classId: number,
+    studentId: string,
+  ): Promise<Test[]> {
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase.rpc("get_pending_tests_by_class", {
+      p_class_id: classId,
+      p_student_id: studentId,
+    });
+
+    if (error) throw error;
+    return data || [];
+  }
+
   async getTestById(testId: string): Promise<Test | null> {
     const supabase = getSupabaseBrowserClient();
     const { data, error } = await supabase
@@ -441,13 +455,22 @@ export class TestService {
   /**
    * Lấy danh sách ID các node mà học sinh đã hoàn thành
    */
-  async getCompletedNodeIds(studentId: string): Promise<number[]> {
+  async getCompletedNodeIds(
+    studentId: string,
+    subjectId?: number,
+  ): Promise<number[]> {
     const supabase = getSupabaseBrowserClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from("student_node_progress")
-      .select("node_id")
+      .select("node_id, nodes!inner(subject_id)")
       .eq("student_id", studentId)
       .eq("status", "completed");
+
+    if (subjectId) {
+      query = query.eq("nodes.subject_id", subjectId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching completed nodes:", error);
@@ -558,22 +581,13 @@ export class TestService {
 
   async getTeacherTotalQuestionCount(teacherId: string): Promise<number> {
     const supabase = getSupabaseBrowserClient();
-    const { data: testIds, error: testError } = await supabase
-      .from("tests")
-      .select("id")
-      .eq("created_by", teacherId);
-
-    if (testError) throw testError;
-    if (!testIds || testIds.length === 0) return 0;
-
-    const testIdList = testIds.map((t: { id: string }) => t.id);
-    const { count, error } = await supabase
-      .from("test_questions")
-      .select("*", { count: "exact" })
-      .in("test_id", testIdList);
+    // Optimized: Use a single RPC call instead of 2 sequential queries (M-10)
+    const { data, error } = await supabase.rpc("get_teacher_question_count", {
+      teacher_uuid: teacherId,
+    });
 
     if (error) throw error;
-    return count || 0;
+    return Number(data) || 0;
   }
 
   async getTestsWithQuestionCounts(

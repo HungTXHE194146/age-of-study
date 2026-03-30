@@ -140,8 +140,12 @@ export async function getTeacherLeaderboardData(filters?: {
   grade?: number;
   subject?: string;
   period?: LeaderboardPeriod;
+  limit?: number;
+  offset?: number;
 }) {
   const supabase = getSupabaseBrowserClient();
+  const limit = filters?.limit ?? 200;
+  const offset = filters?.offset ?? 0;
   
   try {
     let query = supabase
@@ -154,7 +158,10 @@ export async function getTeacherLeaderboardData(filters?: {
       query = query.eq('grade', filters.grade);
     }
 
-    const { data, error } = await query.order('total_xp', { ascending: false });
+    // Apply ordering and pagination (server-side)
+    const { data, error } = await query
+      .order('total_xp', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) {
       console.error('Error fetching teacher leaderboard data:', error);

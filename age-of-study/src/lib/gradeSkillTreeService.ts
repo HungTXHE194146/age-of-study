@@ -93,21 +93,28 @@ export async function fetchSubjectSkillTree(subjectId: number, studentId?: strin
       return { subject: null, nodes: [] };
     }
 
-    // Lấy danh sách tất cả các nodes thuộc môn học đó kèm theo tiến độ của học sinh
-    let query = supabase
-      .from('nodes')
-      .select(`
-        *,
-        student_node_progress!left (
-          score,
-          status
-        )
-      `)
-      .eq('subject_id', subjectId);
-
+    // Lấy danh sách tất cả các nodes thuộc môn học đó
+    let query;
+    
     if (studentId) {
-      // Filter the join specifically for this student
-      query = query.eq('student_node_progress.student_id', studentId);
+      // Chế độ học sinh: Lấy nodes kèm theo tiến độ của học sinh cụ thể
+      query = supabase
+        .from('nodes')
+        .select(`
+          *,
+          student_node_progress!left (
+            score,
+            status
+          )
+        `)
+        .eq('subject_id', subjectId)
+        .eq('student_node_progress.student_id', studentId);
+    } else {
+      // Chế độ giáo viên: Chỉ lấy thông tin nodes (Performance fix: Skip heavy join)
+      query = supabase
+        .from('nodes')
+        .select('*')
+        .eq('subject_id', subjectId);
     }
 
     // Filter by volume and lesson type when volume is specified
@@ -123,8 +130,9 @@ export async function fetchSubjectSkillTree(subjectId: number, studentId?: strin
       throw new Error(`Failed to fetch nodes: ${nodesError.message}`);
     }
 
-    // Map nested student_node_progress to flat properties
+    // Map data to Node interface
     const nodes: Node[] = (nodesData || []).map((n: any) => {
+      // Handle potential join data from student mode
       const progress = n.student_node_progress?.[0];
       return {
         ...n,

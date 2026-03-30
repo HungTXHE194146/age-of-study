@@ -9,7 +9,13 @@ import Loading from "@/components/ui/loading";
 import { AlertCircle, ArrowLeft, Download, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { NotebookCard, NotebookCardHeader, NotebookCardTitle, NotebookCardContent, NotebookButton } from "@/components/ui/notebook-card";
+import {
+  NotebookCard,
+  NotebookCardHeader,
+  NotebookCardTitle,
+  NotebookCardContent,
+  NotebookButton,
+} from "@/components/ui/notebook-card";
 
 interface StudentData {
   student_id: string;
@@ -61,6 +67,9 @@ export default function ReportsPage() {
     if (!reportRef.current) return;
 
     try {
+      // Dynamic import to reduce initial bundle size (M-8)
+      const html2canvas = (await import("html2canvas")).default;
+
       const canvas = await html2canvas(reportRef.current, {
         scale: 2, // Tăng chất lượng ảnh
         backgroundColor: "#ffffff",
@@ -69,7 +78,7 @@ export default function ReportsPage() {
       const image = canvas.toDataURL("image/png");
       const link = document.createElement("a");
       link.href = image;
-      link.download = `Bao_Cao_Lop_${classData?.name || 'Class'}.png`;
+      link.download = `Bao_Cao_Lop_${classData?.name || "Class"}.png`;
       link.click();
     } catch (err) {
       console.error("Lỗi xuất ảnh:", err);
@@ -101,9 +110,13 @@ export default function ReportsPage() {
 
   // Calculate some simple stats
   const totalStudents = classData?.students.length || 0;
-  const avgXp = totalStudents > 0
-    ? Math.round(classData!.students.reduce((acc, s) => acc + s.profile.total_xp, 0) / totalStudents)
-    : 0;
+  const avgXp =
+    totalStudents > 0
+      ? Math.round(
+          classData!.students.reduce((acc, s) => acc + s.profile.total_xp, 0) /
+            totalStudents,
+        )
+      : 0;
 
   // Sort students by XP for "Top" list
   const topStudents = [...(classData?.students || [])]
@@ -113,23 +126,26 @@ export default function ReportsPage() {
   return (
     <div className="min-h-screen bg-[#f4f4f9] py-8 print:bg-white print:py-0">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 print:px-0">
-
         {/* Controls */}
         <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4 print:hidden">
           <Link href={`/teacher/classes/${classId}`}>
-            <NotebookButton
-              className="flex items-center gap-2 bg-white text-black hover:bg-gray-100 w-full sm:w-auto h-12"
-            >
+            <NotebookButton className="flex items-center gap-2 bg-white text-black hover:bg-gray-100 w-full sm:w-auto h-12">
               <ArrowLeft className="w-5 h-5" />
               Quay lại
             </NotebookButton>
           </Link>
           <div className="flex gap-4 w-full sm:w-auto">
-            <NotebookButton onClick={handleExportImage} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-green-300">
+            <NotebookButton
+              onClick={handleExportImage}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-green-300"
+            >
               <Download className="w-5 h-5" />
               Lưu Ảnh Báo Cáo
             </NotebookButton>
-            <NotebookButton onClick={() => window.print()} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-blue-300">
+            <NotebookButton
+              onClick={() => window.print()}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-blue-300"
+            >
               <Share2 className="w-5 h-5" />
               In Bản Giấy
             </NotebookButton>
@@ -146,23 +162,38 @@ export default function ReportsPage() {
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black uppercase text-blue-900 mb-2">
               Báo Cáo Tóm Tắt Lớp Học
             </h1>
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold">Lớp: {classData?.name}</h2>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold">
+              Lớp: {classData?.name}
+            </h2>
             <p className="text-base sm:text-xl font-bold text-gray-600 mt-2">
-              Năm học: {classData?.school_year} • Ngày xuất: {new Date().toLocaleDateString('vi-VN')}
+              Năm học: {classData?.school_year} • Ngày xuất:{" "}
+              {new Date().toLocaleDateString("vi-VN")}
             </p>
           </div>
 
           {/* Quick Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8">
             <div className="border-4 border-black rounded-xl p-4 sm:p-6 bg-yellow-100 text-center">
-              <div className="text-lg sm:text-2xl font-bold mb-2">Tổng Sĩ Số</div>
-              <div className="text-4xl sm:text-6xl font-black text-blue-900">{totalStudents}</div>
-              <div className="text-base sm:text-lg font-bold mt-2">Học sinh</div>
+              <div className="text-lg sm:text-2xl font-bold mb-2">
+                Tổng Sĩ Số
+              </div>
+              <div className="text-4xl sm:text-6xl font-black text-blue-900">
+                {totalStudents}
+              </div>
+              <div className="text-base sm:text-lg font-bold mt-2">
+                Học sinh
+              </div>
             </div>
             <div className="border-4 border-black rounded-xl p-4 sm:p-6 bg-purple-100 text-center">
-              <div className="text-lg sm:text-2xl font-bold mb-2">Điểm TB Lớp</div>
-              <div className="text-4xl sm:text-6xl font-black text-purple-900">{avgXp}</div>
-              <div className="text-base sm:text-lg font-bold mt-2">XP / Học sinh</div>
+              <div className="text-lg sm:text-2xl font-bold mb-2">
+                Điểm TB Lớp
+              </div>
+              <div className="text-4xl sm:text-6xl font-black text-purple-900">
+                {avgXp}
+              </div>
+              <div className="text-base sm:text-lg font-bold mt-2">
+                XP / Học sinh
+              </div>
             </div>
           </div>
 
@@ -175,14 +206,21 @@ export default function ReportsPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-200 border-b-4 border-black text-base sm:text-xl">
-                    <th className="p-2 sm:p-4 font-black border-r-4 border-black w-16 sm:w-24 text-center">Hạng</th>
-                    <th className="p-2 sm:p-4 font-black border-r-4 border-black">Họ và Tên</th>
+                    <th className="p-2 sm:p-4 font-black border-r-4 border-black w-16 sm:w-24 text-center">
+                      Hạng
+                    </th>
+                    <th className="p-2 sm:p-4 font-black border-r-4 border-black">
+                      Họ và Tên
+                    </th>
                     <th className="p-2 sm:p-4 font-black">Điểm XP</th>
                   </tr>
                 </thead>
                 <tbody>
                   {topStudents.map((student, idx) => (
-                    <tr key={student.student_id} className={`text-xl font-bold ${idx !== topStudents.length - 1 ? 'border-b-4 border-black' : ''}`}>
+                    <tr
+                      key={student.student_id}
+                      className={`text-xl font-bold ${idx !== topStudents.length - 1 ? "border-b-4 border-black" : ""}`}
+                    >
                       <td className="p-4 border-r-4 border-black text-center text-red-600">
                         #{idx + 1}
                       </td>
@@ -196,7 +234,10 @@ export default function ReportsPage() {
                   ))}
                   {topStudents.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="p-6 text-center text-xl font-bold text-gray-500">
+                      <td
+                        colSpan={3}
+                        className="p-6 text-center text-xl font-bold text-gray-500"
+                      >
                         Chưa có dữ liệu học sinh
                       </td>
                     </tr>
@@ -208,7 +249,8 @@ export default function ReportsPage() {
 
           <div className="text-center mt-12 pt-6 border-t-2 border-dashed border-gray-400">
             <p className="font-bold text-gray-500 italic">
-              Báo cáo được tạo tự động bởi Hệ thống Quản lý Học tập Age of Study.
+              Báo cáo được tạo tự động bởi Hệ thống Quản lý Học tập Age of
+              Study.
             </p>
           </div>
         </div>

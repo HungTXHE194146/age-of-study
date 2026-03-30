@@ -48,16 +48,16 @@ export default function StudentSkillTreePage() {
   const autoSelectedSubjectIdRef = useRef<number | null>(null);
   const [subjectNodes, setSubjectNodes] = useState<
     | {
-      id: number;
-      title: string;
-      description?: string;
-      node_type: string;
-      parent_node_id?: number | null;
-      position_x?: number;
-      position_y?: number;
-      order_index: number;
-      week_number?: number | null;
-    }[]
+        id: number;
+        title: string;
+        description?: string;
+        node_type: string;
+        parent_node_id?: number | null;
+        position_x?: number;
+        position_y?: number;
+        order_index: number;
+        week_number?: number | null;
+      }[]
     | null
   >(null);
   const [completedNodeIds, setCompletedNodeIds] = useState<number[]>([]);
@@ -91,6 +91,29 @@ export default function StudentSkillTreePage() {
     fetchSubjects();
   }, []);
 
+  // Separate effect for auto-selecting volume (SM-4)
+  useEffect(() => {
+    const handleAutoSelectVolume = async () => {
+      if (
+        selectedSubject &&
+        user?.id &&
+        selectedSubject.code === "TV5" &&
+        autoSelectedSubjectIdRef.current !== selectedSubject.id
+      ) {
+        const recommendedVolume = await getRecommendedVolumeAction(
+          selectedSubject.id,
+          user.id,
+        );
+        autoSelectedSubjectIdRef.current = selectedSubject.id;
+        if (recommendedVolume && recommendedVolume !== selectedVolume) {
+          setSelectedVolume(recommendedVolume);
+        }
+      }
+    };
+
+    handleAutoSelectVolume();
+  }, [selectedSubject, user?.id, selectedVolume]);
+
   // Fetch subject nodes and completion status
   useEffect(() => {
     const fetchData = async () => {
@@ -98,33 +121,14 @@ export default function StudentSkillTreePage() {
         setSubjectNodes(null);
         setSelectedNodeId(null);
         try {
-          let currentVolume = selectedVolume;
-
-          // Auto-select volume on initial load for subjects with volumes
-          if (
-            selectedSubject.code === "TV5" &&
-            autoSelectedSubjectIdRef.current !== selectedSubject.id
-          ) {
-            const recommendedVolume = await getRecommendedVolumeAction(
-              selectedSubject.id,
-              user.id,
-            );
-            autoSelectedSubjectIdRef.current = selectedSubject.id;
-            if (recommendedVolume && recommendedVolume !== selectedVolume) {
-              currentVolume = recommendedVolume;
-              setSelectedVolume(recommendedVolume);
-              return; // Let the state update trigger the useEffect again
-            }
-          }
-
           // Pass volume for subjects with volume support (e.g., TV5)
           const volumeParam =
-            selectedSubject.code === "TV5" ? currentVolume : undefined;
+            selectedSubject.code === "TV5" ? selectedVolume : undefined;
 
           // Fetch nodes and completion status in parallel
           const [{ nodes }, completedIds] = await Promise.all([
             fetchSubjectSkillTree(selectedSubject.id, user.id, volumeParam),
-            testService.getCompletedNodeIds(user.id),
+            testService.getCompletedNodeIds(user.id, selectedSubject.id),
           ]);
           setSubjectNodes(nodes || []);
           setCompletedNodeIds(completedIds);
@@ -242,19 +246,21 @@ export default function StudentSkillTreePage() {
             <div className="flex items-center gap-1 bg-white border-2 border-black rounded-xl overflow-hidden shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               <button
                 onClick={() => setSelectedVolume(1)}
-                className={`px-4 py-2 text-sm font-bold transition-all ${selectedVolume === 1
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-100"
-                  }`}
+                className={`px-4 py-2 text-sm font-bold transition-all ${
+                  selectedVolume === 1
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-100"
+                }`}
               >
                 Tập 1
               </button>
               <button
                 onClick={() => setSelectedVolume(2)}
-                className={`px-4 py-2 text-sm font-bold transition-all ${selectedVolume === 2
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-100"
-                  }`}
+                className={`px-4 py-2 text-sm font-bold transition-all ${
+                  selectedVolume === 2
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-100"
+                }`}
               >
                 Tập 2
               </button>
@@ -311,7 +317,11 @@ export default function StudentSkillTreePage() {
                       <div
                         className="w-16 h-16 rounded-2xl flex items-center justify-center border-4 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
                         style={{
-                          backgroundColor: completedNodeIds.includes(selectedNodeId) ? "#22c55e" : "#fbbf24",
+                          backgroundColor: completedNodeIds.includes(
+                            selectedNodeId,
+                          )
+                            ? "#22c55e"
+                            : "#fbbf24",
                         }}
                       >
                         <Sparkles className="text-white w-8 h-8" />
@@ -321,11 +331,17 @@ export default function StudentSkillTreePage() {
                           {selectedNodeData?.title || "Bài học"}
                         </NotebookCardTitle>
                         <div className="flex gap-2 mt-1">
-                          <NotebookBadge variant="default" className="text-[10px] border-black border-2 bg-white text-black">
+                          <NotebookBadge
+                            variant="default"
+                            className="text-[10px] border-black border-2 bg-white text-black"
+                          >
                             Tuần {selectedNodeData?.week_number || "???"}
                           </NotebookBadge>
                           {completedNodeIds.includes(selectedNodeId) && (
-                            <NotebookBadge variant="success" className="text-[10px] border-black border-2">
+                            <NotebookBadge
+                              variant="success"
+                              className="text-[10px] border-black border-2"
+                            >
                               ĐÃ HOÀN THÀNH!
                             </NotebookBadge>
                           )}
@@ -341,21 +357,30 @@ export default function StudentSkillTreePage() {
                         Mục tiêu bài học
                       </div>
                       <p className="text-sm font-bold text-blue-900 leading-relaxed italic">
-                        "{selectedNodeData?.description || "Cùng khám phá kiến thức thú vị trong bài học này nhé!"}"
+                        "
+                        {selectedNodeData?.description ||
+                          "Cùng khám phá kiến thức thú vị trong bài học này nhé!"}
+                        "
                       </p>
                     </div>
 
                     {/* Progress Stats */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-white border-2 border-black rounded-xl p-3 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)]">
-                        <div className="text-[10px] font-black text-gray-500 uppercase mb-1">XP Đạt được</div>
+                        <div className="text-[10px] font-black text-gray-500 uppercase mb-1">
+                          XP Đạt được
+                        </div>
                         <div className="text-2xl font-black text-black">
                           {nodeStats?.stats?.bestXp || 0}
-                          <span className="text-sm text-gray-400 font-bold ml-1">/ {nodeStats?.stats?.requiredXp || 100}</span>
+                          <span className="text-sm text-gray-400 font-bold ml-1">
+                            / {nodeStats?.stats?.requiredXp || 100}
+                          </span>
                         </div>
                       </div>
                       <div className="bg-white border-2 border-black rounded-xl p-3 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)]">
-                        <div className="text-[10px] font-black text-gray-500 uppercase mb-1">Tiến độ</div>
+                        <div className="text-[10px] font-black text-gray-500 uppercase mb-1">
+                          Tiến độ
+                        </div>
                         <div className="text-2xl font-black text-green-600">
                           {nodeStats?.stats?.bestScore || 0}%
                         </div>
@@ -367,7 +392,9 @@ export default function StudentSkillTreePage() {
                       <div className="bg-pink-100 border-2 border-black px-4 py-2 rounded-lg transform -rotate-2 flex items-center gap-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
                         <PlusCircle className="w-5 h-5 text-pink-500" />
                         <span className="text-xs font-black text-pink-700 uppercase">
-                          {completedNodeIds.includes(selectedNodeId) ? "EM THẬT TUYỆT VỜI!" : "CỐ GẮNG LÊN NÀO!"}
+                          {completedNodeIds.includes(selectedNodeId)
+                            ? "EM THẬT TUYỆT VỜI!"
+                            : "CỐ GẮNG LÊN NÀO!"}
                         </span>
                       </div>
                     </div>

@@ -19,7 +19,7 @@ import { changeActiveAvatar } from "@/lib/achievementService";
 interface OwnedAvatarGridProps {
   userId: string;
   currentAvatar: string | null;
-  onAvatarChanged: () => void;
+  onAvatarChanged: (avatarCode: string) => void;
 }
 
 export default function OwnedAvatarGrid({
@@ -70,7 +70,7 @@ export default function OwnedAvatarGrid({
     }
 
     confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-    onAvatarChanged();
+    onAvatarChanged(avatar.avatar_code);
   };
 
   if (loading) {

@@ -144,6 +144,9 @@ export async function createClass(
       }
     }
 
+    // Invalidate cache (M-11)
+    invalidateTeacherClassesCache(input.homeroom_teacher_id);
+    
     return { data: classData, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -301,33 +304,61 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
     const studentIds = studentsData.map((s: any) => s.profile.id as string);
 
     // Step 2: Fetch latest activity & latest progress for all students in 2 batch queries
-    // ORDER BY DESC so the first record per student_id is already the latest
-    const [activitiesResult, progressResult] = await Promise.all([
-      studentIds.length > 0
-        ? supabase
-            .from('activity_logs')
-            .select('id, student_id, activity_type, description, xp_earned, created_at')
-            .in('student_id', studentIds)
-            .order('created_at', { ascending: false })
-        : Promise.resolve({ data: [], error: null }),
+    // Optimized: Use RPC for context-aware DISTINCT ON if possible, or fallback to limited fetch
+    const fetchLatestActivities = async () => {
+      if (studentIds.length === 0) return { data: [], error: null };
+      
+      // Try RPC first for maximum performance
+      const { data, error } = await supabase.rpc('get_latest_activities_by_students', { 
+        p_student_ids: studentIds 
+      });
+      
+      if (!error) return { data, error: null };
+      
+      // Fallback: limited fetch if RPC not found
+      console.warn('RPC get_latest_activities_by_students not found, falling back to limited fetch');
+      return supabase
+        .from('activity_logs')
+        .select('id, student_id, activity_type, description, xp_earned, created_at')
+        .in('student_id', studentIds)
+        .order('created_at', { ascending: false })
+        .limit(studentIds.length * 3); // Heuristic limit to avoid 4000+ rows
+    };
 
-      studentIds.length > 0
-        ? supabase
-            .from('student_node_progress')
-            .select('student_id, node_id, status, score, last_accessed_at, completed_at, nodes(title)')
-            .in('student_id', studentIds)
-            .order('last_accessed_at', { ascending: false, nullsFirst: false })
-        : Promise.resolve({ data: [], error: null }),
+    const fetchLatestProgress = async () => {
+      if (studentIds.length === 0) return { data: [], error: null };
+      
+      // Try RPC first
+      const { data, error } = await supabase.rpc('get_latest_progress_by_students', { 
+        p_student_ids: studentIds 
+      });
+      
+      if (!error) return { data: data.map((d: any) => ({ ...d, nodes: { title: d.node_title } })), error: null };
+      
+      // Fallback
+      console.warn('RPC get_latest_progress_by_students not found, falling back to limited fetch');
+      return supabase
+        .from('student_node_progress')
+        .select('student_id, node_id, status, score, last_accessed_at, completed_at, nodes(title)')
+        .in('student_id', studentIds)
+        .order('last_accessed_at', { ascending: false, nullsFirst: false })
+        .limit(studentIds.length * 3);
+    };
+
+    const [activitiesResult, progressResult] = await Promise.all([
+      fetchLatestActivities(),
+      fetchLatestProgress()
     ]);
 
     // Dedup: keep only the first (= latest) record per student_id
+    // (Important if using fallback or if RPC results need secondary safety)
     const latestActivityMap = new Map<string, any>();
-    for (const row of activitiesResult.data || []) {
+    for (const row of (activitiesResult.data || [])) {
       if (!latestActivityMap.has(row.student_id)) latestActivityMap.set(row.student_id, row);
     }
 
     const latestProgressMap = new Map<string, any>();
-    for (const row of progressResult.data || []) {
+    for (const row of (progressResult.data || [])) {
       if (!latestProgressMap.has(row.student_id)) latestProgressMap.set(row.student_id, row);
     }
 
@@ -479,13 +510,27 @@ function mergeHomeroomAndSubjectMaps(
  */
 let teacherClassesCache: { userId: string, data: any, timestamp: number } | null = null;
 
-export async function getTeacherClasses(
+/**
+ * Invalidate the teacher classes cache (M-11)
+ * @param teacherId Optional teacherId to clear only their cache
+ */
+export function invalidateTeacherClassesCache(teacherId?: string) {
+  if (teacherId) {
+    if (teacherClassesCache?.userId === teacherId) {
+      teacherClassesCache = null;
+    }
+  } else {
+    teacherClassesCache = null;
+  }
+}
 
-  teacherId: string
+export async function getTeacherClasses(
+  teacherId: string,
+  force: boolean = false
 ): Promise<TeacherClassesResponse> {
   // Simple session-level cache (5 minutes)
   const fiveMinutes = 5 * 60 * 1000;
-  if (teacherClassesCache && 
+  if (!force && teacherClassesCache && 
       teacherClassesCache.userId === teacherId && 
       (Date.now() - teacherClassesCache.timestamp < fiveMinutes)) {
     return { data: teacherClassesCache.data, error: null };
@@ -627,6 +672,9 @@ export async function assignTeacherToClass(
       return { data: null, error: error.message };
     }
 
+    // Invalidate cache (M-11)
+    invalidateTeacherClassesCache(input.teacher_id);
+    
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -657,6 +705,9 @@ export async function removeTeacherFromClass(
       return { data: null, error: error.message };
     }
 
+    // Invalidate cache (M-11)
+    invalidateTeacherClassesCache(teacherId);
+    
     return { data: true, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -794,6 +845,9 @@ export async function joinClassByCode(
       return { data: null, error: error.message };
     }
 
+    // Invalidate cache (M-11) - affect student count on dashboard
+    invalidateTeacherClassesCache();
+    
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -841,6 +895,9 @@ export async function addStudentToClass(
       return { data: null, error: error.message };
     }
 
+    // Invalidate cache (M-11) - affect student count on dashboard
+    invalidateTeacherClassesCache();
+    
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -930,6 +987,9 @@ export async function transferStudent(
       return { data: null, error: addError.message };
     }
 
+    // Invalidate cache (M-11) - affect student count on dashboard
+    invalidateTeacherClassesCache();
+    
     return { data: true, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -961,6 +1021,9 @@ export async function removeStudentFromClass(
       return { data: null, error: error.message };
     }
 
+    // Invalidate cache (M-11) - affect student count on dashboard
+    invalidateTeacherClassesCache();
+    
     return { data: true, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
