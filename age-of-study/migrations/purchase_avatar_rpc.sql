@@ -19,13 +19,30 @@ DECLARE
   v_current_xp integer;
   v_already_owned boolean;
 BEGIN
+  -- 0. Authorization check: ensure caller is the user or admin
+  IF auth.uid() IS NULL OR (auth.uid() != p_user_id AND NOT auth_is_admin()) THEN
+    RAISE EXCEPTION 'Unauthorized: cannot purchase avatar for another user';
+  END IF;
+
+  -- 0b. Validate cost is non-negative
+  IF p_cost < 0 THEN
+    RAISE EXCEPTION 'Invalid cost: purchase cost cannot be negative';
+  END IF;
+
+  -- 0c. Acquire advisory lock on (user_id, avatar_code) pair
+  PERFORM pg_advisory_xact_lock(p_user_id::bigint, hashtext(p_avatar_code));
+
   -- 1. Check current XP
-  SELECT total_xp INTO v_current_xp FROM public.profiles WHERE id = p_user_id;
+  SELECT total_xp INTO v_current_xp 
+  FROM public.profiles 
+  WHERE id = p_user_id
+  FOR UPDATE;
+  
   IF v_current_xp < p_cost THEN
     RETURN jsonb_build_object('success', false, 'error', 'Không đủ XP để mở khóa avatar này!');
   END IF;
 
-  -- 2. Check ownership
+  -- 2. Check ownership (after acquiring lock)
   SELECT EXISTS(
     SELECT 1 FROM public.user_avatars 
     WHERE user_id = p_user_id AND avatar_code = p_avatar_code AND is_unlocked = true
@@ -62,3 +79,6 @@ END;
 $$;
 
 COMMENT ON FUNCTION purchase_avatar(uuid, text, integer, text, text) IS 'Handles atomic avatar purchase: checks XP, checks ownership, deducts XP, unlocks avatar, and logs activity.';
+
+-- Grant execute permission to authenticated users (Required for PostgREST/Supabase RPC)
+GRANT EXECUTE ON FUNCTION purchase_avatar(uuid, text, integer, text, text) TO authenticated;

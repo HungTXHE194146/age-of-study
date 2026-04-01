@@ -133,59 +133,78 @@ export async function getClassComparisonData(): Promise<{
       };
     }
 
-    // --- BATCH QUERIES: Replace N+1 loops with 3 parallel batch queries ---
-    const allClassIds = classes.map((c: { id: number }) => c.id);
-    const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    // Get analytics for each class using batched queries
+    const classAnalytics: ClassAnalytics[] = [];
+    const classIds = classes.map((cls: { id: number }) => cls.id);
+    const classStudentMap = new Map<number, string[]>();
+    const allStudentIds = new Set<string>();
 
-    // Batch 1: All active students across all classes
     const { data: allClassStudents, error: classStudentsError } = await supabase
       .from('class_students')
       .select('class_id, student_id')
-      .in('class_id', allClassIds)
+      .in('class_id', classIds)
       .eq('status', 'active');
 
     if (classStudentsError) {
       return { data: null, error: classStudentsError.message };
     }
 
-    // Build map: classId -> studentIds
-    const classStudentMap: Record<number, string[]> = {};
     for (const row of allClassStudents || []) {
-      if (!classStudentMap[row.class_id]) classStudentMap[row.class_id] = [];
-      classStudentMap[row.class_id].push(row.student_id);
+      const existing = classStudentMap.get(row.class_id) || [];
+      existing.push(row.student_id);
+      classStudentMap.set(row.class_id, existing);
+      allStudentIds.add(row.student_id);
     }
 
-    // Collect all unique student IDs
-    const allStudentIds = [...new Set((allClassStudents || []).map((s: { student_id: string }) => s.student_id))];
+    const profileMap = new Map<string, { total_xp: number | null; last_active_at: string | null }>();
+    if (allStudentIds.size > 0) {
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, total_xp, last_active_at')
+        .in('id', Array.from(allStudentIds));
 
-    // Batch 2 & 3: Run in parallel — profiles and progress for all students at once
-    const [profilesResult, progressResult] = await Promise.all([
-      allStudentIds.length > 0
-        ? supabase.from('profiles').select('id, total_xp, last_active_at').in('id', allStudentIds)
-        : Promise.resolve({ data: [], error: null }),
-      allStudentIds.length > 0
-        ? supabase.from('student_node_progress').select('status, score, student_id').in('student_id', allStudentIds)
-        : Promise.resolve({ data: [], error: null }),
-    ]);
+      if (profilesError) {
+        return { data: null, error: profilesError.message };
+      }
 
-    // Build lookup maps for O(1) access
-    const profileMap: Record<string, { total_xp: number; last_active_at: string | null }> = {};
-    for (const p of profilesResult.data || []) {
-      profileMap[p.id] = { total_xp: p.total_xp, last_active_at: p.last_active_at };
+      for (const profile of profiles || []) {
+        profileMap.set(profile.id, {
+          total_xp: profile.total_xp,
+          last_active_at: profile.last_active_at,
+        });
+      }
     }
 
-    // Group progress rows by student_id
-    const progressByStudent: Record<string, { status: string; score: number | null }[]> = {};
-    for (const row of progressResult.data || []) {
-      if (!progressByStudent[row.student_id]) progressByStudent[row.student_id] = [];
-      progressByStudent[row.student_id].push({ status: row.status, score: row.score });
+    let progressData: { status: string; score: number | null; student_id: string }[] = [];
+    let progressError: { message: string } | null = null;
+
+    if (allStudentIds.size > 0) {
+      const { data: pd, error: pe } = await supabase
+        .from('student_node_progress')
+        .select('status, score, student_id')
+        .in('student_id', Array.from(allStudentIds));
+
+      progressError = pe ? { message: pe.message } : null;
+      if (progressError) {
+        console.error('Error fetching student_node_progress:', progressError.message);
+        return { data: null, error: progressError.message };
+      }
+
+      progressData = pd || [];
     }
 
-    // Compute per-class analytics from in-memory maps
-    const classAnalytics: ClassAnalytics[] = [];
+    const progressByStudent = new Map<string, { status: string; score: number | null }[]>();
+    for (const progress of progressData) {
+      const existing = progressByStudent.get(progress.student_id) || [];
+      existing.push({ status: progress.status, score: progress.score });
+      progressByStudent.set(progress.student_id, existing);
+    }
+
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
     for (const cls of classes) {
-      const studentIds = classStudentMap[cls.id] || [];
+      const studentIds = classStudentMap.get(cls.id) || [];
       const studentCount = studentIds.length;
       let totalXP = 0;
       let activeStudents = 0;
@@ -194,18 +213,31 @@ export async function getClassComparisonData(): Promise<{
       let totalScore = 0;
       let scoreCount = 0;
 
-      for (const sid of studentIds) {
-        const profile = profileMap[sid];
+      for (const studentId of studentIds) {
+        const profile = profileMap.get(studentId);
         if (profile) {
           totalXP += profile.total_xp || 0;
-          if (profile.last_active_at && new Date(profile.last_active_at) > weekAgo) activeStudents++;
+          if (profile.last_active_at && new Date(profile.last_active_at) > weekAgo) {
+            activeStudents++;
+          }
         }
-        for (const prog of progressByStudent[sid] || []) {
-          totalNodes++;
-          if (prog.status === 'completed') completedNodes++;
-          if (prog.score !== null && prog.score > 0) { totalScore += prog.score; scoreCount++; }
+
+        const studentProgress = progressByStudent.get(studentId) || [];
+        totalNodes += studentProgress.length;
+        for (const progress of studentProgress) {
+          if (progress.status === 'completed') {
+            completedNodes++;
+          }
+          if (progress.score !== null && progress.score > 0) {
+            totalScore += progress.score;
+            scoreCount++;
+          }
         }
       }
+
+      const averageScore = scoreCount > 0 ? totalScore / scoreCount : 0;
+      const completionRate = totalNodes > 0 ? (completedNodes / totalNodes) * 100 : 0;
+      const averageXP = studentCount > 0 ? totalXP / studentCount : 0;
 
       classAnalytics.push({
         classId: cls.id,
@@ -213,10 +245,10 @@ export async function getClassComparisonData(): Promise<{
         grade: cls.grade,
         schoolYear: cls.school_year,
         studentCount,
-        averageScore: scoreCount > 0 ? totalScore / scoreCount : 0,
-        completionRate: totalNodes > 0 ? (completedNodes / totalNodes) * 100 : 0,
+        averageScore,
+        completionRate,
         totalXP,
-        averageXP: studentCount > 0 ? totalXP / studentCount : 0,
+        averageXP,
         activeStudents,
         completedNodes,
         totalAssignedNodes: totalNodes,
@@ -334,16 +366,6 @@ export async function getTeacherActivityReport(): Promise<{
     }
 
 
-    // Group assignments by teacher for O(1) lookup (M-9 optimization)
-    const assignmentsByTeacher: Record<string, any[]> = {};
-    if (classAssignments) {
-      for (const assignment of classAssignments) {
-        if (!assignmentsByTeacher[assignment.teacher_id]) {
-          assignmentsByTeacher[assignment.teacher_id] = [];
-        }
-        assignmentsByTeacher[assignment.teacher_id].push(assignment);
-      }
-    }
 
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -355,16 +377,21 @@ export async function getTeacherActivityReport(): Promise<{
     let neverLoggedInCount = 0;
 
     for (const teacher of teachers) {
-      // Get class assignments for this teacher from pre-built Map
-      const assignments = assignmentsByTeacher[teacher.id] || [];
+      // Get class assignments for this teacher
+      const assignments = classAssignments?.filter((a: any) => a.teacher_id === teacher.id) || [];
       const homeroomCount = assignments.filter((a: any) => a.is_homeroom).length;
       const subjectCount = assignments.filter((a: any) => !a.is_homeroom).length;
       const totalClasses = assignments.length;
 
       // Calculate total students
-      const classIds = [...new Set(assignments.map((a: any) => a.classes?.id).filter(Boolean))] as number[];
+      const classIds = assignments.reduce((ids: number[], assignment: any) => {
+        const classId = assignment.classes?.id;
+        if (typeof classId === 'number' && !ids.includes(classId)) {
+          ids.push(classId);
+        }
+        return ids;
+      }, []);
       const totalStudents = classIds.reduce((sum: number, classId: number) => sum + (studentCountMap[classId] || 0), 0);
-
       // Get unique subjects
       const subjects: string[] = [...new Set(assignments.map((a: any) => a.subjects?.name).filter(Boolean))] as string[];
 
@@ -485,6 +512,7 @@ export function exportTeacherDataToCSV(teachers: TeacherActivity[]): string {
   const headers = [
     'Họ tên',
     'Email',
+    'Tổng lớp',
     'Lớp chủ nhiệm',
     'Lớp bộ môn',
     'Tổng học sinh',
@@ -506,6 +534,7 @@ export function exportTeacherDataToCSV(teachers: TeacherActivity[]): string {
     return [
       escapeCSVField(t.fullName || t.username || 'N/A'),
       escapeCSVField(t.email || 'N/A'),
+      escapeCSVField(t.totalClasses.toString()),
       escapeCSVField(t.homeroomClasses.toString()),
       escapeCSVField(t.subjectClasses.toString()),
       escapeCSVField(t.totalStudents.toString()),
@@ -567,68 +596,99 @@ export async function getTeacherClassAnalytics(teacherId: string): Promise<{
       return { data: null, error: classesError.message };
     }
 
-    // 3. --- BATCH QUERIES: Replace N+1 loop with 3 parallel batch queries ---
-    const activeClasses = classes || [];
-    const activeClassIds = activeClasses.map((c: { id: number }) => c.id);
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
-    // Batch 1: All students across all assigned classes
-    const { data: allClassStudents } = await supabase
-      .from('class_students')
-      .select('class_id, student_id')
-      .in('class_id', activeClassIds)
-      .eq('status', 'active');
-
-    // Build map: classId -> studentIds
-    const classStudentMap: Record<number, string[]> = {};
-    for (const row of allClassStudents || []) {
-      if (!classStudentMap[row.class_id]) classStudentMap[row.class_id] = [];
-      classStudentMap[row.class_id].push(row.student_id);
-    }
-
-    const allStudentIds = [...new Set((allClassStudents || []).map((s: { student_id: string }) => s.student_id))];
-
-    // Batch 2 & 3: Run in parallel
-    const [profilesResult, progressResult] = await Promise.all([
-      allStudentIds.length > 0
-        ? supabase.from('profiles').select('id, total_xp, last_active_at').in('id', allStudentIds)
-        : Promise.resolve({ data: [], error: null }),
-      allStudentIds.length > 0
-        ? supabase.from('student_node_progress').select('status, score, student_id').in('student_id', allStudentIds)
-        : Promise.resolve({ data: [], error: null }),
-    ]);
-
-    const profileMap: Record<string, { total_xp: number; last_active_at: string | null }> = {};
-    for (const p of profilesResult.data || []) {
-      profileMap[p.id] = { total_xp: p.total_xp, last_active_at: p.last_active_at };
-    }
-
-    const progressByStudent: Record<string, { status: string; score: number | null }[]> = {};
-    for (const row of progressResult.data || []) {
-      if (!progressByStudent[row.student_id]) progressByStudent[row.student_id] = [];
-      progressByStudent[row.student_id].push({ status: row.status, score: row.score });
-    }
-
-    // Compute per-class analytics from in-memory maps
+    // 3. Get analytics for each class using batched queries
     const classAnalytics: ClassAnalytics[] = [];
+    const activeClasses = classes || [];
+    const classIds = activeClasses.map((cls: { id: number }) => cls.id);
+    const classStudentMap = new Map<number, string[]>();
+    const allStudentIds = new Set<string>();
+
+    if (classIds.length > 0) {
+      const { data: classStudents, error: classStudentsError } = await supabase
+        .from('class_students')
+        .select('class_id, student_id')
+        .in('class_id', classIds)
+        .eq('status', 'active');
+
+      if (classStudentsError) {
+        return { data: null, error: classStudentsError.message };
+      }
+
+      for (const row of classStudents || []) {
+        const studentIds = classStudentMap.get(row.class_id) || [];
+        studentIds.push(row.student_id);
+        classStudentMap.set(row.class_id, studentIds);
+        allStudentIds.add(row.student_id);
+      }
+    }
+
+    const profileMap = new Map<string, { total_xp: number | null; last_active_at: string | null }>();
+    const progressByStudent = new Map<string, { status: string; score: number | null }[]>();
+
+    if (allStudentIds.size > 0) {
+      const studentIdList = Array.from(allStudentIds);
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, total_xp, last_active_at')
+        .in('id', studentIdList);
+
+      if (profilesError) {
+        return { data: null, error: profilesError.message };
+      }
+
+      for (const profile of profiles || []) {
+        profileMap.set(profile.id, {
+          total_xp: profile.total_xp,
+          last_active_at: profile.last_active_at,
+        });
+      }
+
+      const { data: pd, error: progressError } = await supabase
+        .from('student_node_progress')
+        .select('status, score, student_id')
+        .in('student_id', studentIdList);
+
+      if (progressError) {
+        return { data: null, error: progressError.message };
+      }
+
+      for (const progress of pd || []) {
+        const studentProgress = progressByStudent.get(progress.student_id) || [];
+        studentProgress.push({ status: progress.status, score: progress.score });
+        progressByStudent.set(progress.student_id, studentProgress);
+      }
+    }
+
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     for (const cls of activeClasses) {
-      const studentIds = classStudentMap[cls.id] || [];
-      if (studentIds.length === 0) continue;
-
+      const studentIds = classStudentMap.get(cls.id) || [];
       const studentCount = studentIds.length;
-      let totalXP = 0, activeStudents = 0, completedNodes = 0, totalNodes = 0, totalScore = 0, scoreCount = 0;
+      let totalXP = 0;
+      let activeStudents = 0;
+      let completedNodes = 0;
+      let totalScore = 0;
+      let scoreCount = 0;
+      let totalNodes = 0;
 
-      for (const sid of studentIds) {
-        const profile = profileMap[sid];
+      for (const studentId of studentIds) {
+        const profile = profileMap.get(studentId);
         if (profile) {
           totalXP += profile.total_xp || 0;
-          if (profile.last_active_at && new Date(profile.last_active_at) > weekAgo) activeStudents++;
+          if (profile.last_active_at && new Date(profile.last_active_at) > weekAgo) {
+            activeStudents++;
+          }
         }
-        for (const prog of progressByStudent[sid] || []) {
-          totalNodes++;
-          if (prog.status === 'completed') completedNodes++;
-          if (prog.score) { totalScore += prog.score; scoreCount++; }
-        }
+
+        const pd = progressByStudent.get(studentId) || [];
+        totalNodes += pd.length;
+
+        pd.forEach((p: { status: string; score: number | null }) => {
+          if (p.status === 'completed') completedNodes++;
+          if (p.score !== null && p.score > 0) {
+            totalScore += p.score;
+            scoreCount++;
+          }
+        });
       }
 
       classAnalytics.push({

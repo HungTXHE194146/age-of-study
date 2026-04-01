@@ -49,7 +49,7 @@ export const QuestionEditor = memo(function QuestionEditor({
 
   const handleAddOption = () => {
     if (editedQuestion.options.length < 6) {
-      const newOptionId = (editedQuestion.options.length + 1).toString();
+      const newOptionId = crypto.randomUUID();
       const newOptionLabel = String.fromCharCode(
         65 + editedQuestion.options.length,
       );
@@ -505,10 +505,9 @@ export const QuestionEditor = memo(function QuestionEditor({
                         <input
                           value={pair.left}
                           onChange={(e) => {
-                            const newPairs = [
-                              ...(editedQuestion.metadata?.matchingPairs || []),
-                            ];
-                            newPairs[idx].left = e.target.value;
+                            const newPairs = (editedQuestion.metadata?.matchingPairs || []).map(
+                              (p, i) => i === idx ? { ...p, left: e.target.value } : p
+                            );
                             handleMetadataChange("matchingPairs", newPairs);
                           }}
                           className="flex-1 px-3 py-2 border-2 border-dashed border-gray-400 rounded-lg"
@@ -517,10 +516,9 @@ export const QuestionEditor = memo(function QuestionEditor({
                         <input
                           value={pair.right}
                           onChange={(e) => {
-                            const newPairs = [
-                              ...(editedQuestion.metadata?.matchingPairs || []),
-                            ];
-                            newPairs[idx].right = e.target.value;
+                            const newPairs = (editedQuestion.metadata?.matchingPairs || []).map(
+                              (p, i) => i === idx ? { ...p, right: e.target.value } : p
+                            );
                             handleMetadataChange("matchingPairs", newPairs);
                           }}
                           className="flex-1 px-3 py-2 border-2 border-dashed border-gray-400 rounded-lg"
@@ -568,7 +566,7 @@ export const QuestionEditor = memo(function QuestionEditor({
                       .map((part: string, idx: number, arr: string[]) => {
                         if (part.trim().length === 0) return null;
 
-                        // Tính toán index thực tế của từ này trong chuỗi gốc
+                        // Calculate the actual index of this word in the original string
                         let currentPos = 0;
                         for (let i = 0; i < idx; i++) {
                           currentPos += arr[i].length;
@@ -653,10 +651,9 @@ export const QuestionEditor = memo(function QuestionEditor({
                       <input
                         value={blank.answer}
                         onChange={(e) => {
-                          const newBlanks = [
-                            ...(editedQuestion.metadata?.blanks || []),
-                          ];
-                          newBlanks[idx].answer = e.target.value;
+                          const newBlanks = (editedQuestion.metadata?.blanks || []).map(
+                            (b, i) => i === idx ? { ...b, answer: e.target.value } : b
+                          );
                           handleMetadataChange("blanks", newBlanks);
                         }}
                         className="flex-1 px-3 py-2 border-2 border-dashed border-gray-400 rounded-lg"
@@ -724,13 +721,12 @@ export const QuestionEditor = memo(function QuestionEditor({
                         <input
                           value={cat.name}
                           onChange={(e) => {
-                            const newCats = [
-                              ...(editedQuestion.metadata?.categories || []),
-                            ];
-                            newCats[idx].name = e.target.value;
+                            const newCats = (editedQuestion.metadata?.categories || []).map(
+                              (c, i) => i === idx ? { ...c, name: e.target.value } : c
+                            );
                             handleMetadataChange("categories", newCats);
                           }}
-                          className="flex-1 px-3 py-1 font-black bg-white border-2 border-black rounded"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded"
                           placeholder="Tên nhóm..."
                         />
                         <button
@@ -750,16 +746,17 @@ export const QuestionEditor = memo(function QuestionEditor({
                       <textarea
                         value={cat.items.join(", ")}
                         onChange={(e) => {
-                          const newCats = [
-                            ...(editedQuestion.metadata?.categories || []),
-                          ];
-                          newCats[idx].items = e.target.value
-                            .split(",")
-                            .map((s) => s.trim())
-                            .filter((s) => s !== "");
+                          const newCats = (editedQuestion.metadata?.categories || []).map(
+                            (c, i) => i === idx ? {
+                              ...c,
+                              items: e.target.value
+                                .split(",")
+                                .map((s) => s.trim())
+                                .filter((s) => s !== "")
+                            } : c
+                          );
                           handleMetadataChange("categories", newCats);
                         }}
-                        className="w-full px-3 py-2 border-2 border-dashed border-gray-400 rounded-lg bg-white"
                         placeholder="Các mục (ngăn cách bằng dấu phẩy)..."
                       />
                     </div>

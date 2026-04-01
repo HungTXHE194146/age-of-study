@@ -68,13 +68,22 @@ export default function UsersManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "blocked">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "blocked"
+  >("all");
   const [gradeFilter, setGradeFilter] = useState<number | "all">("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [availableClasses, setAvailableClasses] = useState<ClassInfo[]>([]);
-  const [classStudentMap, setClassStudentMap] = useState<Record<string, number>>({});
+  const [classStudentMap, setClassStudentMap] = useState<
+    Record<string, number>
+  >({});
   const [classFilter, setClassFilter] = useState<number | "all">("all");
-  const [stats, setStats] = useState({ total: 0, students: 0, teachers: 0, blocked: 0 });
+  const [stats, setStats] = useState({
+    total: 0,
+    students: 0,
+    teachers: 0,
+    blocked: 0,
+  });
 
   // Modal states
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -111,13 +120,19 @@ export default function UsersManagementPage() {
     setMigration((prev) => ({ ...prev, checking: true }));
     try {
       const supabase = getSupabaseBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) return;
       const res = await fetch("/api/admin/migrate-student-emails", {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const data = await res.json();
-      setMigration((prev) => ({ ...prev, needsMigration: data.needsMigration ?? 0, checking: false }));
+      setMigration((prev) => ({
+        ...prev,
+        needsMigration: data.needsMigration ?? 0,
+        checking: false,
+      }));
     } catch {
       setMigration((prev) => ({ ...prev, checking: false }));
     }
@@ -127,15 +142,26 @@ export default function UsersManagementPage() {
     setMigration((prev) => ({ ...prev, running: true }));
     try {
       const supabase = getSupabaseBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) return;
       const res = await fetch("/api/admin/migrate-student-emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const data = await res.json();
-      showToast(`Đã migrate ${data.success ?? 0} tài khoản thành công.${data.errors ? ` Lỗi: ${data.errors}` : ""}`, data.errors ? "warning" : "success");
-      setMigration({ needsMigration: 0, checking: false, running: false, done: true });    } catch {
+      showToast(
+        `Đã migrate ${data.success ?? 0} tài khoản thành công.${data.errors ? ` Lỗi: ${data.errors}` : ""}`,
+        data.errors ? "warning" : "success",
+      );
+      setMigration({
+        needsMigration: 0,
+        checking: false,
+        running: false,
+        done: true,
+      });
+    } catch {
       showToast("Lỗi khi thực hiện migration.", "error");
       setMigration((prev) => ({ ...prev, running: false }));
     }
@@ -174,7 +200,15 @@ export default function UsersManagementPage() {
   // Reload users whenever page or any filter/sort changes
   useEffect(() => {
     loadUsers();
-  }, [page, debouncedSearch, roleFilter, statusFilter, gradeFilter, classFilter, sortBy]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    page,
+    debouncedSearch,
+    roleFilter,
+    statusFilter,
+    gradeFilter,
+    classFilter,
+    sortBy,
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadClasses = async () => {
     try {
@@ -193,12 +227,22 @@ export default function UsersManagementPage() {
   const loadStats = async () => {
     try {
       const supabase = getSupabaseBrowserClient();
-      const [totalRes, studentsRes, teachersRes, blockedRes] = await Promise.all([
-        supabase.from("profiles").select("*", { count: "exact", head: true }),
-        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "student"),
-        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "teacher"),
-        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_blocked", true),
-      ]);
+      const [totalRes, studentsRes, teachersRes, blockedRes] =
+        await Promise.all([
+          supabase.from("profiles").select("*", { count: "exact", head: true }),
+          supabase
+            .from("profiles")
+            .select("*", { count: "exact", head: true })
+            .eq("role", "student"),
+          supabase
+            .from("profiles")
+            .select("*", { count: "exact", head: true })
+            .eq("role", "teacher"),
+          supabase
+            .from("profiles")
+            .select("*", { count: "exact", head: true })
+            .eq("is_blocked", true),
+        ]);
       setStats({
         total: totalRes.count || 0,
         students: studentsRes.count || 0,
@@ -223,7 +267,9 @@ export default function UsersManagementPage() {
           .select("student_id")
           .eq("class_id", classFilter)
           .eq("status", "active");
-        classFilterIds = (cs || []).map((r: { student_id: string }) => r.student_id);
+        classFilterIds = (cs || []).map(
+          (r: { student_id: string }) => r.student_id,
+        );
         if (classFilterIds && classFilterIds.length === 0) {
           setUsers([]);
           setTotalCount(0);
@@ -232,7 +278,12 @@ export default function UsersManagementPage() {
           return;
         }
       }
-      let query = supabase.from("profiles").select("*", { count: "exact" });
+      let query = supabase
+        .from("profiles")
+        .select(
+          "id, username, full_name, avatar_url, role, grade, total_xp, current_streak, is_blocked, created_at, last_active_at",
+          { count: "exact" },
+        );
 
       if (roleFilter !== "all") query = query.eq("role", roleFilter);
       if (statusFilter === "active") query = query.eq("is_blocked", false);
@@ -242,11 +293,14 @@ export default function UsersManagementPage() {
 
       if (debouncedSearch.trim()) {
         // Escape SQL LIKE special characters to prevent wildcard injection
-        const escapedTerm = debouncedSearch.trim()
+        const escapedTerm = debouncedSearch
+          .trim()
           .replace(/\\/g, "\\\\")
           .replace(/%/g, "\\%")
           .replace(/_/g, "\\_");
-        query = query.or(`username.ilike.%${escapedTerm}%,full_name.ilike.%${escapedTerm}%`);
+        query = query.or(
+          `username.ilike.%${escapedTerm}%,full_name.ilike.%${escapedTerm}%`,
+        );
       }
 
       switch (sortBy) {
@@ -260,7 +314,10 @@ export default function UsersManagementPage() {
           query = query.order("total_xp", { ascending: true });
           break;
         case "name_asc":
-          query = query.order("full_name", { ascending: true, nullsFirst: false });
+          query = query.order("full_name", {
+            ascending: true,
+            nullsFirst: false,
+          });
           break;
         case "streak_high":
           query = query.order("current_streak", { ascending: false });
@@ -311,11 +368,21 @@ export default function UsersManagementPage() {
     setShowBlockConfirm(true);
   };
 
-  const handleGenerateTeacherCode = async (teacherId: string, teacherName: string) => {
-    setTeacherMagicCodeModal({ visible: true, code: null, teacherName, loading: true });
+  const handleGenerateTeacherCode = async (
+    teacherId: string,
+    teacherName: string,
+  ) => {
+    setTeacherMagicCodeModal({
+      visible: true,
+      code: null,
+      teacherName,
+      loading: true,
+    });
     try {
       const supabase = getSupabaseBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         showToast("Phiên đăng nhập đã hết hạn.", "error");
         setTeacherMagicCodeModal((prev) => ({ ...prev, visible: false }));
@@ -335,7 +402,12 @@ export default function UsersManagementPage() {
         setTeacherMagicCodeModal((prev) => ({ ...prev, visible: false }));
         return;
       }
-      setTeacherMagicCodeModal({ visible: true, code: data.code, teacherName, loading: false });
+      setTeacherMagicCodeModal({
+        visible: true,
+        code: data.code,
+        teacherName,
+        loading: false,
+      });
     } catch {
       showToast("Lỗi kết nối.", "error");
       setTeacherMagicCodeModal((prev) => ({ ...prev, visible: false }));
@@ -613,7 +685,10 @@ export default function UsersManagementPage() {
           {/* Role Filter */}
           <select
             value={roleFilter}
-            onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setRoleFilter(e.target.value);
+              setPage(1);
+            }}
             className="px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 text-sm bg-white cursor-pointer"
           >
             <option value="all">Tất cả vai trò</option>
@@ -694,7 +769,10 @@ export default function UsersManagementPage() {
             <ArrowUpDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
             <select
               value={sortBy}
-              onChange={(e) => { setSortBy(e.target.value as SortOption); setPage(1); }}
+              onChange={(e) => {
+                setSortBy(e.target.value as SortOption);
+                setPage(1);
+              }}
               className="text-sm bg-transparent focus:outline-none cursor-pointer"
             >
               <option value="newest">Mới nhất</option>
@@ -720,7 +798,9 @@ export default function UsersManagementPage() {
       </div>
 
       {/* Users Table */}
-      <div className={`bg-white rounded-xl border-2 border-gray-100 overflow-hidden transition-opacity ${loading ? "opacity-60 pointer-events-none" : ""}`}>
+      <div
+        className={`bg-white rounded-xl border-2 border-gray-100 overflow-hidden transition-opacity ${loading ? "opacity-60 pointer-events-none" : ""}`}
+      >
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-100">
@@ -897,8 +977,10 @@ export default function UsersManagementPage() {
         <div className="flex items-center justify-between mt-4 px-2">
           <p className="text-sm text-gray-600">
             Trang <span className="font-semibold">{page}</span> /{" "}
-            <span className="font-semibold">{Math.ceil(totalCount / PAGE_SIZE)}</span>
-            {" "}· {totalCount} kết quả
+            <span className="font-semibold">
+              {Math.ceil(totalCount / PAGE_SIZE)}
+            </span>{" "}
+            · {totalCount} kết quả
           </p>
           <div className="flex items-center gap-1">
             <button
@@ -909,7 +991,10 @@ export default function UsersManagementPage() {
             >
               <ChevronLeft className="w-4 h-4 text-gray-600" />
             </button>
-            {Array.from({ length: Math.ceil(totalCount / PAGE_SIZE) }, (_, i) => i + 1)
+            {Array.from(
+              { length: Math.ceil(totalCount / PAGE_SIZE) },
+              (_, i) => i + 1,
+            )
               .filter((p) => {
                 const total = Math.ceil(totalCount / PAGE_SIZE);
                 return p === 1 || p === total || Math.abs(p - page) <= 2;
@@ -921,7 +1006,12 @@ export default function UsersManagementPage() {
               }, [])
               .map((item, idx) =>
                 item === "..." ? (
-                  <span key={`ellipsis-${idx}`} className="px-2 text-gray-400 text-sm">…</span>
+                  <span
+                    key={`ellipsis-${idx}`}
+                    className="px-2 text-gray-400 text-sm"
+                  >
+                    …
+                  </span>
                 ) : (
                   <button
                     key={item}
@@ -938,7 +1028,11 @@ export default function UsersManagementPage() {
                 ),
               )}
             <button
-              onClick={() => setPage((p) => Math.min(Math.ceil(totalCount / PAGE_SIZE), p + 1))}
+              onClick={() =>
+                setPage((p) =>
+                  Math.min(Math.ceil(totalCount / PAGE_SIZE), p + 1),
+                )
+              }
               disabled={page === Math.ceil(totalCount / PAGE_SIZE) || loading}
               className="p-2 rounded-lg border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               title="Trang sau"
@@ -1045,21 +1139,33 @@ export default function UsersManagementPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Mã đặt lại mật khẩu</h3>
+              <h3 className="text-lg font-bold text-gray-900">
+                Mã đặt lại mật khẩu
+              </h3>
               <button
-                onClick={() => setTeacherMagicCodeModal((prev) => ({ ...prev, visible: false }))}
+                onClick={() =>
+                  setTeacherMagicCodeModal((prev) => ({
+                    ...prev,
+                    visible: false,
+                  }))
+                }
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             {teacherMagicCodeModal.loading ? (
-              <div className="text-center py-8 text-gray-500">Đang tạo mã...</div>
+              <div className="text-center py-8 text-gray-500">
+                Đang tạo mã...
+              </div>
             ) : (
               <>
                 <p className="text-sm text-gray-600 mb-4">
                   Mã đặt lại mật khẩu cho giáo viên{" "}
-                  <span className="font-semibold text-gray-800">{teacherMagicCodeModal.teacherName}</span>:
+                  <span className="font-semibold text-gray-800">
+                    {teacherMagicCodeModal.teacherName}
+                  </span>
+                  :
                 </p>
                 <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4 text-center mb-4">
                   <p className="text-4xl font-mono font-bold tracking-[0.4em] text-purple-700">
@@ -1072,7 +1178,10 @@ export default function UsersManagementPage() {
                 </p>
                 <button
                   onClick={() =>
-                    setTeacherMagicCodeModal((prev) => ({ ...prev, visible: false }))
+                    setTeacherMagicCodeModal((prev) => ({
+                      ...prev,
+                      visible: false,
+                    }))
                   }
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 rounded-xl transition-colors"
                 >

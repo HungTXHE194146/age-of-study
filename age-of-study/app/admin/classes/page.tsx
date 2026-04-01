@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, memo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, memo } from "react";
 import { useRouter } from "next/navigation";
 import {
   BookOpen,
@@ -134,11 +134,11 @@ const ClassCard = memo(function ClassCard({
 export default function ClassesManagementPage() {
   const router = useRouter();
   const [classes, setClasses] = useState<ClassWithCount[]>([]);
-  const [filteredClasses, setFilteredClasses] = useState<ClassWithCount[]>([]);
   const [teachers, setTeachers] = useState<Profile[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [gradeFilter, setGradeFilter] = useState<number | "all">("all");
 
   // Modal states
@@ -152,13 +152,45 @@ export default function ClassesManagementPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingClass, setEditingClass] = useState<ClassWithCount | null>(null);
 
+  // Cache for class details (AL-2)
+  const detailCache = useRef<
+    Map<number, { data: ClassDetail; timestamp: number }>
+  >(new Map());
+
   useEffect(() => {
     loadData();
   }, []);
 
+  // Debounce search input
   useEffect(() => {
-    filterClasses();
-  }, [searchTerm, gradeFilter, classes]);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Derived state: filteredClasses (using useMemo to prevent unnecessary re-renders)
+  const filteredClasses = useMemo(() => {
+    let filtered = classes;
+
+    // Grade filter
+    if (gradeFilter !== "all") {
+      filtered = filtered.filter((c) => c.grade === gradeFilter);
+    }
+
+    // Search filter (using debounced value)
+    if (debouncedSearch) {
+      const term = debouncedSearch.toLowerCase();
+      filtered = filtered.filter(
+        (c) =>
+          c.name.toLowerCase().includes(term) ||
+          c.class_code.toLowerCase().includes(term) ||
+          c.homeroom_teacher_name?.toLowerCase().includes(term),
+      );
+    }
+
+    return filtered;
+  }, [classes, gradeFilter, debouncedSearch]);
 
   const loadData = async () => {
     try {
@@ -170,7 +202,6 @@ export default function ClassesManagementPage() {
         console.error("Error loading classes:", classesResult.error);
       } else {
         setClasses(classesResult.data || []);
-        setFilteredClasses(classesResult.data || []);
       }
 
       // Load teachers for dropdown
@@ -205,28 +236,6 @@ export default function ClassesManagementPage() {
     }
   };
 
-  const filterClasses = () => {
-    let filtered = classes;
-
-    // Grade filter
-    if (gradeFilter !== "all") {
-      filtered = filtered.filter((c) => c.grade === gradeFilter);
-    }
-
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (c) =>
-          c.name.toLowerCase().includes(term) ||
-          c.class_code.toLowerCase().includes(term) ||
-          c.homeroom_teacher_name?.toLowerCase().includes(term),
-      );
-    }
-
-    setFilteredClasses(filtered);
-  };
-
   const handleCreateClass = async (input: CreateClassInput) => {
     const result = await createClass(input);
     if (result.error) {
@@ -238,6 +247,14 @@ export default function ClassesManagementPage() {
   };
 
   const handleViewDetail = useCallback(async (classId: number) => {
+    // Check cache first (AL-2)
+    const cached = detailCache.current.get(classId);
+    if (cached && Date.now() - cached.timestamp < 30000) {
+      setSelectedClass(cached.data);
+      setShowDetailModal(true);
+      return;
+    }
+
     const result = await getClassDetail(classId);
     if (result.error) {
       alert(`Lỗi tải thông tin lớp: ${result.error}`);
@@ -247,6 +264,13 @@ export default function ClassesManagementPage() {
       alert("Không tìm thấy thông tin lớp");
       return;
     }
+
+    // Update cache
+    detailCache.current.set(classId, {
+      data: result.data,
+      timestamp: Date.now(),
+    });
+
     setSelectedClass(result.data);
     setShowDetailModal(true);
   }, []);
@@ -265,6 +289,8 @@ export default function ClassesManagementPage() {
       alert(`Lỗi cập nhật lớp: ${result.error}`);
       return false;
     }
+    // Invalidate cache (AL-2)
+    detailCache.current.delete(classId);
     setShowEditModal(false);
     setEditingClass(null);
     await loadData();
@@ -299,6 +325,9 @@ export default function ClassesManagementPage() {
       alert(`Lỗi phân công giáo viên: ${result.error}`);
       return false;
     }
+
+    // Invalidate cache (AL-2)
+    detailCache.current.delete(input.class_id);
 
     // Reload class detail
     if (selectedClass) {

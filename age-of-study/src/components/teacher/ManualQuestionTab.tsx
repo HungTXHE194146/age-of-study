@@ -147,15 +147,14 @@ export function ManualQuestionTab({
     }
 
     if (state.type === "MULTIPLE_CHOICE") {
-      const hasEmptyOptions = state.options.some(
-        (option) => !option.text.trim(),
-      );
+      const hasEmptyOptions = state.options
+        .slice(0, 2)
+        .some((option) => !option.text.trim());
       if (hasEmptyOptions) {
         alert("Vui lòng nhập đầy đủ nội dung cho ít nhất 2 phương án đầu tiên");
         return;
       }
     }
-
     // Create question object
     const newQuestion: Question = {
       id: Date.now().toString(),
@@ -187,6 +186,8 @@ export function ManualQuestionTab({
             : [],
       difficulty: state.difficulty,
       explanation: state.explanation || undefined,
+      hint:
+        state.type === "ESSAY" && state.essayHint ? state.essayHint : undefined,
       metadata:
         state.type === "WORD_ORDERING"
           ? {

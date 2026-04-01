@@ -18,7 +18,7 @@ import {
   Download,
   FileSpreadsheet,
 } from "lucide-react";
-import ExcelJS from "exceljs";
+import type ExcelJS from "exceljs";
 
 export default function ClassAnalyticsPage() {
   const [data, setData] = useState<ClassComparisonData | null>(null);
@@ -61,11 +61,11 @@ export default function ClassAnalyticsPage() {
         const aVal = a[sortBy];
         const bVal = b[sortBy];
         const modifier = sortOrder === "asc" ? 1 : -1;
-        
+
         if (aVal == null && bVal == null) return 0;
         if (aVal == null) return 1;
         if (bVal == null) return -1;
-        
+
         if (typeof aVal === "string" && typeof bVal === "string") {
           return aVal.localeCompare(bVal) * modifier;
         }
@@ -76,6 +76,8 @@ export default function ClassAnalyticsPage() {
   const exportToExcel = async () => {
     if (!data?.classes) return;
 
+    // Dynamic import ExcelJS to reduce bundle size
+    const ExcelJS = (await import("exceljs")).default;
     const workbook = new ExcelJS.Workbook();
     workbook.creator = "Age of Study Admin";
     workbook.created = new Date();
@@ -85,14 +87,32 @@ export default function ClassAnalyticsPage() {
 
     // ── Border helpers ─────────────────────────────────────────────────────
     type BS = ExcelJS.BorderStyle;
-    const thin = (argb = "FFD1D5DB") => ({ style: "thin" as BS, color: { argb } });
-    const medium = (argb = "FF9CA3AF") => ({ style: "medium" as BS, color: { argb } });
-    const CELL_BORDER = { top: thin(), left: thin(), bottom: thin(), right: thin() };
-    const OUTER_BORDER = { top: medium(), left: medium(), bottom: medium(), right: medium() };
+    const thin = (argb = "FFD1D5DB") => ({
+      style: "thin" as BS,
+      color: { argb },
+    });
+    const medium = (argb = "FF9CA3AF") => ({
+      style: "medium" as BS,
+      color: { argb },
+    });
+    const CELL_BORDER = {
+      top: thin(),
+      left: thin(),
+      bottom: thin(),
+      right: thin(),
+    };
+    const OUTER_BORDER = {
+      top: medium(),
+      left: medium(),
+      bottom: medium(),
+      right: medium(),
+    };
 
     const applyBorders = (row: ExcelJS.Row, isLast = false) =>
       row.eachCell({ includeEmpty: true }, (cell) => {
-        cell.border = isLast ? { ...CELL_BORDER, bottom: medium() } : CELL_BORDER;
+        cell.border = isLast
+          ? { ...CELL_BORDER, bottom: medium() }
+          : CELL_BORDER;
       });
 
     // ── Title block (rows 1-2) ─────────────────────────────────────────────
@@ -100,7 +120,11 @@ export default function ClassAnalyticsPage() {
     const titleCell = sheet.getCell("A1");
     titleCell.value = "BẢNG PHÂN TÍCH SO SÁNH LỚP HỌC";
     titleCell.font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
-    titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A8A" } };
+    titleCell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF1E3A8A" },
+    };
     titleCell.alignment = { vertical: "middle", horizontal: "center" };
     titleCell.border = OUTER_BORDER;
     sheet.getRow(1).height = 34;
@@ -109,23 +133,50 @@ export default function ClassAnalyticsPage() {
     const dateCell = sheet.getCell("A2");
     dateCell.value = `Ngày xuất: ${new Date().toLocaleDateString("vi-VN")}  |  Age of Study`;
     dateCell.font = { italic: true, size: 10, color: { argb: "FF374151" } };
-    dateCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E7FF" } };
+    dateCell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE0E7FF" },
+    };
     dateCell.alignment = { vertical: "middle", horizontal: "center" };
     sheet.getRow(2).height = 20;
 
     // ── Column widths ──────────────────────────────────────────────────────
     const colWidths = [18, 8, 12, 8, 12, 16, 13, 13, 13, 18];
-    colWidths.forEach((w, i) => { sheet.getColumn(i + 1).width = w; });
+    colWidths.forEach((w, i) => {
+      sheet.getColumn(i + 1).width = w;
+    });
 
     // ── Header row (row 3) ─────────────────────────────────────────────────
     const headerRow = sheet.getRow(3);
-    const headers = ["Tên lớp", "Khối", "Năm học", "Sĩ số", "Điểm TB", "Hoàn thành (%)", "HS hoạt động", "% Hoạt động", "HS không HĐ", "Tiến độ (HT/Tổng)"];
-    headers.forEach((h, i) => { headerRow.getCell(i + 1).value = h; });
+    const headers = [
+      "Tên lớp",
+      "Khối",
+      "Năm học",
+      "Sĩ số",
+      "Điểm TB",
+      "Hoàn thành (%)",
+      "HS hoạt động",
+      "% Hoạt động",
+      "HS không HĐ",
+      "Tiến độ (HT/Tổng)",
+    ];
+    headers.forEach((h, i) => {
+      headerRow.getCell(i + 1).value = h;
+    });
     headerRow.height = 30;
     headerRow.eachCell({ includeEmpty: true }, (cell) => {
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E40AF" } };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF1E40AF" },
+      };
       cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
-      cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+      cell.alignment = {
+        vertical: "middle",
+        horizontal: "center",
+        wrapText: true,
+      };
       cell.border = {
         top: medium("FF1E40AF"),
         left: thin("FF3B82F6"),
@@ -152,7 +203,8 @@ export default function ClassAnalyticsPage() {
     const classes = data.classes;
     classes.forEach((c, idx) => {
       const hasScoreData = c.completedNodes > 0;
-      const activeRate = c.studentCount > 0 ? (c.activeStudents / c.studentCount) * 100 : 0;
+      const activeRate =
+        c.studentCount > 0 ? (c.activeStudents / c.studentCount) * 100 : 0;
       const rowBg = idx % 2 === 0 ? "FFFFFFFF" : "FFF8FAFC";
       const isLast = idx === classes.length - 1;
 
@@ -169,17 +221,38 @@ export default function ClassAnalyticsPage() {
         c.studentCount - c.activeStudents,
         `${c.completedNodes}/${c.totalAssignedNodes}`,
       ];
-      values.forEach((v, i) => { row.getCell(i + 1).value = v as ExcelJS.CellValue; });
+      values.forEach((v, i) => {
+        row.getCell(i + 1).value = v as ExcelJS.CellValue;
+      });
       row.height = 22;
 
       row.eachCell({ includeEmpty: true }, (cell, colNum) => {
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: rowBg } };
-        cell.alignment = { vertical: "middle", horizontal: colNum === 1 ? "left" : "center" };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: rowBg },
+        };
+        cell.alignment = {
+          vertical: "middle",
+          horizontal: colNum === 1 ? "left" : "center",
+        };
       });
 
-      row.getCell(5).fill = { type: "pattern", pattern: "solid", fgColor: { argb: getScoreColor(c.averageScore, hasScoreData) } };
-      row.getCell(6).fill = { type: "pattern", pattern: "solid", fgColor: { argb: getRateColor(c.completionRate) } };
-      row.getCell(8).fill = { type: "pattern", pattern: "solid", fgColor: { argb: getRateColor(activeRate) } };
+      row.getCell(5).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: getScoreColor(c.averageScore, hasScoreData) },
+      };
+      row.getCell(6).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: getRateColor(c.completionRate) },
+      };
+      row.getCell(8).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: getRateColor(activeRate) },
+      };
 
       applyBorders(row, isLast);
     });
@@ -188,14 +261,19 @@ export default function ClassAnalyticsPage() {
     if (classes.length > 0) {
       const totalStudents = classes.reduce((s, c) => s + c.studentCount, 0);
       const totalActive = classes.reduce((s, c) => s + c.activeStudents, 0);
-      const avgScore = classes.reduce((s, c) => s + c.averageScore, 0) / classes.length;
-      const avgCompletion = classes.reduce((s, c) => s + c.completionRate, 0) / classes.length;
-      const avgActiveRate = totalStudents > 0 ? (totalActive / totalStudents) * 100 : 0;
+      const avgScore =
+        classes.reduce((s, c) => s + c.averageScore, 0) / classes.length;
+      const avgCompletion =
+        classes.reduce((s, c) => s + c.completionRate, 0) / classes.length;
+      const avgActiveRate =
+        totalStudents > 0 ? (totalActive / totalStudents) * 100 : 0;
       const hasAnyScore = classes.some((c) => c.completedNodes > 0);
 
       const sumRow = sheet.getRow(classes.length + 4);
       const sumValues = [
-        "TRUNG BÌNH TOÀN TRƯỜNG", "", "",
+        "TRUNG BÌNH TOÀN TRƯỜNG",
+        "",
+        "",
         totalStudents,
         hasAnyScore ? parseFloat(avgScore.toFixed(1)) : "-",
         hasAnyScore ? parseFloat(avgCompletion.toFixed(1)) : "-",
@@ -204,13 +282,27 @@ export default function ClassAnalyticsPage() {
         totalStudents - totalActive,
         "",
       ];
-      sumValues.forEach((v, i) => { sumRow.getCell(i + 1).value = v as ExcelJS.CellValue; });
+      sumValues.forEach((v, i) => {
+        sumRow.getCell(i + 1).value = v as ExcelJS.CellValue;
+      });
       sumRow.height = 24;
       sumRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFEFF6FF" } };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFEFF6FF" },
+        };
         cell.font = { bold: true };
-        cell.alignment = { vertical: "middle", horizontal: colNum === 1 ? "left" : "center" };
-        cell.border = { top: medium(), left: thin(), bottom: medium(), right: thin() };
+        cell.alignment = {
+          vertical: "middle",
+          horizontal: colNum === 1 ? "left" : "center",
+        };
+        cell.border = {
+          top: medium(),
+          left: thin(),
+          bottom: medium(),
+          right: thin(),
+        };
       });
     }
     const buffer = await workbook.xlsx.writeBuffer();
@@ -229,7 +321,9 @@ export default function ClassAnalyticsPage() {
     if (!data?.classes) return;
 
     const csv = exportClassDataToCSV(data.classes);
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\uFEFF" + csv], {
+      type: "text/csv;charset=utf-8;",
+    });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.href = url;
@@ -300,7 +394,9 @@ export default function ClassAnalyticsPage() {
             </div>
             <div>
               <p className="text-sm text-gray-600 font-medium">Tổng số lớp</p>
-              <p className="text-2xl font-bold text-gray-900">{data.summary.totalClasses}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {data.summary.totalClasses}
+              </p>
             </div>
           </div>
         </div>
@@ -312,7 +408,9 @@ export default function ClassAnalyticsPage() {
             </div>
             <div>
               <p className="text-sm text-gray-600 font-medium">Tổng học sinh</p>
-              <p className="text-2xl font-bold text-gray-900">{data.summary.totalStudents}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {data.summary.totalStudents}
+              </p>
             </div>
           </div>
         </div>
@@ -351,7 +449,9 @@ export default function ClassAnalyticsPage() {
               <TrendingUp className="w-6 h-6 text-emerald-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600 font-medium">Lớp xuất sắc nhất</p>
+              <p className="text-sm text-gray-600 font-medium">
+                Lớp xuất sắc nhất
+              </p>
               <p className="text-lg font-bold text-gray-900 truncate">
                 {data.summary.highestPerformingClass || "N/A"}
               </p>
@@ -365,7 +465,9 @@ export default function ClassAnalyticsPage() {
               <TrendingDown className="w-6 h-6 text-red-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600 font-medium">Lớp cần cải thiện</p>
+              <p className="text-sm text-gray-600 font-medium">
+                Lớp cần cải thiện
+              </p>
               <p className="text-lg font-bold text-gray-900 truncate">
                 {data.summary.lowestPerformingClass || "N/A"}
               </p>
@@ -384,7 +486,8 @@ export default function ClassAnalyticsPage() {
                   onClick={() => handleSort("className")}
                   className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Tên lớp {sortBy === "className" && (sortOrder === "asc" ? "↑" : "↓")}
+                  Tên lớp{" "}
+                  {sortBy === "className" && (sortOrder === "asc" ? "↑" : "↓")}
                 </th>
                 <th
                   onClick={() => handleSort("grade")}
@@ -396,31 +499,40 @@ export default function ClassAnalyticsPage() {
                   onClick={() => handleSort("studentCount")}
                   className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Sĩ số {sortBy === "studentCount" && (sortOrder === "asc" ? "↑" : "↓")}
+                  Sĩ số{" "}
+                  {sortBy === "studentCount" &&
+                    (sortOrder === "asc" ? "↑" : "↓")}
                 </th>
                 <th
                   onClick={() => handleSort("averageScore")}
                   className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Điểm TB {sortBy === "averageScore" && (sortOrder === "asc" ? "↑" : "↓")}
+                  Điểm TB{" "}
+                  {sortBy === "averageScore" &&
+                    (sortOrder === "asc" ? "↑" : "↓")}
                 </th>
                 <th
                   onClick={() => handleSort("completionRate")}
                   className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  Hoàn thành {sortBy === "completionRate" && (sortOrder === "asc" ? "↑" : "↓")}
+                  Hoàn thành{" "}
+                  {sortBy === "completionRate" &&
+                    (sortOrder === "asc" ? "↑" : "↓")}
                 </th>
                 <th
                   onClick={() => handleSort("averageXP")}
                   className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  XP TB {sortBy === "averageXP" && (sortOrder === "asc" ? "↑" : "↓")}
+                  XP TB{" "}
+                  {sortBy === "averageXP" && (sortOrder === "asc" ? "↑" : "↓")}
                 </th>
                 <th
                   onClick={() => handleSort("activeStudents")}
                   className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
-                  HS hoạt động {sortBy === "activeStudents" && (sortOrder === "asc" ? "↑" : "↓")}
+                  HS hoạt động{" "}
+                  {sortBy === "activeStudents" &&
+                    (sortOrder === "asc" ? "↑" : "↓")}
                 </th>
               </tr>
             </thead>
@@ -442,8 +554,8 @@ export default function ClassAnalyticsPage() {
                         cls.averageScore >= 80
                           ? "bg-green-100 text-green-800"
                           : cls.averageScore >= 60
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
                       }`}
                     >
                       {cls.averageScore.toFixed(1)}
@@ -457,7 +569,9 @@ export default function ClassAnalyticsPage() {
                       <div className="w-full max-w-[80px] h-2 bg-gray-200 rounded-full mt-1 overflow-hidden">
                         <div
                           className="h-full bg-blue-600 rounded-full"
-                          style={{ width: `${Math.min(cls.completionRate, 100)}%` }}
+                          style={{
+                            width: `${Math.min(cls.completionRate, 100)}%`,
+                          }}
                         />
                       </div>
                     </div>

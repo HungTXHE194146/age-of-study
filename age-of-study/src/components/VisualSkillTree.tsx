@@ -18,7 +18,7 @@ import {
   Panel,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Search, Star, Target } from "lucide-react";
+import { Search, Star, Target, Compass, ChevronDown } from "lucide-react";
 import { transformDBNodesToFlow } from "@/utils/skillTreeMapper";
 import {
   updateNodeConnection,
@@ -59,6 +59,14 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const [isLowData, setIsLowData] = useState(false);
+
+  // Convert completedNodeIds to a Set for efficient lookup and to avoid ".has is not a function" errors if an array is passed
+  const completedNodesSet = useMemo(() => {
+    if (!completedNodeIds) return new Set<number>();
+    return completedNodeIds instanceof Set
+      ? completedNodeIds
+      : new Set(completedNodeIds);
+  }, [completedNodeIds]);
 
   // MUST BE CALLED TOP LEVEL TO AVOID REACT HOOK ORDER VIOLATION
   const contextValue = useMemo(
@@ -159,9 +167,9 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     }
 
     const centerX = (minX + maxX) / 2 + 75; // 75 is half node width
-    const horizontalRange = 1;
-    const headerMarginY = 150;
-    const bottomMarginY = 250;
+    const horizontalRange = 200;
+    const headerMarginY = 200;
+    const bottomMarginY = 600;
 
     return [
       [centerX - horizontalRange, minY - headerMarginY],
@@ -322,6 +330,37 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
 
   // Determine current week from scroll position
   const [currentWeek, setCurrentWeek] = useState<number | null>(null);
+  const [showWeekSelector, setShowWeekSelector] = useState(false);
+
+  const availableWeeks = useMemo(() => {
+    if (!subjectNodes) return [];
+    const weeks = subjectNodes
+      .map((n) => n.week_number)
+      .filter((w): w is number => w != null);
+    return Array.from(new Set(weeks)).sort((a, b) => a - b);
+  }, [subjectNodes]);
+
+  // Find the week where the student is currently at (first uncompleted node)
+  const studentProgressWeek = useMemo(() => {
+    if (!subjectNodes || !completedNodesSet || isTeacherMode) return null;
+    const firstUncompleted = subjectNodes.find(
+      (n) => !completedNodesSet.has(n.id),
+    );
+    return (
+      firstUncompleted?.week_number ?? availableWeeks[availableWeeks.length - 1]
+    );
+  }, [subjectNodes, completedNodesSet, availableWeeks, isTeacherMode]);
+
+  const scrollToWeek = (week: number) => {
+    if (!rfInstance || !subjectNodes) return;
+    const firstNodeInWeek = subjectNodes.find((n) => n.week_number === week);
+    if (firstNodeInWeek) {
+      const x = firstNodeInWeek.position_x ?? 0;
+      const y = firstNodeInWeek.position_y ?? 0;
+      rfInstance.setCenter(x + 75, y + 75, { zoom: 0.8, duration: 800 });
+    }
+    setShowWeekSelector(false);
+  };
 
   // Debounced so rapid pan/scroll events don't cause continuous re-renders.
   // Uses functional setState to drop `currentWeek` from the dependency array,
@@ -374,14 +413,71 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
       <div
         className={`w-full h-full relative overflow-hidden flex flex-col ${isTeacherMode ? "max-w-[400px] mx-auto border-x-4 border-black shadow-[4px_0_0_0_rgba(0,0,0,1),-4px_0_0_0_rgba(0,0,0,1)] bg-[#fffdf8]" : "bg-transparent"}`}
       >
-        {/* Sticky Week Header for Students */}
-        {!isTeacherMode && currentWeek && (
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 duration-300">
-            <div className="bg-[#fbbf24] border-2 border-black rounded-full px-6 py-1 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-widest text-black font-handwritten">
-                TUẦN {currentWeek}
-              </span>
+        {/* Sticky Week Navigation Bar */}
+        {!isTeacherMode && (
+          <div className="absolute top-0 left-0 right-0 z-[100] animate-in slide-in-from-top duration-300">
+            <div
+              onClick={() => setShowWeekSelector(!showWeekSelector)}
+              className="bg-[#fbbf24] border-b-4 border-black px-6 py-2 shadow-md flex items-center justify-between cursor-pointer hover:bg-[#f59e0b] transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <div className="bg-white rounded-full p-1 border-2 border-black">
+                  <Target size={14} className="text-blue-600" />
+                </div>
+                <span className="text-sm font-black uppercase tracking-tight text-black font-handwritten">
+                  {currentWeek ? `TUẦN ${currentWeek}` : "CHỌN TUẦN HỌC"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-black/60 uppercase">
+                  Chế độ bay
+                </span>
+                <ChevronDown
+                  size={18}
+                  className={`text-black transition-transform duration-300 ${showWeekSelector ? "rotate-180" : ""}`}
+                />
+              </div>
             </div>
+
+            {/* Week Selector Dropdown */}
+            {showWeekSelector && (
+              <div className="absolute top-full left-0 right-0 bg-white border-b-4 border-black shadow-xl max-h-[60vh] overflow-y-auto no-scrollbar grid grid-cols-4 sm:grid-cols-6 gap-2 p-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                {availableWeeks.map((week) => {
+                  const isCurrentView = currentWeek === week;
+                  const isProgressWeek = studentProgressWeek === week;
+
+                  return (
+                    <button
+                      key={week}
+                      onClick={() => scrollToWeek(week)}
+                      className={`flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all active:scale-95 relative
+                        ${
+                          isCurrentView
+                            ? "bg-blue-600 border-black text-white shadow-[2px_2px_0_0_rgba(0,0,0,1)] z-10"
+                            : isProgressWeek
+                              ? "bg-emerald-500 border-black text-white shadow-[2px_2px_0_0_rgba(0,0,0,1)] ring-4 ring-yellow-400 ring-opacity-50"
+                              : "bg-white border-gray-200 text-gray-700 hover:border-black hover:bg-blue-50"
+                        }
+                      `}
+                    >
+                      {isProgressWeek && (
+                        <div className="absolute -top-1 -right-1 bg-yellow-400 text-black rounded-full p-0.5 border border-black shadow-sm">
+                          <Target size={10} />
+                        </div>
+                      )}
+                      <span
+                        className={`text-[8px] font-black uppercase leading-tight ${isCurrentView || isProgressWeek ? "text-white" : "text-gray-400"}`}
+                      >
+                        {isProgressWeek ? "Đang học" : "Tuần"}
+                      </span>
+                      <span className="text-lg font-black leading-tight">
+                        {week}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -506,101 +602,103 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
           </>
         )}
 
-        {/* Thanh Search Nổi */}
-        <div className="absolute top-4 left-4 right-4 z-50">
-          <form
-            onSubmit={handleSearchFormSubmit}
-            className="relative flex items-center"
-          >
-            <input
-              type="text"
-              placeholder="Tìm kiếm bài học..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowSuggestions(true);
-              }}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => {
-                setTimeout(() => setShowSuggestions(false), 200);
-              }}
-              className={
-                isTeacherMode
-                  ? "w-full bg-white/80 text-gray-900 placeholder-gray-500 border-2 border-black rounded-lg pl-12 pr-4 py-3 shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus:outline-none focus:border-blue-600 transition-all font-bold text-lg"
-                  : "w-full bg-slate-800/90 text-slate-100 placeholder-slate-400 border border-indigo-500/50 rounded-full pl-10 pr-4 py-3 shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all backdrop-blur-md text-sm"
-              }
-            />
-            <Search
-              className={
-                isTeacherMode
-                  ? "w-6 h-6 text-gray-600 absolute left-3"
-                  : "w-5 h-5 text-indigo-400 absolute left-3"
-              }
-            />
-            <button type="submit" className="hidden">
-              Search
-            </button>
-          </form>
-
-          {showSuggestions && searchResults.length > 0 && (
-            <div
-              className={
-                isTeacherMode
-                  ? "absolute mt-2 w-full bg-orange-50/95 border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] max-h-60 overflow-y-auto z-50 font-bold"
-                  : "absolute mt-2 w-full bg-slate-800/95 border border-slate-700 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden max-h-60 overflow-y-auto z-50"
-              }
+        {/* Floating Search Bar - Hidden for students to reduce clutter */}
+        {isTeacherMode && (
+          <div className="absolute top-4 left-4 right-4 z-50">
+            <form
+              onSubmit={handleSearchFormSubmit}
+              className="relative flex items-center"
             >
-              {searchResults.map((node) => (
-                <div
-                  key={node.id}
-                  onMouseDown={() =>
-                    handleSelectNode(node.id.toString(), setNodes as any)
-                  }
-                  className={
-                    isTeacherMode
-                      ? "px-4 py-3 hover:bg-yellow-200 cursor-pointer transition-colors border-b-2 border-dashed border-gray-400 last:border-0 flex items-center gap-3 text-gray-800 font-bold"
-                      : "px-4 py-3 hover:bg-slate-700/50 cursor-pointer transition-colors border-b border-slate-700/50 last:border-0 flex items-center gap-3"
-                  }
-                >
+              <input
+                type="text"
+                placeholder="Tìm kiếm bài học..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => {
+                  setTimeout(() => setShowSuggestions(false), 200);
+                }}
+                className={
+                  isTeacherMode
+                    ? "w-full bg-white/80 text-gray-900 placeholder-gray-500 border-2 border-black rounded-lg pl-12 pr-4 py-3 shadow-[4px_4px_0_0_rgba(0,0,0,1)] focus:outline-none focus:border-blue-600 transition-all font-bold text-lg"
+                    : "w-full bg-slate-800/90 text-slate-100 placeholder-slate-400 border border-indigo-500/50 rounded-full pl-10 pr-4 py-3 shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all backdrop-blur-md text-sm"
+                }
+              />
+              <Search
+                className={
+                  isTeacherMode
+                    ? "w-6 h-6 text-gray-600 absolute left-3"
+                    : "w-5 h-5 text-indigo-400 absolute left-3"
+                }
+              />
+              <button type="submit" className="hidden">
+                Search
+              </button>
+            </form>
+
+            {showSuggestions && searchResults.length > 0 && (
+              <div
+                className={
+                  isTeacherMode
+                    ? "absolute mt-2 w-full bg-orange-50/95 border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] max-h-60 overflow-y-auto z-50 font-bold"
+                    : "absolute mt-2 w-full bg-slate-800/95 border border-slate-700 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden max-h-60 overflow-y-auto z-50"
+                }
+              >
+                {searchResults.map((node) => (
                   <div
+                    key={node.id}
+                    onMouseDown={() =>
+                      handleSelectNode(node.id.toString(), setNodes as any)
+                    }
                     className={
                       isTeacherMode
-                        ? "w-8 h-8 rounded-full border-2 border-black flex items-center justify-center shrink-0 bg-white"
-                        : "w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0"
+                        ? "px-4 py-3 hover:bg-yellow-200 cursor-pointer transition-colors border-b-2 border-dashed border-gray-400 last:border-0 flex items-center gap-3 text-gray-800 font-bold"
+                        : "px-4 py-3 hover:bg-slate-700/50 cursor-pointer transition-colors border-b border-slate-700/50 last:border-0 flex items-center gap-3"
                     }
                   >
-                    <Star
-                      size={14}
-                      className={
-                        isTeacherMode ? "text-black" : "text-indigo-400"
-                      }
-                    />
-                  </div>
-                  <div>
                     <div
                       className={
                         isTeacherMode
-                          ? "text-base font-black text-black line-clamp-1"
-                          : "text-sm font-medium text-slate-200 line-clamp-1"
+                          ? "w-8 h-8 rounded-full border-2 border-black flex items-center justify-center shrink-0 bg-white"
+                          : "w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0"
                       }
                     >
-                      {node.data.title as string}
+                      <Star
+                        size={14}
+                        className={
+                          isTeacherMode ? "text-black" : "text-indigo-400"
+                        }
+                      />
                     </div>
-                    <div
-                      className={
-                        isTeacherMode
-                          ? "text-xs text-gray-600 mt-0.5 capitalize font-bold"
-                          : "text-xs text-slate-500 mt-0.5 capitalize"
-                      }
-                    >
-                      {node.data.nodeType as string}
+                    <div>
+                      <div
+                        className={
+                          isTeacherMode
+                            ? "text-base font-black text-black line-clamp-1"
+                            : "text-sm font-medium text-slate-200 line-clamp-1"
+                        }
+                      >
+                        {node.data.title as string}
+                      </div>
+                      <div
+                        className={
+                          isTeacherMode
+                            ? "text-xs text-gray-600 mt-0.5 capitalize font-bold"
+                            : "text-xs text-slate-500 mt-0.5 capitalize"
+                        }
+                      >
+                        {node.data.nodeType as string}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div
           className={`flex-1 w-full h-full relative ${isTeacherMode ? "pl-8" : ""}`}
@@ -635,7 +733,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
             translateExtent={calculatedTranslateExtent}
             defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
             selectionMode={isTeacherMode ? SelectionMode.Partial : undefined}
-            onlyRenderVisibleElements={true}
+            onlyRenderVisibleElements={false}
           >
             <Background
               color={isTeacherMode ? "#94a3b8" : "#818cf8"}
@@ -659,22 +757,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
                 </button>
               </Panel>
             )}
-            {!isTeacherMode && (
-              <Panel
-                position="bottom-center"
-                className="flex gap-2 mb-6 w-full justify-center z-50"
-              >
-                <button
-                  onClick={() => {
-                    applyFocus(false);
-                  }}
-                  className="bg-white hover:bg-yellow-50 text-black border-2 border-black font-black py-3 px-6 rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] flex items-center gap-2 transition-all text-sm uppercase"
-                >
-                  <Target size={20} className="text-blue-500" />
-                  Về Bài Hiện Tại
-                </button>
-              </Panel>
-            )}
+            {!isTeacherMode && null}
           </ReactFlow>
         </div>
       </div>

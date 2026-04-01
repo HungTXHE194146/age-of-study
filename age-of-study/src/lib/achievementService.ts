@@ -340,8 +340,8 @@ export async function unlockAvatar(
       return { data: null, error: rpcError.message };
     }
 
-    if (result && !result.success) {
-      return { data: null, error: result.error };
+    if (!result || !result.success) {
+      return { data: null, error: result?.error || 'RPC returned no result' };
     }
 
     // Since the RPC doesn't return the full object, we fetch it or just return a simulated one

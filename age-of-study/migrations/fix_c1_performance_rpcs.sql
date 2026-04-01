@@ -12,7 +12,11 @@ RETURNS TABLE (
   description text,
   xp_earned integer,
   created_at timestamp with time zone
-) AS $$
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $
 BEGIN
   RETURN QUERY
   SELECT DISTINCT ON (a.student_id) 
@@ -21,7 +25,7 @@ BEGIN
   WHERE a.student_id = ANY(p_student_ids)
   ORDER BY a.student_id, a.created_at DESC;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$;
 
 -- 2. RPC for latest node progress per student
 CREATE OR REPLACE FUNCTION get_latest_progress_by_students(p_student_ids uuid[])

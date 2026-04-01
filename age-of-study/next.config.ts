@@ -1,17 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // --- Performance ---
-  compress: true, // Enable Gzip/Brotli compression for all responses
-
-  // --- Security ---
-  poweredByHeader: false, // Remove X-Powered-By: Next.js header
-
-  // --- Bundle optimization: tree-shake large icon/UI packages ---
-  experimental: {
-    optimizePackageImports: ['lucide-react', '@xyflow/react'],
-  },
-
   images: {
     remotePatterns: [
       // Supabase Storage (if you're using it for avatars)
@@ -42,4 +31,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-

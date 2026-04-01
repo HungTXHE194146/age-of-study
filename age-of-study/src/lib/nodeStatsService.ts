@@ -33,14 +33,14 @@ export interface StudentNodeStats {
 export async function getTeacherNodeStats(nodeId: number, teacherId?: string): Promise<TeacherNodeStats> {
   const supabase = getSupabaseBrowserClient();
   
-  // Lấy các bài test của node này (vẫn giữ để hiển thị danh sách bài tập ở sidebar)
+  // Fetch tests for this node (kept to display assignment list in sidebar)
   const { data: tests, error: testsError } = await supabase
     .from('tests')
     .select('id, title, type, settings')
     .eq('node_id', nodeId)
     .eq('is_published', true);
 
-  // Khởi tạo query cho bảng student_node_progress
+  // Initialize query for student_node_progress table
   let query = supabase
     .from('student_node_progress')
     .select('status, student_id')

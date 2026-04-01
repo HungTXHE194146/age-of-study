@@ -21,7 +21,7 @@ interface AuthState {
   signUp: (username: string, password: string, fullName: string) => Promise<void>  // Removed email param
   logout: () => Promise<void>
   checkAuth: () => Promise<void>
-  updateUser: (partial: Partial<Profile>) => void
+  updateUser: (updates: Partial<Profile>) => void
   updateUserXP: (xp: number) => void
   clearError: () => void
   clearMFAChallenge: () => void
@@ -57,12 +57,10 @@ export const useAuthStore = create<AuthState>()(
           if (authError) throw new Error('Tên đăng nhập hoặc mật khẩu không đúng')
           if (!authData.user) throw new Error('Đăng nhập thất bại')
 
-          // Lấy profile từ database — chỉ select fields cần thiết cho auth/display
-          // Tránh fetch những column nặng (ethnicity, phone_number, ...)
-          // vì profile được persist vào localStorage
+          // Lấy profile từ database
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('id, username, full_name, avatar_url, role, age, grade, favorite_subject, total_xp, weekly_xp, monthly_xp, current_streak, last_study_date, freeze_count, daily_limit_minutes, is_blocked, profile_completed_reward_claimed, must_change_password, last_active_at, created_at, updated_at')
+            .select('*')
             .eq('id', authData.user.id)
             .single()
 
@@ -162,10 +160,10 @@ export const useAuthStore = create<AuthState>()(
             return false
           }
 
-          // Get profile after successful MFA — same minimal field list as login
+          // Get profile after successful MFA
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('id, username, full_name, avatar_url, role, age, grade, favorite_subject, total_xp, weekly_xp, monthly_xp, current_streak, last_study_date, freeze_count, daily_limit_minutes, is_blocked, profile_completed_reward_claimed, must_change_password, last_active_at, created_at, updated_at')
+            .select('*')
             .eq('id', mfaChallenge.userId)
             .single()
 
@@ -274,10 +272,10 @@ export const useAuthStore = create<AuthState>()(
               return
             }
 
-            // Fetch user profile — minimal fields only (persisted to localStorage)
+            // Fetch user profile
             const { data: profile, error: profileError } = await supabase
               .from('profiles')
-              .select('id, username, full_name, avatar_url, role, age, grade, favorite_subject, total_xp, weekly_xp, monthly_xp, current_streak, last_study_date, freeze_count, daily_limit_minutes, is_blocked, profile_completed_reward_claimed, must_change_password, last_active_at, created_at, updated_at')
+              .select('*')
               .eq('id', authUser.id)
               .single()
 
@@ -318,16 +316,16 @@ export const useAuthStore = create<AuthState>()(
         return checkAuthPromise
       },
 
-      updateUser: (partial: Partial<Profile>) => {
-        const user = get().user
-        if (user) {
-          set({ user: { ...user, ...partial } })
-        }
-      },
-
       // NOTE: This is an optimistic local update only.
       // XP changes are persisted to the backend separately (e.g., after completing exercises).
       // The checkAuth method will sync the canonical XP value from the DB on page load/refresh.
+      updateUser: (updates: Partial<Profile>) => {
+        const user = get().user
+        if (!user) return
+
+        set({ user: { ...user, ...updates } })
+      },
+
       updateUserXP: (xp: number) => {
         const user = get().user
         if (user) {

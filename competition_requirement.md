@@ -79,9 +79,9 @@ III. Sản phẩm dự thi
   số), nêu rõ: mục tiêu, đối tượng áp dụng, quy trình thực hiện, hiệu quả, công cụ
   AI sử dụng, hướng phát triển.
 - Có thể nộp kèm video minh họa (không quá 10 phút).
-  \*\*IV. Hình thức, hồ sơ dự thi và thời gian tổ chức
+  **IV. Hình thức, hồ sơ dự thi và thời gian tổ chức**
 
-1. Hình thức tổ chức\*\*
+**1. Hình thức tổ chức**
 
 - Các cơ sở giáo dục nộp hồ sơ dự thi trực tuyến tại địa chỉ:
   **https://forms.gle/zYZSWrtjm3noH**
@@ -113,7 +113,7 @@ Tiêu chí Mô tả
 tiễn (25 điểm)**
 
 ```
-1.2. Sản phẩm ứng dụng AI được triển khai trực tiếp trong
+1.1. Sản phẩm ứng dụng AI được triển khai trực tiếp trong
 lớp học hoặc nhà trường, nhằm giải quyết thách thức thực
 tiễn và/hoặc tạo tác động tích cực trong giảng dạy, học tập
 và quản lý giáo dục.
@@ -164,7 +164,7 @@ kiện thực tế của các cơ sở giáo dục, với nguồn lực sẵn c�
 
 ```
 Tiêu chí Mô tả
-(15 điểm) 4.2. Sản phẩm có tiềm năng cao để^ nhân rộng cho nhiều lớp
+(15 điểm) 4.2. Sản phẩm có tiềm năng cao để nhân rộng cho nhiều lớp
 học, trường học khác nhau, đảm bảo khả năng lan tỏa và giá
 trị bền vững.
 ```
@@ -194,16 +194,16 @@ b) Dự kiến số lượng và giá trị tối đa các giải thưởng như
 
 - Giải đặc biệt: 01 giải, không quá 20 triệu đồng.
 - Giải Nhất: 02 giải, mỗi giải không quá 5 triệu đồng.
-- Giải Nhì: 0 5 giải, mỗi giải không quá 3 triệu đồng.
+- Giải Nhì: 05 giải, mỗi giải không quá 3 triệu đồng.
 - Giải Ba: 10 giải, mỗi giải không quá 2 triệu đồng.
 - Giải Khuyến khích: 20 giải, mỗi giải không quá 1 triệu đồng.
   **_1.2. Đối với lĩnh vực dạy học_**
   a) Các giải thưởng gồm có: Đặc biệt, Nhất, Nhì, Ba, Khuyến khích.
   b) Dự kiến số lượng và giá trị tối đa các giải thưởng như sau:
 - Giải đặc biệt: 01 giải, không quá 20 triệu đồng.
-- Giải Nhất: 0 2 giải, mỗi giải không quá 10 triệu đồng.
-- Giải Nhì: 10 giải, mỗi giải không quá 0 5 triệu đồng.
-- Giải Ba: 15 giải, mỗi giải không quá 0 3 triệu đồng.
+- Giải Nhất: 02 giải, mỗi giải không quá 10 triệu đồng.
+- Giải Nhì: 10 giải, mỗi giải không quá 05 triệu đồng.
+- Giải Ba: 15 giải, mỗi giải không quá 03 triệu đồng.
 - Giải Khuyến khích: 30 giải, mỗi giải không quá 01 triệu đồng.
   **2. Giấy chứng nhận**
 - Tất cả các sản phẩm hợp lệ được nhận Giấy chứng nhận tham gia Cuộc thi
@@ -309,7 +309,7 @@ Tài liệu/bằng chứng kèm theo:
 ```
 
 ```
-☐ Tệp minh hoạ khác: ..........................................
+☐ Tệp minh họa khác: ..........................................
 ```
 
 **III. Cam kết của thí sinh/nhóm dự thi**

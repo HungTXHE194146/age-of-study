@@ -6,8 +6,15 @@ import StatsCard from "@/components/admin/StatsCard";
 import UserAvatar from "@/components/admin/UserAvatar";
 import Loading from "@/components/ui/loading";
 import {
-  Users, GraduationCap, UserCog, Activity,
-  TrendingUp, UserPlus, Clock, BarChart3, FileDown,
+  Users,
+  GraduationCap,
+  UserCog,
+  Activity,
+  TrendingUp,
+  UserPlus,
+  Clock,
+  BarChart3,
+  FileDown,
 } from "lucide-react";
 
 interface UserStats {
@@ -94,35 +101,6 @@ interface DailyActivity {
   count: number;
 }
 
-function getLast7DaysActivity(
-  users: Array<{ last_active_at: string | null }>
-): DailyActivity[] {
-  const days: DailyActivity[] = [];
-  const dayLabels = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() - i);
-    // Use local date formatting to match local day boundaries
-    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const nextDay = new Date(d);
-    nextDay.setDate(nextDay.getDate() + 1);
-
-    const count = users.filter((u) => {
-      if (!u.last_active_at) return false;
-      const t = new Date(u.last_active_at).getTime();
-      return t >= d.getTime() && t < nextDay.getTime();
-    }).length;
-
-    days.push({
-      date: dateStr,
-      label: dayLabels[d.getDay()],
-      count,
-    });
-  }  return days;
-}
-
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -148,60 +126,96 @@ export default function AdminDashboard() {
     try {
       const supabase = getSupabaseBrowserClient();
 
-      // Load all user profiles with last_active_at
-      const { data: allUsers, error: usersError } = await supabase
-        .from("profiles")
-        .select("id, role, last_active_at, created_at");
-
-      if (usersError) throw usersError;
-
       const now = new Date();
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-      type ProfileRow = { id: string; role: string; last_active_at: string | null; created_at: string };
-      const users: ProfileRow[] = allUsers || [];
+      // Run ALL count queries in parallel - much faster than fetching all records
+      const [
+        totalRes,
+        studentsRes,
+        teachersRes,
+        adminsRes,
+        activeTodayRes,
+        activeWeekRes,
+        newWeekRes,
+        recentRes,
+      ] = await Promise.all([
+        supabase.from("profiles").select("*", { count: "exact", head: true }),
+        supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("role", "student"),
+        supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("role", "teacher"),
+        supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("role", "system_admin"),
+        supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .gt("last_active_at", oneDayAgo.toISOString()),
+        supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .gt("last_active_at", oneWeekAgo.toISOString()),
+        supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .gt("created_at", oneWeekAgo.toISOString()),
+        supabase
+          .from("profiles")
+          .select(
+            "id, username, full_name, avatar_url, role, created_at, total_xp, last_active_at",
+          )
+          .order("created_at", { ascending: false })
+          .limit(8),
+      ]);
 
-      const students = users.filter((u) => u.role === "student");
-      const teachers = users.filter((u) => u.role === "teacher");
-      const admins = users.filter((u) => u.role === "system_admin");
-
-      const activeToday = users.filter(
-        (u) => u.last_active_at && new Date(u.last_active_at) > oneDayAgo
-      ).length;
-
-      const activeThisWeek = users.filter(
-        (u) => u.last_active_at && new Date(u.last_active_at) > oneWeekAgo
-      ).length;
-
-      const newThisWeek = users.filter(
-        (u) => new Date(u.created_at) > oneWeekAgo
-      ).length;
+      if (totalRes.error) throw totalRes.error;
 
       setStats({
-        totalUsers: users.length,
-        students: students.length,
-        teachers: teachers.length,
-        admins: admins.length,
-        activeToday,
-        activeThisWeek,
-        newThisWeek,
+        totalUsers: totalRes.count || 0,
+        students: studentsRes.count || 0,
+        teachers: teachersRes.count || 0,
+        admins: adminsRes.count || 0,
+        activeToday: activeTodayRes.count || 0,
+        activeThisWeek: activeWeekRes.count || 0,
+        newThisWeek: newWeekRes.count || 0,
       });
 
-      // Compute 7-day activity chart
-      setDailyActivity(getLast7DaysActivity(users));
+      setRecentUsers((recentRes.data as RecentUser[]) || []);
 
-      // Load recent users (last 8) with last_active_at
-      const { data: recent, error: recentError } = await supabase
-        .from("profiles")
-        .select(
-          "id, username, full_name, avatar_url, role, created_at, total_xp, last_active_at"
-        )
-        .order("created_at", { ascending: false })
-        .limit(8);
+      // Load 7-day activity data efficiently
+      const dayLabels = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+      const dailyQueries = [];
 
-      if (recentError) throw recentError;
-      setRecentUsers(recent || []);
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() - i);
+        const nextDay = new Date(d);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        dailyQueries.push(
+          supabase
+            .from("profiles")
+            .select("*", { count: "exact", head: true })
+            .gte("last_active_at", d.toISOString())
+            .lt("last_active_at", nextDay.toISOString())
+            .then((res: { count: number | null }) => ({
+              date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+              label: dayLabels[d.getDay()],
+              count: res.count || 0,
+            })),
+        );
+      }
+
+      const dailyResults = await Promise.all(dailyQueries);
+      setDailyActivity(dailyResults);
     } catch (error) {
       console.error("Error loading dashboard data:", error);
     } finally {
@@ -404,7 +418,8 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-end justify-between gap-2 h-32">
             {dailyActivity.map((day) => {
-              const heightPct = maxDailyCount > 0 ? (day.count / maxDailyCount) * 100 : 0;
+              const heightPct =
+                maxDailyCount > 0 ? (day.count / maxDailyCount) * 100 : 0;
               return (
                 <div
                   key={day.date}
@@ -490,14 +505,15 @@ export default function AdminDashboard() {
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border-2 ${getRoleBadgeColor(
-                          user.role
+                          user.role,
                         )}`}
                       >
                         {getRoleLabel(user.role)}
                       </span>
                     </td>
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                      {(user.total_xp ?? 0).toLocaleString()} XP                    </td>
+                      {(user.total_xp ?? 0).toLocaleString()} XP{" "}
+                    </td>
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {formatDate(user.created_at)}
                     </td>
