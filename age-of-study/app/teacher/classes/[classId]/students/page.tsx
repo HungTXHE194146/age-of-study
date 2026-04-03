@@ -178,10 +178,20 @@ export default function ClassStudentsPage() {
     setGeneratingCodeFor(studentId);
     setMagicCodeResult(null);
     try {
+      const { getSupabaseBrowserClient } = await import("@/lib/supabase");
+      const {
+        data: { session },
+      } = await getSupabaseBrowserClient().auth.getSession();
+
       const res = await fetch("/api/auth/magic-login/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ student_id: studentId, teacher_id: user.id }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
+        body: JSON.stringify({ student_id: studentId }),
       });
       const data = await res.json();
       if (!res.ok) {

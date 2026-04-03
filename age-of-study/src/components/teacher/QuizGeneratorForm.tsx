@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Loading from "@/components/ui/loading";
 import { AIQuestionService } from "@/lib/aiQuestionService";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 import { Tooltip } from "@/components/ui/tooltip";
 import {
@@ -101,12 +102,19 @@ export function QuizGeneratorForm({
         // Map types to match teacher.ts Question interface
         const formattedQuestions = response.questions.map((q, idx) => ({
           ...q,
+          questionText: sanitizeHtml(q.questionText),
+          explanation: sanitizeHtml(q.explanation),
+          options: q.options?.map((opt) => ({
+            ...opt,
+            text: sanitizeHtml(opt.text),
+          })),
           id: `ai-${Date.now()}-${idx}`,
           createdAt: Date.now(),
           number: idx + 1,
           type: q.type as any,
           difficulty: q.difficulty as any,
         }));
+
         onQuestionsGenerated(formattedQuestions as any);
       } else {
         alert(
@@ -286,14 +294,46 @@ export function QuizGeneratorForm({
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { id: "MULTIPLE_CHOICE", label: "Trắc nghiệm", desc: "Câu hỏi có nhiều lựa chọn, chỉ có 1 đáp án đúng." },
-                  { id: "TRUE_FALSE", label: "Đúng/Sai", desc: "Học sinh chọn xem nhận định là Đúng hay Sai." },
-                  { id: "WORD_ORDERING", label: "Sắp xếp từ", desc: "Sắp xếp các từ xáo trộn thành câu hoàn chỉnh." },
-                  { id: "MATCHING", label: "Nối cặp", desc: "Nối các mục ở cột A với các mục ở cột B tương ứng." },
-                  { id: "FILL_IN_BLANKS", label: "Điền trống", desc: "Điền từ hoặc cụm từ còn thiếu vào chỗ trống." },
-                  { id: "CATEGORIZATION", label: "Phân loại", desc: "Sắp xếp các đối tượng vào các nhóm phù hợp." },
-                  { id: "FIND_ERROR", label: "Tìm lỗi sai", desc: "Xác định và sửa lỗi sai trong câu văn." },
-                  { id: "ESSAY", label: "Tự luận", desc: "Câu hỏi mở yêu cầu viết câu trả lời chi tiết." },
+                  {
+                    id: "MULTIPLE_CHOICE",
+                    label: "Trắc nghiệm",
+                    desc: "Câu hỏi có nhiều lựa chọn, chỉ có 1 đáp án đúng.",
+                  },
+                  {
+                    id: "TRUE_FALSE",
+                    label: "Đúng/Sai",
+                    desc: "Học sinh chọn xem nhận định là Đúng hay Sai.",
+                  },
+                  {
+                    id: "WORD_ORDERING",
+                    label: "Sắp xếp từ",
+                    desc: "Sắp xếp các từ xáo trộn thành câu hoàn chỉnh.",
+                  },
+                  {
+                    id: "MATCHING",
+                    label: "Nối cặp",
+                    desc: "Nối các mục ở cột A với các mục ở cột B tương ứng.",
+                  },
+                  {
+                    id: "FILL_IN_BLANKS",
+                    label: "Điền trống",
+                    desc: "Điền từ hoặc cụm từ còn thiếu vào chỗ trống.",
+                  },
+                  {
+                    id: "CATEGORIZATION",
+                    label: "Phân loại",
+                    desc: "Sắp xếp các đối tượng vào các nhóm phù hợp.",
+                  },
+                  {
+                    id: "FIND_ERROR",
+                    label: "Tìm lỗi sai",
+                    desc: "Xác định và sửa lỗi sai trong câu văn.",
+                  },
+                  {
+                    id: "ESSAY",
+                    label: "Tự luận",
+                    desc: "Câu hỏi mở yêu cầu viết câu trả lời chi tiết.",
+                  },
                 ].map((type) => (
                   <Tooltip key={type.id} content={type.desc} className="w-48">
                     <label className="flex items-center gap-2 cursor-pointer group w-full">

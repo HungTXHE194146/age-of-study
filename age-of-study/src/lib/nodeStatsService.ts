@@ -131,7 +131,7 @@ export async function getStudentNodeStats(nodeId: number, studentId: string): Pr
   // Lấy submissions của riêng học sinh này
   const { data: submissions, error: subError } = await supabase
     .from('test_submissions')
-    .select('test_id, status, score, total_questions')
+    .select('test_id, status, score, total_questions, correct_answers')
     .eq('student_id', studentId)
     .in('test_id', testIds);
 
@@ -170,11 +170,17 @@ export async function getStudentNodeStats(nodeId: number, studentId: string): Pr
         stStatus = 'completed';
         // For individual tests, we still show the score percentage attained in that test
         if (sub.total_questions > 0) {
-           percentage = Math.round(((sub.correct_answers || sub.score) / sub.total_questions) * 100);
-           percentage = Math.min(100, Math.max(0, percentage));
-           if (percentage < 50) needsReview++;
+          if (typeof sub.correct_answers === 'number') {
+            percentage = Math.round((sub.correct_answers / sub.total_questions) * 100);
+          } else {
+            // Fallback to score which is already a percentage (0-100)
+            percentage = sub.score || 0;
+          }
+          percentage = Math.min(100, Math.max(0, percentage));
+          if (percentage < 50) needsReview++;
         } else {
-           percentage = (sub.score <= 10) ? Math.min(100, sub.score * 10) : Math.min(100, (sub.score || 0));
+          // Fallback if total_questions is missing or 0
+          percentage = (sub.score <= 10) ? Math.min(100, sub.score * 10) : Math.min(100, (sub.score || 0));
         }
       } else {
         stStatus = 'in_progress';

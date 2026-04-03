@@ -29,9 +29,12 @@ export default function LeaderboardPage() {
     }
   }, [isAuthenticated, isLoading, router]);
 
+  // Only fetch when the leaderboard tab (class view) is active or when switching to it
   useEffect(() => {
-    loadLeaderboard();
-  }, [period]);
+    if (viewMode === "class") {
+      loadLeaderboard();
+    }
+  }, [period, viewMode]);
 
   const loadLeaderboard = async () => {
     setLoading(true);
@@ -140,7 +143,9 @@ export default function LeaderboardPage() {
                 transition={{ duration: 0.3 }}
                 className="text-center py-20 bg-white rounded-3xl shadow-xl border-4 border-purple-200"
               >
-                <div className="text-5xl sm:text-8xl mb-6 animate-bounce">🌱</div>
+                <div className="text-5xl sm:text-8xl mb-6 animate-bounce">
+                  🌱
+                </div>
                 <h3 className="text-2xl sm:text-3xl font-black text-gray-800 mb-4">
                   Hành trình của bạn mới bắt đầu!
                 </h3>

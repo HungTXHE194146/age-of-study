@@ -11,6 +11,7 @@ import MatchingRenderer from "@/components/student/QuestionRenderers/MatchingRen
 import FillInBlanksRenderer from "@/components/student/QuestionRenderers/FillInBlanksRenderer";
 import CategorizationRenderer from "@/components/student/QuestionRenderers/CategorizationRenderer";
 import FindErrorRenderer from "@/components/student/QuestionRenderers/FindErrorRenderer";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 // --- Web Audio API Utilities ---
 let sharedAudioCtx: AudioContext | null = null;
@@ -253,11 +254,12 @@ export default function TestInterface({
           <h3
             className="text-2xl font-black mb-8 border-b-2 border-dashed border-slate-300 pb-6 leading-relaxed text-slate-800"
             dangerouslySetInnerHTML={{
-              __html:
+              __html: sanitizeHtml(
                 currentQuestion.content?.question ||
-                currentQuestion.content?.questionText ||
-                (currentQuestion.content as any)?.text ||
-                "Câu hỏi không có nội dung",
+                  currentQuestion.content?.questionText ||
+                  (currentQuestion.content as any)?.text ||
+                  "Câu hỏi không có nội dung",
+              ),
             }}
           />
 
@@ -718,7 +720,11 @@ function QuestionBodyRenderer({
               const isSelected = answers[currentQuestion.id] === index;
               const optionText =
                 typeof option === "string" ? option : option?.text || "";
-              const isCorrect = typeof option === "object" && option?.isCorrect;
+              const isCorrect =
+                currentQuestion.correct_option_index !== undefined &&
+                currentQuestion.correct_option_index !== null
+                  ? index === currentQuestion.correct_option_index
+                  : typeof option === "object" && option?.isCorrect;
 
               return (
                 <button

@@ -26,11 +26,14 @@ import {
   Download,
   BarChart2,
   Calendar,
-  User
+  User,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { getStudentReportData, StudentReportData } from "@/lib/analyticsService";
+import {
+  getStudentReportData,
+  StudentReportData,
+} from "@/lib/analyticsService";
 
 export default function StudentLogPage() {
   const { classId, studentId } = useParams();
@@ -45,7 +48,7 @@ export default function StudentLogPage() {
 
   // UI States
   const [showEncourage, setShowEncourage] = useState(false);
-  const [activeTab, setActiveTab] = useState<'log' | 'report'>('report');
+  const [activeTab, setActiveTab] = useState<"log" | "report">("report");
 
   // Pagination States
   const [visibleActivitiesCount, setVisibleActivitiesCount] = useState(5);
@@ -64,13 +67,24 @@ export default function StudentLogPage() {
           setReportData(reportResult.data);
         }
 
-        // Fetch old activity data (for timeline)
-        const res = await fetch(`/api/teacher/students/${studentId}/progress?classId=${classId}`);
+        // Fetch old activity data (for timeline) — with auth header
+        const { getSupabaseBrowserClient } = await import("@/lib/supabase");
+        const {
+          data: { session },
+        } = await getSupabaseBrowserClient().auth.getSession();
+        const headers: HeadersInit = {};
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
+        }
+
+        const res = await fetch(
+          `/api/teacher/students/${studentId}/progress?classId=${classId}`,
+          { headers },
+        );
         if (res.ok) {
           const json = await res.json();
           setOldData(json);
         }
-
       } catch (err) {
         setError("Lỗi khi tải dữ liệu học tập.");
       } finally {
@@ -100,7 +114,10 @@ export default function StudentLogPage() {
           </NotebookCardHeader>
           <NotebookCardContent>
             <p className="mt-4 font-bold text-xl">{error}</p>
-            <Link href={`/teacher/classes/${classId}`} className="mt-4 inline-block">
+            <Link
+              href={`/teacher/classes/${classId}`}
+              className="mt-4 inline-block"
+            >
               <NotebookButton>Quay Lại</NotebookButton>
             </Link>
           </NotebookCardContent>
@@ -109,26 +126,28 @@ export default function StudentLogPage() {
     );
   }
 
-  const studentProfile = reportData || (oldData?.profile ? {
-    fullName: oldData.profile.full_name,
-    username: oldData.profile.username,
-    totalXP: oldData.profile.total_xp,
-    level: 1,
-    avatarUrl: null
-  } : null);
+  const studentProfile =
+    reportData ||
+    (oldData?.profile
+      ? {
+          fullName: oldData.profile.full_name,
+          username: oldData.profile.username,
+          totalXP: oldData.profile.total_xp,
+          level: 1,
+          avatarUrl: null,
+        }
+      : null);
 
-  if (!studentProfile) return <div className="p-8">Không tìm thấy dữ liệu học sinh.</div>;
+  if (!studentProfile)
+    return <div className="p-8">Không tìm thấy dữ liệu học sinh.</div>;
 
   return (
     <div className="min-h-screen bg-[#f4f4f9] py-8">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-
         {/* Header Navigation */}
         <div className="flex items-center justify-between mb-6">
           <Link href={`/teacher/classes/${classId}`}>
-            <NotebookButton
-              className="flex items-center gap-2 border-2 border-black font-bold hover:bg-gray-200"
-            >
+            <NotebookButton className="flex items-center gap-2 border-2 border-black font-bold hover:bg-gray-200">
               <ArrowLeft className="w-5 h-5" />
               Quay lại DS Lớp
             </NotebookButton>
@@ -159,7 +178,11 @@ export default function StudentLogPage() {
               <div className="relative">
                 <div className="w-24 h-24 rounded-full border-4 border-black bg-yellow-100 flex items-center justify-center overflow-hidden shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
                   {studentProfile.avatarUrl ? (
-                    <img src={studentProfile.avatarUrl} alt={studentProfile.fullName || ''} className="w-full h-full object-cover" />
+                    <img
+                      src={studentProfile.avatarUrl}
+                      alt={studentProfile.fullName || ""}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <User className="w-12 h-12 text-gray-400" />
                   )}
@@ -189,14 +212,14 @@ export default function StudentLogPage() {
 
               <div className="flex bg-gray-100 p-1 rounded-lg border-2 border-black">
                 <button
-                  onClick={() => setActiveTab('report')}
-                  className={`px-4 py-2 rounded-md font-bold text-sm transition-all ${activeTab === 'report' ? 'bg-white shadow-[2px_2px_0_0_rgba(0,0,0,1)] border-2 border-black text-blue-900' : 'text-gray-500'}`}
+                  onClick={() => setActiveTab("report")}
+                  className={`px-4 py-2 rounded-md font-bold text-sm transition-all ${activeTab === "report" ? "bg-white shadow-[2px_2px_0_0_rgba(0,0,0,1)] border-2 border-black text-blue-900" : "text-gray-500"}`}
                 >
                   Học bạ
                 </button>
                 <button
-                  onClick={() => setActiveTab('log')}
-                  className={`px-4 py-2 rounded-md font-bold text-sm transition-all ${activeTab === 'log' ? 'bg-white shadow-[2px_2px_0_0_rgba(0,0,0,1)] border-2 border-black text-blue-900' : 'text-gray-500'}`}
+                  onClick={() => setActiveTab("log")}
+                  className={`px-4 py-2 rounded-md font-bold text-sm transition-all ${activeTab === "log" ? "bg-white shadow-[2px_2px_0_0_rgba(0,0,0,1)] border-2 border-black text-blue-900" : "text-gray-500"}`}
                 >
                   Nhật ký
                 </button>
@@ -205,30 +228,48 @@ export default function StudentLogPage() {
           </NotebookCardContent>
         </NotebookCard>
 
-        {activeTab === 'report' ? (
+        {activeTab === "report" ? (
           <div className="space-y-8">
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <NotebookCard className="bg-green-50 border-green-900 border-2">
                 <NotebookCardContent className="pt-6">
                   <div className="flex justify-between items-start mb-2">
-                    <p className="text-gray-600 font-bold uppercase text-xs">Điểm trung bình</p>
+                    <p className="text-gray-600 font-bold uppercase text-xs">
+                      Điểm trung bình
+                    </p>
                     <Award className="w-4 h-4 text-green-600" />
                   </div>
-                  <p className="text-4xl font-black text-gray-900">{(reportData?.averageTestScore || 0).toFixed(1)}</p>
-                  <div className="mt-2 text-xs font-bold text-gray-500">Dựa trên {reportData?.testHistory.length || 0} bài thi</div>
+                  <p className="text-4xl font-black text-gray-900">
+                    {(reportData?.averageTestScore || 0).toFixed(1)}
+                  </p>
+                  <div className="mt-2 text-xs font-bold text-gray-500">
+                    Dựa trên {reportData?.testHistory.length || 0} bài thi
+                  </div>
                 </NotebookCardContent>
               </NotebookCard>
 
               <NotebookCard className="bg-blue-50 border-blue-900 border-2">
                 <NotebookCardContent className="pt-6">
                   <div className="flex justify-between items-start mb-2">
-                    <p className="text-gray-600 font-bold uppercase text-xs">Node hoàn thành</p>
+                    <p className="text-gray-600 font-bold uppercase text-xs">
+                      Node hoàn thành
+                    </p>
                     <CheckCircle2 className="w-4 h-4 text-blue-600" />
                   </div>
-                  <p className="text-4xl font-black text-gray-900">{reportData?.completedNodes || 0}/{reportData?.totalNodes || 0}</p>
+                  <p className="text-4xl font-black text-gray-900">
+                    {reportData?.completedNodes || 0}/
+                    {reportData?.totalNodes || 0}
+                  </p>
                   <div className="mt-2 text-xs font-bold text-gray-500">
-                    Tiến độ: {reportData?.totalNodes ? ((reportData.completedNodes / reportData.totalNodes) * 100).toFixed(0) : 0}%
+                    Tiến độ:{" "}
+                    {reportData?.totalNodes
+                      ? (
+                          (reportData.completedNodes / reportData.totalNodes) *
+                          100
+                        ).toFixed(0)
+                      : 0}
+                    %
                   </div>
                 </NotebookCardContent>
               </NotebookCard>
@@ -236,11 +277,20 @@ export default function StudentLogPage() {
               <NotebookCard className="bg-purple-50 border-purple-900 border-2">
                 <NotebookCardContent className="pt-6">
                   <div className="flex justify-between items-start mb-2">
-                    <p className="text-gray-600 font-bold uppercase text-xs">Cấp độ</p>
+                    <p className="text-gray-600 font-bold uppercase text-xs">
+                      Cấp độ
+                    </p>
                     <BarChart2 className="w-4 h-4 text-purple-600" />
                   </div>
-                  <p className="text-4xl font-black text-gray-900">{reportData?.level || 1}</p>
-                  <div className="mt-2 text-xs font-bold text-gray-500">Học sinh {reportData && reportData.averageTestScore >= 8 ? 'Xuất sắc' : 'Tiềm năng'}</div>
+                  <p className="text-4xl font-black text-gray-900">
+                    {reportData?.level || 1}
+                  </p>
+                  <div className="mt-2 text-xs font-bold text-gray-500">
+                    Học sinh{" "}
+                    {reportData && reportData.averageTestScore >= 8
+                      ? "Xuất sắc"
+                      : "Tiềm năng"}
+                  </div>
                 </NotebookCardContent>
               </NotebookCard>
             </div>
@@ -254,26 +304,50 @@ export default function StudentLogPage() {
               </NotebookCardHeader>
               <NotebookCardContent>
                 <div className="divide-y-2 divide-dashed divide-gray-200">
-                  {reportData?.testHistory && reportData.testHistory.length > 0 ? (
+                  {reportData?.testHistory &&
+                  reportData.testHistory.length > 0 ? (
                     reportData.testHistory.map((test) => (
-                      <div key={test.testId} className="py-4 flex items-center justify-between">
+                      <div
+                        key={test.testId}
+                        className="py-4 flex items-center justify-between"
+                      >
                         <div>
-                          <h4 className="font-black text-gray-900">{test.testTitle}</h4>
+                          <h4 className="font-black text-gray-900">
+                            {test.testTitle}
+                          </h4>
                           <div className="flex items-center gap-3 text-xs text-gray-500 font-bold">
-                            <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(test.submittedAt).toLocaleDateString('vi-VN')}</span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />{" "}
+                              {new Date(test.submittedAt).toLocaleDateString(
+                                "vi-VN",
+                              )}
+                            </span>
                             <NotebookBadge className="scale-75 origin-left">
-                              {test.type === 'homework' ? 'Bài tập' : test.type === 'exam' ? 'Kiểm tra' : 'Luyện tập'}
+                              {test.type === "homework"
+                                ? "Bài tập"
+                                : test.type === "exam"
+                                  ? "Kiểm tra"
+                                  : "Luyện tập"}
                             </NotebookBadge>
                           </div>
                         </div>
-                        <div className={`text-2xl font-black px-4 py-1 border-2 border-black rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,1)] ${test.score >= 8 ? 'bg-green-100' : test.score >= 5 ? 'bg-yellow-100' : 'bg-red-100'
-                          }`}>
+                        <div
+                          className={`text-2xl font-black px-4 py-1 border-2 border-black rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,1)] ${
+                            test.score >= 8
+                              ? "bg-green-100"
+                              : test.score >= 5
+                                ? "bg-yellow-100"
+                                : "bg-red-100"
+                          }`}
+                        >
                           {test.score}
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="py-8 text-center text-gray-400 font-bold italic">Chưa có dữ liệu bài thi.</p>
+                    <p className="py-8 text-center text-gray-400 font-bold italic">
+                      Chưa có dữ liệu bài thi.
+                    </p>
                   )}
                 </div>
               </NotebookCardContent>
@@ -292,31 +366,46 @@ export default function StudentLogPage() {
                 </NotebookCardHeader>
                 <NotebookCardContent className="pt-6 h-[500px] overflow-y-auto custom-scrollbar">
                   <div className="mt-4 space-y-6">
-                    {oldData?.activities?.slice(0, visibleActivitiesCount).map((act: any, idx: number) => (
-                      <div key={act.id} className="flex gap-4 relative">
-                        {idx !== Math.min(oldData.activities.length, visibleActivitiesCount) - 1 && (
-                          <div className="absolute left-6 top-10 bottom-[-24px] w-1 bg-black border-l-2 border-dashed border-gray-400"></div>
-                        )}
-                        <div className="w-12 h-12 rounded-full border-4 border-black flex items-center justify-center shrink-0 z-10 bg-white">
-                          {act.type === 'login' && <ArrowLeft className="w-5 h-5 text-blue-500 rotate-180" />}
-                          {act.type === 'study' && <BookOpen className="w-5 h-5 text-purple-500" />}
-                          {act.type === 'complete' && <CheckCircle2 className="w-6 h-6 text-green-600" />}
-                        </div>
-                        <div className="pt-1 pb-4">
-                          <div className="font-bold text-gray-500 text-sm uppercase tracking-wider mb-1">
-                            {act.time}
+                    {oldData?.activities
+                      ?.slice(0, visibleActivitiesCount)
+                      .map((act: any, idx: number) => (
+                        <div key={act.id} className="flex gap-4 relative">
+                          {idx !==
+                            Math.min(
+                              oldData.activities.length,
+                              visibleActivitiesCount,
+                            ) -
+                              1 && (
+                            <div className="absolute left-6 top-10 bottom-[-24px] w-1 bg-black border-l-2 border-dashed border-gray-400"></div>
+                          )}
+                          <div className="w-12 h-12 rounded-full border-4 border-black flex items-center justify-center shrink-0 z-10 bg-white">
+                            {act.type === "login" && (
+                              <ArrowLeft className="w-5 h-5 text-blue-500 rotate-180" />
+                            )}
+                            {act.type === "study" && (
+                              <BookOpen className="w-5 h-5 text-purple-500" />
+                            )}
+                            {act.type === "complete" && (
+                              <CheckCircle2 className="w-6 h-6 text-green-600" />
+                            )}
                           </div>
-                          <div className="font-medium text-xl text-gray-900 bg-white inline-block px-3 py-1 border-2 border-black rounded-lg">
-                            {act.desc}
+                          <div className="pt-1 pb-4">
+                            <div className="font-bold text-gray-500 text-sm uppercase tracking-wider mb-1">
+                              {act.time}
+                            </div>
+                            <div className="font-medium text-xl text-gray-900 bg-white inline-block px-3 py-1 border-2 border-black rounded-lg">
+                              {act.desc}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
 
                     {oldData?.activities?.length > visibleActivitiesCount && (
                       <div className="pt-4 pb-2 text-center border-t-2 border-dashed border-gray-300">
                         <NotebookButton
-                          onClick={() => setVisibleActivitiesCount(prev => prev + 5)}
+                          onClick={() =>
+                            setVisibleActivitiesCount((prev) => prev + 5)
+                          }
                           className="bg-white hover:bg-gray-50 text-gray-700 font-bold border-2 border-black rounded-full px-6"
                         >
                           Nạp thêm hoạt động...
@@ -339,30 +428,47 @@ export default function StudentLogPage() {
                 </NotebookCardHeader>
                 <NotebookCardContent className="pt-6 h-[500px] overflow-y-auto custom-scrollbar">
                   <div className="space-y-3">
-                    {oldData?.progress?.map((p: { id: string, title: string, status: string, score: string }) => (
-                      <div
-                        key={p.id}
-                        className={`p-3 border-2 border-black rounded-lg flex items-center justify-between ${p.status === 'completed' ? 'bg-green-50/50' :
-                          p.status === 'in_progress' ? 'bg-yellow-50' : 'bg-gray-100 opacity-70'
+                    {oldData?.progress?.map(
+                      (p: {
+                        id: string;
+                        title: string;
+                        status: string;
+                        score: string;
+                      }) => (
+                        <div
+                          key={p.id}
+                          className={`p-3 border-2 border-black rounded-lg flex items-center justify-between ${
+                            p.status === "completed"
+                              ? "bg-green-50/50"
+                              : p.status === "in_progress"
+                                ? "bg-yellow-50"
+                                : "bg-gray-100 opacity-70"
                           }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          {p.status === 'completed' ? (
-                            <div className="w-6 h-6 bg-green-500 border-2 border-black text-white flex items-center justify-center rounded-sm font-bold text-xs">✓</div>
-                          ) : p.status === 'in_progress' ? (
-                            <div className="w-6 h-6 bg-yellow-400 border-2 border-black text-black flex items-center justify-center rounded-sm font-bold text-xs">...</div>
-                          ) : (
-                            <div className="w-6 h-6 bg-white border-2 border-black text-white flex items-center justify-center rounded-sm"></div>
-                          )}
-                          <span className={`font-bold ${p.status === 'not_started' ? 'text-gray-500' : 'text-gray-900'}`}>
-                            {p.title}
+                        >
+                          <div className="flex items-center gap-2">
+                            {p.status === "completed" ? (
+                              <div className="w-6 h-6 bg-green-500 border-2 border-black text-white flex items-center justify-center rounded-sm font-bold text-xs">
+                                ✓
+                              </div>
+                            ) : p.status === "in_progress" ? (
+                              <div className="w-6 h-6 bg-yellow-400 border-2 border-black text-black flex items-center justify-center rounded-sm font-bold text-xs">
+                                ...
+                              </div>
+                            ) : (
+                              <div className="w-6 h-6 bg-white border-2 border-black text-white flex items-center justify-center rounded-sm"></div>
+                            )}
+                            <span
+                              className={`font-bold ${p.status === "not_started" ? "text-gray-500" : "text-gray-900"}`}
+                            >
+                              {p.title}
+                            </span>
+                          </div>
+                          <span className="font-black text-gray-700 text-sm">
+                            {p.score}
                           </span>
                         </div>
-                        <span className="font-black text-gray-700 text-sm">
-                          {p.score}
-                        </span>
-                      </div>
-                    ))}
+                      ),
+                    )}
                   </div>
                 </NotebookCardContent>
               </NotebookCard>
@@ -388,7 +494,7 @@ export default function StudentLogPage() {
                   {[
                     "Tuyệt lắm! Em đã hoàn thành bài tập rất nhanh hôm nay.",
                     "Cô thấy em rất chăm chỉ, giữ vững phong độ nhé!",
-                    "Điểm số rất ấn tượng, em là học sinh gương mẫu đấy!"
+                    "Điểm số rất ấn tượng, em là học sinh gương mẫu đấy!",
                   ].map((msg, i) => (
                     <div key={i} className="flex gap-2">
                       <div className="flex-1 bg-white p-4 border-2 border-yellow-600 rounded-lg font-bold text-gray-800 italic">

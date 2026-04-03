@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { verifyTeacher } from "@/lib/adminAuth";
+
 
 // Init Supabase Admin to bypass RLS
 const supabaseAdmin = createClient(
@@ -16,6 +18,14 @@ export async function GET(
 ) {
   try {
     const { studentId } = await params;
+
+    // Verify teacher authentication
+    const authResult = await verifyTeacher(request);
+    if (authResult instanceof NextResponse) {
+      return authResult; // Return error response
+    }
+    const teacherId = authResult.userId;
+
     const searchParams = request.nextUrl.searchParams;
     const classId = searchParams.get("classId");
 
@@ -25,6 +35,30 @@ export async function GET(
         { status: 400 }
       );
     }
+
+    // Verify Resource Scope (Student must be in a class taught by this teacher)
+    const { data: teacherClasses } = await supabaseAdmin
+      .from("class_teachers")
+      .select("class_id")
+      .eq("teacher_id", teacherId);
+
+    const classIds = teacherClasses?.map(c => c.class_id) || [];
+
+    const { data: isAssociated, error: scopeError } = await supabaseAdmin
+      .from("class_students")
+      .select("class_id")
+      .eq("student_id", studentId)
+      .in("class_id", classIds)
+      .limit(1)
+      .single();
+
+    if (scopeError || !isAssociated) {
+      return NextResponse.json(
+        { error: "Bạn không có quyền truy cập thông tin học sinh này. (Unauthorized for this student scope)" },
+        { status: 403 }
+      );
+    }
+
 
     // 1. Fetch Profile
     const { data: profile, error: profileErr } = await supabaseAdmin

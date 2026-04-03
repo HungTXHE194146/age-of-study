@@ -6,6 +6,8 @@ import {
   QuestionOption,
   QuestionDifficulty,
 } from "@/types/teacher";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
+
 
 export interface QuestionFilter {
   subjectId?: string;
@@ -377,24 +379,22 @@ export class QuestionBankService {
     data: EditQuestionData,
   ): Promise<boolean> {
     try {
-      // Transform options to match database format - keep the new format with label and text
-      const optionsArray = data.options.map((opt) => ({
-        label: opt.label,
-        text: opt.text,
-      }));
-
       const { error } = await this.supabase
         .from("questions")
         .update({
           content: {
-            questionText: data.questionText,
-            options: optionsArray,
+            questionText: sanitizeHtml(data.questionText),
+            options: data.options.map((opt) => ({
+              label: opt.label,
+              text: sanitizeHtml(opt.text),
+            })),
           },
           difficulty: data.difficulty.toLowerCase(),
-          explanation: data.explanation,
-          model_answer: data.model_answer,
+          explanation: sanitizeHtml(data.explanation),
+          model_answer: sanitizeHtml(data.model_answer),
         })
         .eq("id", questionId);
+
 
       if (error) {
         console.error("Error editing question:", error);
