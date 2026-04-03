@@ -5,6 +5,20 @@
 
 import { getSupabaseBrowserClient } from './supabase';
 
+const CHUNK_SIZE = 100;
+const chunkArray = <T>(arr: T[], size: number): T[][] => {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+  return chunks;
+};
+
+const parseGrade = (gl: string | number | null): number => {
+  if (gl === null || gl === undefined) return 5; // Default fallback
+  if (typeof gl === 'number') return gl;
+  const match = gl.toString().match(/\d+/);
+  return match ? parseInt(match[0]) : 5;
+};
+
 export interface ClassAnalytics {
   classId: number;
   className: string;
@@ -18,6 +32,7 @@ export interface ClassAnalytics {
   activeStudents: number;
   completedNodes: number;
   totalAssignedNodes: number;
+  curriculumNodes: number;
 }
 
 export interface TeacherActivity {
@@ -43,6 +58,7 @@ export interface ClassComparisonData {
     totalStudents: number;
     averageScore: number;
     averageCompletion: number;
+    averageParticipation: number;
     highestPerformingClass: string | null;
     lowestPerformingClass: string | null;
   };
@@ -79,6 +95,13 @@ export interface StudentReportData {
   completedNodes: number;
   totalNodes: number;
   averageTestScore: number;
+  recentActivity: {
+    id: string;
+    type: string;
+    description: string;
+    xpEarned: number;
+    createdAt: string;
+  }[];
   testHistory: {
     testId: string;
     testTitle: string;
@@ -125,6 +148,7 @@ export async function getClassComparisonData(): Promise<{
             totalStudents: 0,
             averageScore: 0,
             averageCompletion: 0,
+            averageParticipation: 0,
             highestPerformingClass: null,
             lowestPerformingClass: null,
           },
@@ -133,71 +157,107 @@ export async function getClassComparisonData(): Promise<{
       };
     }
 
-    // Get analytics for each class using batched queries
+    // 1. Fetch subjects and node counts to calculate true curriculum progress
+    const { data: subjectsData, error: subjectsError } = await supabase
+      .from('subjects')
+      .select('id, grade_level');
+    
+    if (subjectsError) return { data: null, error: subjectsError.message };
+
+    const gradeTotalNodesMap = new Map<number, number>();
+    const uniqueGrades: number[] = Array.from(new Set((subjectsData || []).map((s: { grade_level: string }) => parseGrade(s.grade_level))));
+
+    for (const g of uniqueGrades) {
+      const subjectIds = (subjectsData || [])
+        .filter((s: { grade_level: string; id: number }) => parseGrade(s.grade_level) === g)
+        .map((s: { id: number }) => s.id);
+      
+      if (subjectIds.length > 0) {
+        const { count, error: countError } = await supabase
+          .from('nodes')
+          .select('*', { count: 'exact', head: true })
+          .in('subject_id', subjectIds)
+          .in('node_type', ['lesson', 'content']);
+        
+        if (countError) console.error(`Error counting nodes for grade ${g}:`, countError);
+        gradeTotalNodesMap.set(g, (count as number) || 0);
+      } else {
+        gradeTotalNodesMap.set(g, 0);
+      }
+    }
+
+    // 2. Fetch class students in chunks
     const classAnalytics: ClassAnalytics[] = [];
     const classIds = classes.map((cls: { id: number }) => cls.id);
     const classStudentMap = new Map<number, string[]>();
     const allStudentIds = new Set<string>();
 
-    const { data: allClassStudents, error: classStudentsError } = await supabase
-      .from('class_students')
-      .select('class_id, student_id')
-      .in('class_id', classIds)
-      .eq('status', 'active');
+    const classIdChunks = chunkArray(classIds, CHUNK_SIZE);
+    for (const chunk of classIdChunks) {
+      const { data: chunkStudents, error: classStudentsError } = await supabase
+        .from('class_students')
+        .select('class_id, student_id')
+        .in('class_id', chunk)
+        .eq('status', 'active');
 
-    if (classStudentsError) {
-      return { data: null, error: classStudentsError.message };
+      if (classStudentsError) {
+        return { data: null, error: classStudentsError.message };
+      }
+
+      for (const row of chunkStudents || []) {
+        const existing = classStudentMap.get(row.class_id) || [];
+        existing.push(row.student_id);
+        classStudentMap.set(row.class_id, existing);
+        allStudentIds.add(row.student_id);
+      }
     }
 
-    for (const row of allClassStudents || []) {
-      const existing = classStudentMap.get(row.class_id) || [];
-      existing.push(row.student_id);
-      classStudentMap.set(row.class_id, existing);
-      allStudentIds.add(row.student_id);
-    }
-
+    const studentIds = Array.from(allStudentIds);
     const profileMap = new Map<string, { total_xp: number | null; last_active_at: string | null }>();
-    if (allStudentIds.size > 0) {
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, total_xp, last_active_at')
-        .in('id', Array.from(allStudentIds));
-
-      if (profilesError) {
-        return { data: null, error: profilesError.message };
-      }
-
-      for (const profile of profiles || []) {
-        profileMap.set(profile.id, {
-          total_xp: profile.total_xp,
-          last_active_at: profile.last_active_at,
-        });
-      }
-    }
-
-    let progressData: { status: string; score: number | null; student_id: string }[] = [];
-    let progressError: { message: string } | null = null;
-
-    if (allStudentIds.size > 0) {
-      const { data: pd, error: pe } = await supabase
-        .from('student_node_progress')
-        .select('status, score, student_id')
-        .in('student_id', Array.from(allStudentIds));
-
-      progressError = pe ? { message: pe.message } : null;
-      if (progressError) {
-        console.error('Error fetching student_node_progress:', progressError.message);
-        return { data: null, error: progressError.message };
-      }
-
-      progressData = pd || [];
-    }
-
     const progressByStudent = new Map<string, { status: string; score: number | null }[]>();
-    for (const progress of progressData) {
-      const existing = progressByStudent.get(progress.student_id) || [];
-      existing.push({ status: progress.status, score: progress.score });
-      progressByStudent.set(progress.student_id, existing);
+
+    if (studentIds.length > 0) {
+      const studentIdChunks = chunkArray(studentIds, CHUNK_SIZE);
+      
+      for (const chunk of studentIdChunks) {
+        // 3. Fetch profiles in chunks
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, total_xp, last_active_at')
+          .in('id', chunk);
+
+        if (profilesError) {
+          return { data: null, error: profilesError.message };
+        }
+
+        for (const profile of profiles || []) {
+          profileMap.set(profile.id, {
+            total_xp: profile.total_xp,
+            last_active_at: profile.last_active_at,
+          });
+        }
+
+        // 4. Fetch progress in chunks
+        const { data: pd, error: pe } = await supabase
+          .from('student_node_progress')
+          .select('status, score, student_id')
+          .in('student_id', chunk);
+
+        if (pe) {
+          console.error('Error fetching student_node_progress chunk:', pe.message);
+          return { data: null, error: pe.message };
+        }
+
+        if (pd) {
+          for (const progress of pd) {
+            const existing = progressByStudent.get(progress.student_id) || [];
+            // Cast score to number safely since it's stored as TEXT in DB
+            const numericScore = progress.score ? Number(progress.score) : null;
+            existing.push({ status: progress.status, score: numericScore });
+            progressByStudent.set(progress.student_id, existing);
+          }
+        }
+      }
     }
 
     const now = new Date();
@@ -208,10 +268,13 @@ export async function getClassComparisonData(): Promise<{
       const studentCount = studentIds.length;
       let totalXP = 0;
       let activeStudents = 0;
-      let completedNodes = 0;
-      let totalNodes = 0;
+      let totalCompletedNodesInClass = 0;
       let totalScore = 0;
       let scoreCount = 0;
+
+      // Get curriculum baseline for this class
+      const gradeNum = parseGrade(cls.grade);
+      const totalCurriculumNodesPerStudent = gradeTotalNodesMap.get(gradeNum) || 1; // avoid div by 0
 
       for (const studentId of studentIds) {
         const profile = profileMap.get(studentId);
@@ -223,20 +286,28 @@ export async function getClassComparisonData(): Promise<{
         }
 
         const studentProgress = progressByStudent.get(studentId) || [];
-        totalNodes += studentProgress.length;
         for (const progress of studentProgress) {
           if (progress.status === 'completed') {
-            completedNodes++;
+            totalCompletedNodesInClass++;
           }
+          // Only count scores that are valid percentages (0-100)
           if (progress.score !== null && progress.score > 0) {
-            totalScore += progress.score;
+            // Cap score at 100 for legacy data cleanup in view
+            const cleanScore = Math.min(100, progress.score);
+            totalScore += cleanScore;
             scoreCount++;
           }
         }
       }
 
       const averageScore = scoreCount > 0 ? totalScore / scoreCount : 0;
-      const completionRate = totalNodes > 0 ? (completedNodes / totalNodes) * 100 : 0;
+      
+      // True Completion Rate: progress against the FULL curriculum
+      const totalPossibleCompletions = totalCurriculumNodesPerStudent * studentCount;
+      const completionRate = totalPossibleCompletions > 0 
+        ? (totalCompletedNodesInClass / totalPossibleCompletions) * 100 
+        : 0;
+      
       const averageXP = studentCount > 0 ? totalXP / studentCount : 0;
 
       classAnalytics.push({
@@ -246,34 +317,41 @@ export async function getClassComparisonData(): Promise<{
         schoolYear: cls.school_year,
         studentCount,
         averageScore,
-        completionRate,
+        completionRate: Math.min(100, completionRate), // Cap at 100%
         totalXP,
         averageXP,
         activeStudents,
-        completedNodes,
-        totalAssignedNodes: totalNodes,
+        completedNodes: totalCompletedNodesInClass,
+        totalAssignedNodes: totalPossibleCompletions,
+        curriculumNodes: totalCurriculumNodesPerStudent,
       });
     }
 
     // Calculate summary statistics
-    const totalStudents = classAnalytics.reduce((sum, c) => sum + c.studentCount, 0);
+    const totalStudents = classAnalytics.reduce((sum: number, c: ClassAnalytics) => sum + c.studentCount, 0);
     const avgScore =
       classAnalytics.length > 0
-        ? classAnalytics.reduce((sum, c) => sum + c.averageScore, 0) / classAnalytics.length
+        ? classAnalytics.reduce((sum: number, c: ClassAnalytics) => sum + c.averageScore, 0) / classAnalytics.length
         : 0;
     const avgCompletion =
       classAnalytics.length > 0
-        ? classAnalytics.reduce((sum, c) => sum + c.completionRate, 0) / classAnalytics.length
+        ? classAnalytics.reduce((sum: number, c: ClassAnalytics) => sum + c.completionRate, 0) / classAnalytics.length
         : 0;
 
     // Find highest and lowest performing classes
     let highestClass = null;
     let lowestClass = null;
     if (classAnalytics.length > 0) {
+      // Best class = High score + High participation
       const sorted = [...classAnalytics].sort((a, b) => b.averageScore - a.averageScore);
       highestClass = sorted[0].className;
       lowestClass = sorted[sorted.length - 1].className;
     }
+
+    const avgParticipation =
+      totalStudents > 0
+        ? (classAnalytics.reduce((sum: number, c: ClassAnalytics) => sum + (c.activeStudents || 0), 0) / totalStudents) * 100
+        : 0;
 
     return {
       data: {
@@ -283,6 +361,7 @@ export async function getClassComparisonData(): Promise<{
           totalStudents,
           averageScore: avgScore,
           averageCompletion: avgCompletion,
+          averageParticipation: avgParticipation,
           highestPerformingClass: highestClass,
           lowestPerformingClass: lowestClass,
         },
@@ -611,6 +690,20 @@ export async function getTeacherClassAnalytics(teacherId: string): Promise<{
     const classStudentMap = new Map<number, string[]>();
     const allStudentIds = new Set<string>();
 
+    // Fetch curriculum metadata
+    const { data: subjectsData } = await supabase.from('subjects').select('id, grade_level');
+    const { data: nodeCountsData } = await supabase.from('nodes').select('subject_id, node_type').in('node_type', ['lesson', 'content']);
+    
+    const subjectNodeCountMap = new Map<number, number>();
+    for (const node of nodeCountsData || []) {
+      subjectNodeCountMap.set(node.subject_id, (subjectNodeCountMap.get(node.subject_id) || 0) + 1);
+    }
+    const gradeTotalNodesMap = new Map<number, number>();
+    for (const sub of subjectsData || []) {
+      const grade = parseGrade(sub.grade_level);
+      gradeTotalNodesMap.set(grade, (gradeTotalNodesMap.get(grade) || 0) + (subjectNodeCountMap.get(sub.id) || 0));
+    }
+
     if (classIds.length > 0) {
       const { data: classStudents, error: classStudentsError } = await supabase
         .from('class_students')
@@ -635,35 +728,44 @@ export async function getTeacherClassAnalytics(teacherId: string): Promise<{
 
     if (allStudentIds.size > 0) {
       const studentIdList = Array.from(allStudentIds);
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, total_xp, last_active_at')
-        .in('id', studentIdList);
 
-      if (profilesError) {
-        return { data: null, error: profilesError.message };
-      }
+      const studentIdChunks = chunkArray(studentIdList, CHUNK_SIZE);
+      
+      for (const chunk of studentIdChunks) {
+        // Fetch profiles in chunks
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, total_xp, last_active_at')
+          .in('id', chunk);
 
-      for (const profile of profiles || []) {
-        profileMap.set(profile.id, {
-          total_xp: profile.total_xp,
-          last_active_at: profile.last_active_at,
-        });
-      }
+        if (profilesError) {
+          return { data: null, error: profilesError.message };
+        }
 
-      const { data: pd, error: progressError } = await supabase
-        .from('student_node_progress')
-        .select('status, score, student_id')
-        .in('student_id', studentIdList);
+        for (const profile of profiles || []) {
+          profileMap.set(profile.id, {
+            total_xp: profile.total_xp,
+            last_active_at: profile.last_active_at,
+          });
+        }
 
-      if (progressError) {
-        return { data: null, error: progressError.message };
-      }
+        // Fetch progress in chunks
+        const { data: pd, error: progressError } = await supabase
+          .from('student_node_progress')
+          .select('status, score, student_id')
+          .in('student_id', chunk);
 
-      for (const progress of pd || []) {
-        const studentProgress = progressByStudent.get(progress.student_id) || [];
-        studentProgress.push({ status: progress.status, score: progress.score });
-        progressByStudent.set(progress.student_id, studentProgress);
+        if (progressError) {
+          return { data: null, error: progressError.message };
+        }
+
+        for (const progress of pd || []) {
+          const studentProgress = progressByStudent.get(progress.student_id) || [];
+          // Cast score to number safely since it's stored as TEXT in DB
+          const numericScore = progress.score ? Number(progress.score) : null;
+          studentProgress.push({ status: progress.status, score: numericScore });
+          progressByStudent.set(progress.student_id, studentProgress);
+        }
       }
     }
 
@@ -673,10 +775,12 @@ export async function getTeacherClassAnalytics(teacherId: string): Promise<{
       const studentCount = studentIds.length;
       let totalXP = 0;
       let activeStudents = 0;
-      let completedNodes = 0;
+      let totalCompletedNodesInClass = 0;
       let totalScore = 0;
       let scoreCount = 0;
-      let totalNodes = 0;
+
+      const gradeNum = parseGrade(cls.grade);
+      const totalCurriculumNodesPerStudent = gradeTotalNodesMap.get(gradeNum) || 1;
 
       for (const studentId of studentIds) {
         const profile = profileMap.get(studentId);
@@ -688,16 +792,20 @@ export async function getTeacherClassAnalytics(teacherId: string): Promise<{
         }
 
         const pd = progressByStudent.get(studentId) || [];
-        totalNodes += pd.length;
-
         pd.forEach((p: { status: string; score: number | null }) => {
-          if (p.status === 'completed') completedNodes++;
+          if (p.status === 'completed') totalCompletedNodesInClass++;
           if (p.score !== null && p.score > 0) {
-            totalScore += p.score;
+            const cleanScore = Math.min(100, p.score);
+            totalScore += cleanScore;
             scoreCount++;
           }
         });
       }
+
+      const totalPossibleCompletions = totalCurriculumNodesPerStudent * studentCount;
+      const completionRate = totalPossibleCompletions > 0 
+        ? (totalCompletedNodesInClass / totalPossibleCompletions) * 100 
+        : 0;
 
       classAnalytics.push({
         classId: cls.id,
@@ -706,12 +814,13 @@ export async function getTeacherClassAnalytics(teacherId: string): Promise<{
         schoolYear: cls.school_year,
         studentCount,
         averageScore: scoreCount > 0 ? totalScore / scoreCount : 0,
-        completionRate: totalNodes > 0 ? (completedNodes / totalNodes) * 100 : 0,
+        completionRate: Math.min(100, completionRate),
         totalXP,
         averageXP: studentCount > 0 ? totalXP / studentCount : 0,
         activeStudents,
-        completedNodes,
-        totalAssignedNodes: totalNodes,
+        completedNodes: totalCompletedNodesInClass,
+        totalAssignedNodes: totalPossibleCompletions,
+        curriculumNodes: totalCurriculumNodesPerStudent,
       });
     }
 
@@ -720,9 +829,9 @@ export async function getTeacherClassAnalytics(teacherId: string): Promise<{
         classes: classAnalytics,
         summary: {
           totalClasses: classAnalytics.length,
-          totalStudents: classAnalytics.reduce((sum, c) => sum + c.studentCount, 0),
-          averageScore: classAnalytics.length > 0 ? classAnalytics.reduce((sum, c) => sum + c.averageScore, 0) / classAnalytics.length : 0,
-          averageCompletion: classAnalytics.length > 0 ? classAnalytics.reduce((sum, c) => sum + c.completionRate, 0) / classAnalytics.length : 0,
+          totalStudents: classAnalytics.reduce((sum: number, c: ClassAnalytics) => sum + c.studentCount, 0),
+          averageScore: classAnalytics.length > 0 ? classAnalytics.reduce((sum: number, c: ClassAnalytics) => sum + c.averageScore, 0) / classAnalytics.length : 0,
+          averageCompletion: classAnalytics.length > 0 ? classAnalytics.reduce((sum: number, c: ClassAnalytics) => sum + c.completionRate, 0) / classAnalytics.length : 0,
         }
       },
       error: null
@@ -742,82 +851,97 @@ export async function getStudentReportData(studentId: string): Promise<{
   try {
     const supabase = getSupabaseBrowserClient();
 
-    // 1. Get profile basic info
+    // 1. Get profile and class grade
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, full_name, username, avatar_url, total_xp, level')
+      .select('id, full_name, username, avatar_url, total_xp, classes!inner(grade)')
       .eq('id', studentId)
       .single();
 
     if (profileError) return { data: null, error: profileError.message };
 
-    // 2. Get node progress
-    const { data: nodeProgress } = await supabase
-      .from('student_node_progress')
-      .select(`
-        node_id,
-        status,
-        completed_at,
-        nodes (
-          title
-        )
-      `)
-      .eq('student_id', studentId);
+    const rawGrade = (profile.classes as any)?.grade;
+    const grade = parseGrade(rawGrade);
 
-    // 3. Get test submissions history
-    const { data: testSubmissions } = await supabase
-      .from('test_submissions')
-      .select(`
-        test_id,
-        score,
-        submitted_at,
-        tests (
-          title,
-          type
-        )
-      `)
+    // 2. Fetch curriculum total for this grade
+    const { data: subjectsData } = await supabase.from('subjects').select('id').eq('grade_level', grade.toString());
+    const subjectIds = subjectsData?.map((s: { id: number }) => s.id) || [];
+    
+    let totalCurriculumNodes = 0;
+    if (subjectIds.length > 0) {
+      const { count } = await supabase
+        .from('nodes')
+        .select('id', { count: 'exact', head: true })
+        .in('subject_id', subjectIds)
+        .in('node_type', ['lesson', 'content']);
+      
+      totalCurriculumNodes = count || 0;
+    }
+
+    // 3. Fetch activity log
+    const { data: activities, error: activityError } = await supabase
+      .from('activity_logs')
+      .select('*')
       .eq('student_id', studentId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    // 4. Fetch test history
+    const { data: submissions } = await supabase
+      .from('test_submissions')
+      .select('*, tests(title)')
+      .eq('student_id', studentId)
+      .eq('status', 'completed')
       .order('submitted_at', { ascending: false });
 
-    // Process nodes
-    const nodeHistory = (nodeProgress || []).map((p: any) => ({
-      nodeId: p.node_id,
-      nodeTitle: p.nodes?.title || 'Unknown Node',
-      status: p.status,
-      completedAt: p.completed_at
-    }));
+    // 5. Fetch node progress
+    const { data: studentProgress } = await supabase
+      .from('student_node_progress')
+      .select('*, nodes(title)')
+      .eq('student_id', studentId);
 
-    const completedNodes = nodeHistory.filter((n: { status: string }) => n.status === 'completed').length;
-    const totalNodes = nodeHistory.length;
+    const completedNodes = (studentProgress || []).filter((p: { status: string }) => p.status === 'completed').length;
+    const testScores = (submissions || [])
+      .map((s: any) => s.score ? Number(s.score) : 0)
+      .filter((s: number) => s > 0);
+    
+    const averageTestScore = testScores.length > 0 
+      ? testScores.reduce((sum: number, s: number) => sum + s, 0) / testScores.length 
+      : 0;
 
-    // Process tests
-    const testHistory = (testSubmissions || []).map((s: any) => ({
-      testId: s.test_id,
-      testTitle: s.tests?.title || 'Unknown Test',
-      score: s.score,
-      submittedAt: s.submitted_at,
-      type: s.tests?.type || 'practice'
-    }));
-
-    const totalScore = testHistory.reduce((sum: number, t: { score: number }) => sum + t.score, 0);
-    const averageScore = testHistory.length > 0 ? totalScore / testHistory.length : 0;
-
-    return {
-      data: {
-        studentId: profile.id,
-        fullName: profile.full_name,
-        username: profile.username,
-        avatarUrl: profile.avatar_url,
-        totalXP: profile.total_xp || 0,
-        level: profile.level || 1,
-        completedNodes,
-        totalNodes,
-        averageTestScore: averageScore,
-        testHistory,
-        nodeHistory
-      },
-      error: null
+    const reportData: StudentReportData = {
+      studentId: profile.id,
+      fullName: profile.full_name,
+      username: profile.username,
+      avatarUrl: profile.avatar_url,
+      totalXP: profile.total_xp || 0,
+      level: Math.floor((profile.total_xp || 0) / 100) + 1,
+      totalNodes: totalCurriculumNodes || studentProgress?.length || 0,
+      completedNodes,
+      averageTestScore,
+      recentActivity: (activities || []).map((a: any) => ({
+        id: a.id,
+        type: a.activity_type,
+        description: a.description,
+        xpEarned: a.xp_earned,
+        createdAt: a.created_at,
+      })),
+      testHistory: (submissions || []).map((s: any) => ({
+        testId: s.test_id,
+        testTitle: s.tests?.title || 'Bài tập',
+        score: s.score ? Number(s.score) : 0,
+        submittedAt: s.submitted_at,
+        type: s.score >= 50 ? 'pass' : 'fail',
+      })),
+      nodeHistory: (studentProgress || []).map((p: any) => ({
+        nodeId: p.node_id.toString(),
+        nodeTitle: p.nodes?.title || 'Bài học',
+        status: p.status,
+        completedAt: p.completed_at,
+      })),
     };
+
+    return { data: reportData, error: null };
   } catch (err) {
     return { data: null, error: err instanceof Error ? err.message : 'Unknown error' };
   }

@@ -74,19 +74,29 @@ export const transformDBNodesToFlow = (
   let offsetX = 0;
   let offsetY = 0;
 
-  if (!isTeacherMode && sortedNodes.length > 0) {
-    const isCompletable = (n: any) => n.node_type !== 'chapter' && n.node_type !== 'subject';
-    
-    let activeNode = sortedNodes.find(n => isCompletable(n) && !completedNodeIds.includes(n.id));
-    
+  if (sortedNodes.length > 0) {
+    const isCompletable = (n: any) => n.node_type !== "chapter" && n.node_type !== "subject";
+
+    let activeNode;
+    if (!isTeacherMode) {
+      // Students: first uncompleted completable node
+      activeNode = sortedNodes.find(
+        (n) => isCompletable(n) && !completedNodeIds.includes(n.id),
+      );
+    } else {
+      // Teachers: first completable node (starting point)
+      activeNode = sortedNodes.find((n) => isCompletable(n));
+    }
+
     // Fallback: all done -> focus last one
     if (!activeNode) {
       const completableItems = sortedNodes.filter(isCompletable);
-      activeNode = completableItems.length > 0 
-        ? completableItems[completableItems.length - 1] 
-        : sortedNodes[sortedNodes.length - 1];
+      activeNode =
+        completableItems.length > 0
+          ? completableItems[completableItems.length - 1]
+          : sortedNodes[sortedNodes.length - 1];
     }
-    
+
     if (activeNode) {
       offsetX = activeNode.position_x || 0;
       offsetY = activeNode.position_y || 0;

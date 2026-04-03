@@ -91,19 +91,16 @@ export const useSkillTreeFocus = (
     );
 
     if (canAutoFocus) {
-      if (!isTeacherMode) {
-        // Mark as focused immediately to prevent double-fire if the effect
-        // re-runs within the delay window.
-        hasAutoFocused.current = true;
-        // Delay focus by 300ms so that:
-        // 1. completedNodeIds ref has settled (parallel fetch with subjectNodes)
-        // 2. ReactFlow has finished its internal layout cycle after onInit
-        // Pass `true` so the initial jump happens instantly (duration 0)
-        // rather than taking 800ms, which causes user to see top nodes first.
-        const timer = setTimeout(() => applyFocus(true), 300);
-        return () => clearTimeout(timer);
-      }
+      // Mark as focused immediately to prevent double-fire if the effect
+      // re-runs within the delay window.
       hasAutoFocused.current = true;
+      // Delay focus by 300ms so that:
+      // 1. completedNodeIds ref has settled (parallel fetch with subjectNodes)
+      // 2. ReactFlow has finished its internal layout cycle after onInit
+      // Pass `true` so the initial jump happens instantly (duration 0)
+      // rather than taking 800ms, which causes user to see top nodes first.
+      const timer = setTimeout(() => applyFocus(true), 300);
+      return () => clearTimeout(timer);
     }
 
     // Reset flag when subject changes (nodes go back to empty)

@@ -102,6 +102,70 @@ export default function ClassDetailPage() {
     fetchData();
   }, [classId, user?.id, fetchClassData]);
 
+  // Check if current teacher is homeroom teacher
+  const isHomeroomTeacher = teacherData?.homeroom_classes?.some(
+    (c) => c.id === Number(classId),
+  );
+
+  // Sorting and filtering logic for students
+  const filteredAndSortedStudents = React.useMemo(() => {
+    if (!classData?.students) return [];
+    return classData.students
+      .filter((student: any) => {
+        const matchesSearch =
+          student.profile.full_name
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          student.profile.username
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase());
+        const matchesGrade =
+          filterGrade === 0 || student.profile.grade === filterGrade;
+        return matchesSearch && matchesGrade;
+      })
+      .sort((a: any, b: any) => {
+        let comparison = 0;
+
+        switch (sortBy) {
+          case "name":
+            comparison = (
+              a.profile.full_name ||
+              a.profile.username ||
+              ""
+            ).localeCompare(b.profile.full_name || b.profile.username || "");
+            break;
+          case "xp":
+            comparison = a.profile.total_xp - b.profile.total_xp;
+            break;
+          case "grade":
+            comparison = (a.profile.grade || 0) - (b.profile.grade || 0);
+            break;
+          case "joined":
+            comparison =
+              new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime();
+            break;
+          default:
+            return 0;
+        }
+
+        return sortOrder === "asc" ? comparison : -comparison;
+      });
+  }, [classData?.students, searchTerm, filterGrade, sortBy, sortOrder]);
+
+  // Pagination
+  const { totalPages, currentStudents } = React.useMemo(() => {
+    const totalPgs = Math.max(
+      1,
+      Math.ceil(filteredAndSortedStudents.length / itemsPerPage),
+    );
+    const startIdx = (currentPage - 1) * itemsPerPage;
+    const endIdx = startIdx + itemsPerPage;
+    return {
+      totalPages: totalPgs,
+      currentStudents: filteredAndSortedStudents.slice(startIdx, endIdx),
+    };
+  }, [filteredAndSortedStudents, currentPage, itemsPerPage]);
+
   if (loading) {
     return (
       <Loading message="Đang tải thông tin lớp học..." size="lg" fullScreen />
@@ -159,69 +223,6 @@ export default function ClassDetailPage() {
       </div>
     );
   }
-
-  // Check if current teacher is homeroom teacher
-  const isHomeroomTeacher = teacherData?.homeroom_classes?.some(
-    (c) => c.id === Number(classId),
-  );
-
-  // Sorting and filtering logic for students
-  const filteredAndSortedStudents = React.useMemo(() => {
-    return classData.students
-      .filter((student: any) => {
-        const matchesSearch =
-          student.profile.full_name
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          student.profile.username
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase());
-        const matchesGrade =
-          filterGrade === 0 || student.profile.grade === filterGrade;
-        return matchesSearch && matchesGrade;
-      })
-      .sort((a: any, b: any) => {
-        let comparison = 0;
-
-        switch (sortBy) {
-          case "name":
-            comparison = (
-              a.profile.full_name ||
-              a.profile.username ||
-              ""
-            ).localeCompare(b.profile.full_name || b.profile.username || "");
-            break;
-          case "xp":
-            comparison = a.profile.total_xp - b.profile.total_xp;
-            break;
-          case "grade":
-            comparison = (a.profile.grade || 0) - (b.profile.grade || 0);
-            break;
-          case "joined":
-            comparison =
-              new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime();
-            break;
-          default:
-            return 0;
-        }
-
-        return sortOrder === "asc" ? comparison : -comparison;
-      });
-  }, [classData.students, searchTerm, filterGrade, sortBy, sortOrder]);
-
-  // Pagination
-  const { totalPages, currentStudents } = React.useMemo(() => {
-    const totalPgs = Math.max(
-      1,
-      Math.ceil(filteredAndSortedStudents.length / itemsPerPage),
-    );
-    const startIdx = (currentPage - 1) * itemsPerPage;
-    const endIdx = startIdx + itemsPerPage;
-    return {
-      totalPages: totalPgs,
-      currentStudents: filteredAndSortedStudents.slice(startIdx, endIdx),
-    };
-  }, [filteredAndSortedStudents, currentPage, itemsPerPage]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);

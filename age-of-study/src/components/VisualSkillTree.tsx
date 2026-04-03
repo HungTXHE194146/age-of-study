@@ -33,6 +33,7 @@ import { NotebookDecorations } from "./visual-skill-tree/NotebookDecorations";
 import { CustomNode } from "./visual-skill-tree/CustomNode";
 import { CustomEdge } from "./visual-skill-tree/CustomEdge";
 import { NodeCallbacksContext } from "./visual-skill-tree/NodeCallbacksContext";
+import { useSkillTreeFocus } from "./visual-skill-tree/useSkillTreeFocus";
 import {
   VisualSkillTreeProps,
   CustomNodeType,
@@ -82,6 +83,15 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     searchResults,
     handleSelectNode,
   } = useSkillTreeSearch(nodes, onNodeSelected, rfInstance, isTeacherMode);
+
+  // Focus logic
+  useSkillTreeFocus(
+    rfInstance,
+    subjectNodes,
+    nodes,
+    Array.from(completedNodesSet), // Convert Set back to Array for the hook
+    isTeacherMode,
+  );
 
   // Low data mode listener
   useEffect(() => {
@@ -350,6 +360,14 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
       typeof window !== "undefined" ? window.innerWidth / 2 : 500;
     const paddingY =
       typeof window !== "undefined" ? window.innerHeight / 2 : 500;
+
+    // For teacher mode, strictly limit horizontal panning to keep tree centered
+    if (isTeacherMode) {
+      return [
+        [-50, minY - paddingY],
+        [50, maxY + paddingY],
+      ] as [[number, number], [number, number]];
+    }
 
     return [
       [minX - paddingX, minY - paddingY],
@@ -732,8 +750,9 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
             elementsSelectable={true}
             translateExtent={translateExtent}
             defaultViewport={{
-              x:
-                typeof window !== "undefined"
+              x: isTeacherMode
+                ? 200 - 75 * 0.8
+                : typeof window !== "undefined"
                   ? window.innerWidth / 2 - 75
                   : 400,
               y: 150,

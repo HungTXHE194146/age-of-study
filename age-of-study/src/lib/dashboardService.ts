@@ -114,27 +114,51 @@ export async function getTeacherDashboardSummary(teacherId: string): Promise<{ d
       const classActivityLogs = logsResult.data || [];
       const progress = progressResult.data || [];
 
+      const parseGrade = (gl: any) => {
+        if (!gl) return 5;
+        const match = gl.toString().match(/\d+/);
+        return match ? parseInt(match[0]) : 5;
+      };
+
+      // Fetch curriculum metadata for truthful progress
+      const grade = parseGrade(mainHomeroom.grade);
+      const { data: allSubjects } = await supabase.from('subjects').select('id, grade_level');
+      const subjectIds = (allSubjects || [])
+        .filter((s: { id: number; grade_level: string }) => parseGrade(s.grade_level) === grade)
+        .map((s: { id: number }) => s.id);
+      
+      let gradeTotalNodes = 0;
+      if (subjectIds.length > 0) {
+        const { count } = await supabase
+          .from('nodes')
+          .select('id', { count: 'exact', head: true })
+          .in('subject_id', subjectIds)
+          .in('node_type', ['lesson', 'content']);
+        gradeTotalNodes = count || 0;
+      }
+
       let totalScore = 0;
       let scoreCount = 0;
       let completedCount = 0;
-      const totalNodes = progress.length;
 
       progress.forEach((p: any) => {
         if (p.status === 'completed') completedCount++;
         if (p.score) {
-          const scoreVal = typeof p.score === 'string' ? parseFloat(p.score) : p.score;
+          const scoreVal = typeof p.score === 'string' ? Number(p.score) : p.score;
           if (!isNaN(scoreVal)) {
-            totalScore += scoreVal;
+            totalScore += Math.min(100, scoreVal);
             scoreCount++;
           }
         }
       });
 
+      const totalPossibleCompletions = gradeTotalNodes * studentIds.length;
+
       homeroomDetails = {
         classId: mainHomeroom.id,
         className: mainHomeroom.name,
         averageScore: scoreCount > 0 ? totalScore / scoreCount : 0,
-        completionRate: totalNodes > 0 ? (completedCount / totalNodes) * 100 : 0,
+        completionRate: totalPossibleCompletions > 0 ? (completedCount / totalPossibleCompletions) * 100 : 0,
         students: studentsData,
         activityLogs: classActivityLogs
       };

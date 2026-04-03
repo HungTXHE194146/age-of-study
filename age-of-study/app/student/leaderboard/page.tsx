@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import {
   getStudentLeaderboard,
+  getStudentLeaderboardEntry,
   type LeaderboardEntry,
   type LeaderboardPeriod,
 } from "@/lib/leaderboardService";
@@ -22,6 +23,8 @@ export default function LeaderboardPage() {
   const [period, setPeriod] = useState<LeaderboardPeriod>("all-time");
   const [viewMode, setViewMode] = useState<ViewMode>("personal");
   const [loading, setLoading] = useState(true);
+  const [currentUserEntry, setCurrentUserEntry] =
+    useState<LeaderboardEntry | null>(null);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -29,18 +32,28 @@ export default function LeaderboardPage() {
     }
   }, [isAuthenticated, isLoading, router]);
 
-  // Only fetch when the leaderboard tab (class view) is active or when switching to it
+  // Fetch leaderboard data on period change or initial mount
   useEffect(() => {
-    if (viewMode === "class") {
+    if (user?.id) {
       loadLeaderboard();
     }
-  }, [period, viewMode]);
+  }, [period, user?.id]);
 
   const loadLeaderboard = async () => {
     setLoading(true);
     try {
       const data = await getStudentLeaderboard(period, 50);
       setLeaderboard(data);
+
+      // Check if current user is in the top 50
+      const foundInList = data.find((e) => e.id === user?.id);
+      if (foundInList) {
+        setCurrentUserEntry(foundInList);
+      } else if (user?.id) {
+        // Fetch specifically for the current user if not in top list
+        const specificEntry = await getStudentLeaderboardEntry(user.id, period);
+        setCurrentUserEntry(specificEntry);
+      }
     } catch (error) {
       console.error("Error loading leaderboard:", error);
     } finally {
@@ -52,7 +65,7 @@ export default function LeaderboardPage() {
     return <Loading message="Đang tải bảng xếp hạng..." size="lg" fullScreen />;
   }
 
-  const userEntry = leaderboard.find((e) => e.id === user?.id);
+  const userEntry = currentUserEntry;
   const topTen = leaderboard.slice(0, 10);
 
   return (

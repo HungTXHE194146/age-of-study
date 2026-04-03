@@ -65,7 +65,7 @@ export default function TeacherLeaderboardPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const data = await getTeacherLeaderboardData();
+      const data = await getTeacherLeaderboardData({ teacherId: user?.id });
       setStudents(data);
     } catch (error) {
       console.error("Error loading teacher leaderboard:", error);

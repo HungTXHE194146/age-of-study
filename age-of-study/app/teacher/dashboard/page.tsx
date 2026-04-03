@@ -40,6 +40,21 @@ export default function TeacherDashboard() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(true);
 
+  const todayLabel = useMemo(() => {
+    return new Date().toLocaleDateString("vi-VN", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+  }, []);
+
+  const handleNavigate = useCallback(
+    (path: string) => {
+      router.push(path);
+    },
+    [router],
+  );
+
   // No need to call checkAuth() here - the layout already does it
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
@@ -90,20 +105,6 @@ export default function TeacherDashboard() {
     return null;
   }
 
-  const todayLabel = useMemo(() => {
-    return new Date().toLocaleDateString("vi-VN", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    });
-  }, []);
-
-  const handleNavigate = useCallback(
-    (path: string) => {
-      router.push(path);
-    },
-    [router],
-  );
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-12">
       {/* Top Decoration Bar */}
