@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/store/useAuthStore";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import "./GameHeader.css";
 
@@ -228,6 +228,34 @@ export default function GameHeader() {
               </span>
             </motion.div>
 
+            {/* Shop Badge */}
+            <motion.div
+              className="hud-badge hud-badge--shop cursor-pointer"
+              whileHover={{ scale: 1.08 }}
+              transition={SPRING}
+              onClick={() => router.push("/student/shop")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  router.push("/student/shop");
+                }
+              }}
+              aria-label="Cửa hàng"
+            >
+              <span
+                role="img"
+                aria-label="Shop"
+                className="text-base sm:text-lg"
+              >
+                🛍️
+              </span>
+              <span className="whitespace-nowrap text-xs sm:text-sm">
+                Cửa hàng
+              </span>
+            </motion.div>
+
             {/* Avatar + Dropdown */}
             <div className="relative z-50" ref={dropdownRef}>
               <motion.button
@@ -294,6 +322,27 @@ export default function GameHeader() {
                     >
                       <User size={16} />
                       <span>Hồ sơ của tôi</span>
+                    </div>
+
+                    <div className="hud-dropdown-divider" />
+
+                    <div
+                      className="hud-dropdown-item"
+                      role="menuitem"
+                      tabIndex={0}
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        router.push("/student/shop");
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          setDropdownOpen(false);
+                          router.push("/student/shop");
+                        }
+                      }}
+                    >
+                      <ShoppingCart size={16} />
+                      <span>Cửa hàng</span>
                     </div>
 
                     <div className="hud-dropdown-divider" />

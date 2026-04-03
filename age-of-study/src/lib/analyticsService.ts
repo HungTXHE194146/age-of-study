@@ -376,9 +376,17 @@ export async function getTeacherActivityReport(): Promise<{
     let inactiveCount = 0;
     let neverLoggedInCount = 0;
 
+    // Pre-calculate assignments by teacher_id (M-9 O(1) lookup)
+    const assignmentsByTeacher = new Map<string, any[]>();
+    for (const a of classAssignments || []) {
+      const arr = assignmentsByTeacher.get(a.teacher_id) || [];
+      arr.push(a);
+      assignmentsByTeacher.set(a.teacher_id, arr);
+    }
+
     for (const teacher of teachers) {
-      // Get class assignments for this teacher
-      const assignments = classAssignments?.filter((a: any) => a.teacher_id === teacher.id) || [];
+      // Get class assignments for this teacher using Map
+      const assignments = assignmentsByTeacher.get(teacher.id) || [];
       const homeroomCount = assignments.filter((a: any) => a.is_homeroom).length;
       const subjectCount = assignments.filter((a: any) => !a.is_homeroom).length;
       const totalClasses = assignments.length;

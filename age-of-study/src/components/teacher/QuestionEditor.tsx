@@ -484,7 +484,7 @@ export const QuestionEditor = memo(function QuestionEditor({
                   onChange={(e) =>
                     handleMetadataChange(
                       "orderedWords",
-                      e.target.value.split(",").map((s) => s.trim()),
+                      e.target.value.split(",").map((s: any) => s.trim()),
                     )
                   }
                   className="w-full px-4 py-3 mt-4 border-2 border-dashed border-gray-400 rounded-lg focus:outline-none focus:border-black font-medium transition-colors"
@@ -505,8 +505,10 @@ export const QuestionEditor = memo(function QuestionEditor({
                         <input
                           value={pair.left}
                           onChange={(e) => {
-                            const newPairs = (editedQuestion.metadata?.matchingPairs || []).map(
-                              (p, i) => i === idx ? { ...p, left: e.target.value } : p
+                            const newPairs = (
+                              editedQuestion.metadata?.matchingPairs || []
+                            ).map((p, i) =>
+                              i === idx ? { ...p, left: e.target.value } : p,
                             );
                             handleMetadataChange("matchingPairs", newPairs);
                           }}
@@ -516,8 +518,10 @@ export const QuestionEditor = memo(function QuestionEditor({
                         <input
                           value={pair.right}
                           onChange={(e) => {
-                            const newPairs = (editedQuestion.metadata?.matchingPairs || []).map(
-                              (p, i) => i === idx ? { ...p, right: e.target.value } : p
+                            const newPairs = (
+                              editedQuestion.metadata?.matchingPairs || []
+                            ).map((p, i) =>
+                              i === idx ? { ...p, right: e.target.value } : p,
                             );
                             handleMetadataChange("matchingPairs", newPairs);
                           }}
@@ -651,8 +655,10 @@ export const QuestionEditor = memo(function QuestionEditor({
                       <input
                         value={blank.answer}
                         onChange={(e) => {
-                          const newBlanks = (editedQuestion.metadata?.blanks || []).map(
-                            (b, i) => i === idx ? { ...b, answer: e.target.value } : b
+                          const newBlanks = (
+                            editedQuestion.metadata?.blanks || []
+                          ).map((b, i) =>
+                            i === idx ? { ...b, answer: e.target.value } : b,
                           );
                           handleMetadataChange("blanks", newBlanks);
                         }}
@@ -721,8 +727,10 @@ export const QuestionEditor = memo(function QuestionEditor({
                         <input
                           value={cat.name}
                           onChange={(e) => {
-                            const newCats = (editedQuestion.metadata?.categories || []).map(
-                              (c, i) => i === idx ? { ...c, name: e.target.value } : c
+                            const newCats = (
+                              editedQuestion.metadata?.categories || []
+                            ).map((c, i) =>
+                              i === idx ? { ...c, name: e.target.value } : c,
                             );
                             handleMetadataChange("categories", newCats);
                           }}
@@ -746,14 +754,18 @@ export const QuestionEditor = memo(function QuestionEditor({
                       <textarea
                         value={cat.items.join(", ")}
                         onChange={(e) => {
-                          const newCats = (editedQuestion.metadata?.categories || []).map(
-                            (c, i) => i === idx ? {
-                              ...c,
-                              items: e.target.value
-                                .split(",")
-                                .map((s) => s.trim())
-                                .filter((s) => s !== "")
-                            } : c
+                          const newCats = (
+                            editedQuestion.metadata?.categories || []
+                          ).map((c, i) =>
+                            i === idx
+                              ? {
+                                  ...c,
+                                  items: e.target.value
+                                    .split(",")
+                                    .map((s: any) => s.trim())
+                                    .filter((s) => s !== ""),
+                                }
+                              : c,
                           );
                           handleMetadataChange("categories", newCats);
                         }}

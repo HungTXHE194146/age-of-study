@@ -69,6 +69,30 @@ export const transformDBNodesToFlow = (
   // Compute locks based on sequential order (Strict Sequential Locking)
   let isAnyPreviousLockedOrUncompleted = false;
 
+  // OUT OF THE BOX FIX: Transform coordinates so the Active Node is EXACTLY at (0, 0)!
+  // This physically moves the entire tree so the camera natively sees the active node on load without buggy jumps.
+  let offsetX = 0;
+  let offsetY = 0;
+
+  if (!isTeacherMode && sortedNodes.length > 0) {
+    const isCompletable = (n: any) => n.node_type !== 'chapter' && n.node_type !== 'subject';
+    
+    let activeNode = sortedNodes.find(n => isCompletable(n) && !completedNodeIds.includes(n.id));
+    
+    // Fallback: all done -> focus last one
+    if (!activeNode) {
+      const completableItems = sortedNodes.filter(isCompletable);
+      activeNode = completableItems.length > 0 
+        ? completableItems[completableItems.length - 1] 
+        : sortedNodes[sortedNodes.length - 1];
+    }
+    
+    if (activeNode) {
+      offsetX = activeNode.position_x || 0;
+      offsetY = activeNode.position_y || 0;
+    }
+  }
+
   // 4. Khởi tạo Nodes và Edges
   sortedNodes.forEach(node => {
     const branchColor = getBranchColor(node.id);
@@ -92,7 +116,7 @@ export const transformDBNodesToFlow = (
     rfNodes.push({
       id: nodeId,
       type: "custom",
-      position: { x: node.position_x || 0, y: node.position_y || 0 }, // Lấy tọa độ thật
+      position: { x: (node.position_x || 0) - offsetX, y: (node.position_y || 0) - offsetY }, // Tọa độ thật chuẩn hóa hoàn toàn về (0,0)
       data: {
         id: node.id,
         title: node.title,

@@ -142,6 +142,9 @@ export async function createClass(
           error: `Class created but teacher assignment failed: ${assignError.message}` 
         };
       }
+      
+      // Invalidate cache for this specific teacher
+      invalidateTeacherClassesCache(input.homeroom_teacher_id);
     }
 
     return { data: classData, error: null };
@@ -302,6 +305,31 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
     const teachersData = teachersResult.data || [];
     const studentsData = studentsResult.data || [];
 
+    // Optimize: Fetch activity_logs and student_node_progress separately with limits
+    const studentIds = studentsData.map((s: any) => s.profile.id);
+    let activityLogs: any[] = [];
+    let progressLogs: any[] = [];
+
+    if (studentIds.length > 0) {
+      const limitCount = studentIds.length * 2;
+      const [logsRes, progRes] = await Promise.all([
+        supabase
+          .from('activity_logs')
+          .select('*')
+          .in('student_id', studentIds)
+          .order('created_at', { ascending: false })
+          .limit(limitCount),
+        supabase
+          .from('student_node_progress')
+          .select('*, nodes(title)')
+          .in('student_id', studentIds)
+          .order('last_accessed_at', { ascending: false, nullsFirst: false })
+          .limit(limitCount)
+      ]);
+      activityLogs = logsRes.data || [];
+      progressLogs = progRes.data || [];
+    }
+
     // Find homeroom teacher
     const homeroomTeachers = teachersData.filter((ct: any) => ct.is_homeroom);
     const homeroomTeacher = homeroomTeachers.length > 0 ? {
@@ -325,24 +353,16 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
       students: studentsData.map((s: any) => {
         // Find the latest activity
         let latestActivity = null;
-        if (s.profile.activity_logs && s.profile.activity_logs.length > 0) {
-          // Sort descending by created_at just to be safe
-          const sortedActs = [...s.profile.activity_logs].sort((a, b) => 
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-          latestActivity = sortedActs[0];
+        const studentActivities = activityLogs.filter((a: any) => a.student_id === s.profile.id);
+        if (studentActivities.length > 0) {
+          latestActivity = studentActivities[0];
         }
 
         // Find the latest progress node
         let latestProgress = null;
-        if (s.profile.student_node_progress && s.profile.student_node_progress.length > 0) {
-          // Sort descending by last_accessed_at or completed_at
-          const sortedProg = [...s.profile.student_node_progress].sort((a, b) => {
-            const timeA = new Date(a.last_accessed_at || a.completed_at || 0).getTime();
-            const timeB = new Date(b.last_accessed_at || b.completed_at || 0).getTime();
-            return timeB - timeA;
-          });
-          latestProgress = sortedProg[0];
+        const studentProgress = progressLogs.filter((p: any) => p.student_id === s.profile.id);
+        if (studentProgress.length > 0) {
+          latestProgress = studentProgress[0];
         }
 
         return {
@@ -473,6 +493,14 @@ function mergeHomeroomAndSubjectMaps(
  * Get all classes assigned to a teacher (both homeroom and subject)
  */
 let teacherClassesCache: { userId: string, data: any, timestamp: number } | null = null;
+
+export function invalidateTeacherClassesCache(teacherId?: string) {
+  if (teacherId && teacherClassesCache?.userId === teacherId) {
+    teacherClassesCache = null;
+  } else if (!teacherId) {
+    teacherClassesCache = null;
+  }
+}
 
 export async function getTeacherClasses(
 
@@ -622,6 +650,7 @@ export async function assignTeacherToClass(
       return { data: null, error: error.message };
     }
 
+    invalidateTeacherClassesCache(input.teacher_id);
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -652,6 +681,7 @@ export async function removeTeacherFromClass(
       return { data: null, error: error.message };
     }
 
+    invalidateTeacherClassesCache(teacherId);
     return { data: true, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -789,6 +819,8 @@ export async function joinClassByCode(
       return { data: null, error: error.message };
     }
 
+    // Since we don't know the exact teacher id here, invalidate all caches
+    invalidateTeacherClassesCache();
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

@@ -23,14 +23,9 @@ export const useSkillTreeFocus = (
       const items = isInitial ? subjectNodes : nodes;
       if (!items || items.length === 0) return;
 
-      const currentCompletedIds = isInitial
-        ? completedNodeIdsRef.current || []
-        : completedNodeIds;
-      const maxCompletedId =
-        currentCompletedIds.length > 0
-          ? Math.max(...currentCompletedIds)
-          : null;
-      const nextNodeId = maxCompletedId !== null ? maxCompletedId + 1 : null;
+      // Always use the ref to get the absolute latest value after
+      // both subjectNodes and completedNodeIds have settled.
+      const currentCompletedIds = completedNodeIdsRef.current;
 
       const getId = (n: any) =>
         typeof n.id === "number" ? n.id : Number(n.data?.id);
@@ -43,18 +38,30 @@ export const useSkillTreeFocus = (
           ? n.position_y
           : n.position?.y ?? 0;
 
-      // Extract node finding logic into distinct steps to avoid complex conditional expressions
-      let activeNode = undefined;
+      // Sort by order_index to determine curriculum order (not DB id order)
       const sortedItems = [...items].sort((a: any, b: any) => {
         const orderA = a.order_index ?? a.data?.order_index ?? getId(a);
         const orderB = b.order_index ?? b.data?.order_index ?? getId(b);
         return orderA - orderB;
       });
 
-      activeNode = sortedItems.find((n: any) => !currentCompletedIds.includes(getId(n)));
+      // Target: first node (by curriculum order) that isn't completed yet
+      // CRITICAL FIX: Skip chapter/subject nodes because they are never "completed" in DB
+      const isCompletable = (n: any) => {
+        const type = n.node_type || n.data?.nodeType;
+        return type !== "chapter" && type !== "subject";
+      };
 
+      let activeNode = sortedItems.find(
+        (n: any) => isCompletable(n) && !currentCompletedIds.includes(getId(n)),
+      );
+
+      // Fallback: all completable nodes done — focus the last completable one
       if (!activeNode && sortedItems.length > 0) {
-        activeNode = sortedItems[sortedItems.length - 1];
+        const completableItems = sortedItems.filter(isCompletable);
+        activeNode = completableItems.length > 0 
+          ? completableItems[completableItems.length - 1] 
+          : sortedItems[sortedItems.length - 1];
       }
 
       if (activeNode) {
@@ -76,20 +83,34 @@ export const useSkillTreeFocus = (
   );
 
   useEffect(() => {
-    const hasData = subjectNodes && subjectNodes.length > 0;
+    // Trigger after ReactFlow nodes are populated (not raw subjectNodes),
+    // so setCenter coordinates match what ReactFlow has actually rendered.
+    const hasData = nodes && nodes.length > 0;
     const canAutoFocus = Boolean(
       rfInstance && !hasAutoFocused.current && hasData,
     );
 
     if (canAutoFocus) {
-      if (!isTeacherMode) applyFocus(true);
+      if (!isTeacherMode) {
+        // Mark as focused immediately to prevent double-fire if the effect
+        // re-runs within the delay window.
+        hasAutoFocused.current = true;
+        // Delay focus by 300ms so that:
+        // 1. completedNodeIds ref has settled (parallel fetch with subjectNodes)
+        // 2. ReactFlow has finished its internal layout cycle after onInit
+        // Pass `true` so the initial jump happens instantly (duration 0)
+        // rather than taking 800ms, which causes user to see top nodes first.
+        const timer = setTimeout(() => applyFocus(true), 300);
+        return () => clearTimeout(timer);
+      }
       hasAutoFocused.current = true;
     }
 
+    // Reset flag when subject changes (nodes go back to empty)
     if (!hasData) {
       hasAutoFocused.current = false;
     }
-  }, [rfInstance, isTeacherMode, subjectNodes, applyFocus]);
+  }, [rfInstance, isTeacherMode, nodes, applyFocus]);
 
   return { applyFocus };
 };

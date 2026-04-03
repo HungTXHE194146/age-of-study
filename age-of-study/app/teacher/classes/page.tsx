@@ -457,11 +457,12 @@ export default function TeacherClassesPage() {
                       <span
                         className="text-xl font-bold text-gray-800 truncate block"
                         title={classData.subjects
-                          ?.map((s) => s.name)
+                          ?.map((s: any) => s.name)
                           .join(", ")}
                       >
-                        {classData.subjects?.map((s) => s.name).join(", ") ||
-                          "N/A"}
+                        {classData.subjects
+                          ?.map((s: any) => s.name)
+                          .join(", ") || "N/A"}
                       </span>
                     </div>
                   </div>

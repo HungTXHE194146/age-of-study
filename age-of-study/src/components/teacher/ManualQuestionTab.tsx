@@ -193,7 +193,7 @@ export function ManualQuestionTab({
           ? {
               orderedWords: state.orderedWordsStr
                 .split(",")
-                .map((s) => s.trim())
+                .map((s: any) => s.trim())
                 .filter(Boolean),
             }
           : state.type === "MATCHING"
@@ -217,7 +217,7 @@ export function ManualQuestionTab({
                         name: c.name,
                         items: c.items
                           .split(",")
-                          .map((s) => s.trim())
+                          .map((s: any) => s.trim())
                           .filter(Boolean),
                       }))
                       .filter((c) => c.name),

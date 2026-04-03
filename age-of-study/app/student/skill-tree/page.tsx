@@ -41,7 +41,7 @@ export default function StudentSkillTreePage() {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [isSubjectSelectorOpen, setIsSubjectSelectorOpen] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [loading, setLoading] = useState(false);
+
   const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null);
   const [nodeStats, setNodeStats] = useState<StudentNodeStats | null>(null);
   const [nodeStatsLoading, setNodeStatsLoading] = useState(false);
@@ -74,7 +74,6 @@ export default function StudentSkillTreePage() {
 
   useEffect(() => {
     const fetchSubjects = async () => {
-      setLoading(true);
       try {
         const allSubjects = await subjectService.getSubjects();
         // Keep ONLY Vietnamese subjects
@@ -88,8 +87,6 @@ export default function StudentSkillTreePage() {
         }
       } catch (error) {
         console.error("Failed to fetch subjects:", error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -254,29 +251,19 @@ export default function StudentSkillTreePage() {
         <div className="flex-1 relative z-10 flex w-full h-full overflow-hidden">
           {/* Tree View Section */}
           <div className="flex-1 relative h-full">
-            {loading ? (
-              <div className="h-full flex items-center justify-center">
-                <Loading message="Đang chuẩn bị trang giấy..." size="lg" />
-              </div>
-            ) : selectedSubject ? (
-              <div className="h-full w-full">
-                <VisualSkillTree
-                  gradeCode={selectedSubject.grade_level}
-                  isTeacherMode={false}
-                  subjectNodes={subjectNodes}
-                  completedNodeIds={completedNodeIds}
-                  onNodeSelected={(id: string | number) =>
-                    setSelectedNodeId(Number(id))
-                  }
-                />
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center">
-                <p className="text-gray-400 font-bold italic">
-                  Bé hãy chọn môn học để bắt đầu nhé!
-                </p>
-              </div>
-            )}
+            {/* Always render VisualSkillTree — its internal loader handles subjectNodes=null.
+                This eliminates the double-loader flash when subjects load then nodes load. */}
+            <div className="h-full w-full">
+              <VisualSkillTree
+                gradeCode={selectedSubject?.grade_level ?? ""}
+                isTeacherMode={false}
+                subjectNodes={selectedSubject ? subjectNodes : null}
+                completedNodeIds={completedNodeIds}
+                onNodeSelected={(id: string | number) =>
+                  setSelectedNodeId(Number(id))
+                }
+              />
+            </div>
 
             {/* Lesson Card Popup (Notebook Style) */}
             {selectedNodeId && (

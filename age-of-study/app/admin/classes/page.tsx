@@ -622,7 +622,7 @@ function ClassDetailModal({
                 <p className="text-sm text-gray-600 mt-1">
                   Môn dạy:{" "}
                   {classDetail.homeroom_teacher.subjects
-                    .map((s) => s.name)
+                    .map((s: any) => s.name)
                     .join(", ")}
                 </p>
               </div>

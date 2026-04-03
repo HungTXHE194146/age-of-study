@@ -29,7 +29,6 @@ import Loading from "@/components/ui/loading";
 
 // Import extracted components and logic
 import { useSkillTreeSearch } from "./visual-skill-tree/useSkillTreeSearch";
-import { useSkillTreeFocus } from "./visual-skill-tree/useSkillTreeFocus";
 import { NotebookDecorations } from "./visual-skill-tree/NotebookDecorations";
 import { CustomNode } from "./visual-skill-tree/CustomNode";
 import { CustomEdge } from "./visual-skill-tree/CustomEdge";
@@ -134,48 +133,8 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     }
   }, [mappedData, setNodes, setEdges, isLowData, isTeacherMode]);
 
-  // Focus logic
-  const { applyFocus } = useSkillTreeFocus(
-    rfInstance,
-    subjectNodes,
-    nodes,
-    completedNodeIds,
-    isTeacherMode,
-  );
-
-  // Translate extent for zooming boundaries
-  const calculatedTranslateExtent = useMemo(() => {
-    if (!nodes || nodes.length === 0) {
-      return [
-        [-1000, -Infinity],
-        [1000, Infinity],
-      ] as any;
-    }
-
-    let minY = Infinity;
-    let maxY = -Infinity;
-    let minX = Infinity;
-    let maxX = -Infinity;
-
-    for (const node of nodes) {
-      const x = node.position.x;
-      const y = node.position.y;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-    }
-
-    const centerX = (minX + maxX) / 2 + 75; // 75 is half node width
-    const horizontalRange = 200;
-    const headerMarginY = 200;
-    const bottomMarginY = 600;
-
-    return [
-      [centerX - horizontalRange, minY - headerMarginY],
-      [centerX + horizontalRange, maxY + bottomMarginY],
-    ] as any;
-  }, [nodes]);
+  // Active Node has been natively offset to exactly (0, 0) inside skillTreeMapper.
+  // We just let ReactFlow paint natively without complex focus hopping.
 
   // Provide node & edge types
   const nodeTypes = useMemo(() => ({ custom: CustomNode }), []);
@@ -352,15 +311,51 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
   }, [subjectNodes, completedNodesSet, availableWeeks, isTeacherMode]);
 
   const scrollToWeek = (week: number) => {
-    if (!rfInstance || !subjectNodes) return;
+    if (!rfInstance || !subjectNodes || !nodes) return;
     const firstNodeInWeek = subjectNodes.find((n) => n.week_number === week);
     if (firstNodeInWeek) {
-      const x = firstNodeInWeek.position_x ?? 0;
-      const y = firstNodeInWeek.position_y ?? 0;
-      rfInstance.setCenter(x + 75, y + 75, { zoom: 0.8, duration: 800 });
+      // Find the visual node based on the original node ID
+      const visualNode = nodes.find(
+        (n) =>
+          Number(n.id) === firstNodeInWeek.id ||
+          Number(n.data?.id) === firstNodeInWeek.id,
+      );
+      if (visualNode) {
+        rfInstance.setCenter(
+          visualNode.position.x + 75,
+          visualNode.position.y + 75,
+          { zoom: 0.8, duration: 800 },
+        );
+      }
     }
     setShowWeekSelector(false);
   };
+
+  // Re-enable Translate Extent (Bounds limiting) strictly clamped around the visual nodes
+  const translateExtent = useMemo(() => {
+    if (!nodes || nodes.length === 0) return undefined;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const node of nodes) {
+      if (node.position.x < minX) minX = node.position.x;
+      if (node.position.y < minY) minY = node.position.y;
+      if (node.position.x > maxX) maxX = node.position.x;
+      if (node.position.y > maxY) maxY = node.position.y;
+    }
+
+    const paddingX =
+      typeof window !== "undefined" ? window.innerWidth / 2 : 500;
+    const paddingY =
+      typeof window !== "undefined" ? window.innerHeight / 2 : 500;
+
+    return [
+      [minX - paddingX, minY - paddingY],
+      [maxX + paddingX, maxY + paddingY],
+    ] as [[number, number], [number, number]];
+  }, [nodes]);
 
   // Debounced so rapid pan/scroll events don't cause continuous re-renders.
   // Uses functional setState to drop `currentWeek` from the dependency array,
@@ -369,7 +364,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
     () =>
       debounce(
         (event: any, viewport: { x: number; y: number; zoom: number }) => {
-          if (!subjectNodes || isTeacherMode) return;
+          if (!subjectNodes || !nodes || isTeacherMode) return;
 
           const screenTopY = -viewport.y / viewport.zoom;
 
@@ -378,10 +373,16 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
 
           for (const node of subjectNodes) {
             if (node.week_number) {
-              const distance = Math.abs(node.position_y! - screenTopY);
-              if (distance < minDistance) {
-                minDistance = distance;
-                closestNode = node;
+              const visualNode = nodes.find(
+                (n) =>
+                  Number(n.id) === node.id || Number(n.data?.id) === node.id,
+              );
+              if (visualNode) {
+                const distance = Math.abs(visualNode.position.y - screenTopY);
+                if (distance < minDistance) {
+                  minDistance = distance;
+                  closestNode = node;
+                }
               }
             }
           }
@@ -397,7 +398,7 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
         },
         150,
       ),
-    [subjectNodes, isTeacherMode],
+    [subjectNodes, nodes, isTeacherMode],
   );
 
   if (!subjectNodes) {
@@ -716,7 +717,6 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
             onMove={handleMove}
             nodeTypes={nodeTypes as any}
             edgeTypes={edgeTypes as any}
-            fitView
             attributionPosition="bottom-right"
             connectionMode={ConnectionMode.Strict}
             connectionLineType={ConnectionLineType.Bezier}
@@ -730,8 +730,15 @@ const VisualSkillTree: React.FC<VisualSkillTreeProps> = ({
             nodesDraggable={isTeacherMode}
             nodesConnectable={isTeacherMode}
             elementsSelectable={true}
-            translateExtent={calculatedTranslateExtent}
-            defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+            translateExtent={translateExtent}
+            defaultViewport={{
+              x:
+                typeof window !== "undefined"
+                  ? window.innerWidth / 2 - 75
+                  : 400,
+              y: 150,
+              zoom: 0.8,
+            }}
             selectionMode={isTeacherMode ? SelectionMode.Partial : undefined}
             onlyRenderVisibleElements={false}
           >

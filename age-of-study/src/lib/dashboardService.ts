@@ -105,6 +105,7 @@ export async function getTeacherDashboardSummary(teacherId: string): Promise<{ d
           .from('student_node_progress')
           .select('status, score')
           .in('student_id', studentIds)
+          .limit(studentIds.length * 2)
       ]);
 
       if (logsResult.error) console.error('Error fetching homeroom logs:', logsResult.error);

@@ -20,7 +20,7 @@ DECLARE
   v_already_owned boolean;
 BEGIN
   -- 0. Authorization check: ensure caller is the user or admin
-  IF auth.uid() IS NULL OR (auth.uid() != p_user_id AND NOT auth_is_admin()) THEN
+  IF auth.uid() IS NULL OR (auth.uid() != p_user_id AND NOT is_admin()) THEN
     RAISE EXCEPTION 'Unauthorized: cannot purchase avatar for another user';
   END IF;
 
@@ -30,7 +30,7 @@ BEGIN
   END IF;
 
   -- 0c. Acquire advisory lock on (user_id, avatar_code) pair
-  PERFORM pg_advisory_xact_lock(p_user_id::bigint, hashtext(p_avatar_code));
+  PERFORM pg_advisory_xact_lock(hashtext(p_user_id::text), hashtext(p_avatar_code));
 
   -- 1. Check current XP
   SELECT total_xp INTO v_current_xp 
