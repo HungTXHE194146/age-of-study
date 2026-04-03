@@ -36,6 +36,14 @@ export function useStudentTest(testId: string) {
   const [timeWarning, setTimeWarning] = useState(false);
   const [showTimeToast, setShowTimeToast] = useState(false);
   const [wrongAttempts, setWrongAttempts] = useState<Record<string, number>>({});
+  const [evaluatedQuestions, setEvaluatedQuestions] = useState<Record<string, boolean>>({});
+  
+  const [retryQueue, setRetryQueue] = useState<string[]>([]);
+  const [isRetryMode, setIsRetryMode] = useState(false);
+  const [firstAttemptAnswers, setFirstAttemptAnswers] = useState<Record<string, number | string>>({});
+  
+  // Phase 2: Progress Tracking
+  const [correctlyAnswered, setCorrectlyAnswered] = useState<string[]>([]);
 
   const fetchTest = useCallback(async () => {
     setLoading(true);
@@ -64,7 +72,7 @@ export function useStudentTest(testId: string) {
     setIsSubmitting(true);
     setSubmitError(null);
 
-    const answersArray = Object.entries(answers).map(([questionId, value]) => ({
+    const answersArray = Object.entries(firstAttemptAnswers).map(([questionId, value]) => ({
       question_id: questionId,
       selected_option_index: typeof value === "number" ? value : undefined,
       text_answer: typeof value === "string" ? value : undefined,
@@ -88,7 +96,7 @@ export function useStudentTest(testId: string) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [user, test, answers, testId, updateUserXP, isSubmitted, isSubmitting]);
+  }, [user, test, answers, firstAttemptAnswers, testId, updateUserXP, isSubmitted, isSubmitting]);
 
   useEffect(() => {
     if (!isStarted || !test?.settings?.time_limit || isSubmitted || testStartedAtMs === null) {
@@ -130,6 +138,19 @@ export function useStudentTest(testId: string) {
     };
   }, [isStarted, test, isSubmitted, testStartedAtMs, handleSubmitTest]);
 
+  // Page exit warning
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isStarted && !isSubmitted) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isStarted, isSubmitted]);
+
   const handleStartTest = () => {
     setTestStartedAtMs(Date.now());
     setIsStarted(true);
@@ -141,7 +162,11 @@ export function useStudentTest(testId: string) {
   const unansweredCount = totalQuestions - answeredCount;
 
   const handleAnswerChange = (questionId: string, answer: number | string) => {
+    if (evaluatedQuestions[questionId]) return;
     setAnswers((prev) => ({ ...prev, [questionId]: answer }));
+    if (!isRetryMode) {
+      setFirstAttemptAnswers((prev) => ({ ...prev, [questionId]: answer }));
+    }
   };
 
   const handleWrongAttempt = (questionId: string) => {
@@ -151,20 +176,32 @@ export function useStudentTest(testId: string) {
     }));
   };
 
-  const handleNextQuestion = () => {
-    if (!isQuestionComplete && !answers[currentQuestion?.id || ""]) {
-      setIsWobbling(true);
-      setFriendlyMessage("Ôi, hiệp sĩ ơi! Còn một chút xíu nữa thôi, mình hoàn thành nốt nhé!");
-      setTimeout(() => {
-        setIsWobbling(false);
-        setFriendlyMessage(null);
-      }, 3000);
-      return;
-    }
+  const prepareNextRetryQuestion = (qId: string) => {
+    const index = test?.questions.findIndex((q) => q.id === qId) || 0;
+    setCurrentQuestionIndex(index);
+    setEvaluatedQuestions((prev) => ({ ...prev, [qId]: false }));
+    setAnswers((prev) => {
+      const newAnswers = { ...prev };
+      delete newAnswers[qId];
+      return newAnswers;
+    });
+  };
 
-    if (currentQuestionIndex < totalQuestions - 1) {
-      setCurrentQuestionIndex((p) => p + 1);
-      setIsQuestionComplete(false);
+  const handleNextQuestion = () => {
+    if (!isRetryMode) {
+      if (currentQuestionIndex < totalQuestions - 1) {
+        setCurrentQuestionIndex((p) => p + 1);
+      } else if (retryQueue.length > 0) {
+        setIsRetryMode(true);
+        prepareNextRetryQuestion(retryQueue[0]);
+      }
+    } else {
+      // Retry Mode
+      if (retryQueue.length > 0) {
+        // Wait, if they just got it right, it's removed from retryQueue.
+        // So retryQueue[0] is either the NEXT wrong question, or the SAME one if they got it wrong again.
+        prepareNextRetryQuestion(retryQueue[0]);
+      }
     }
   };
 
@@ -215,5 +252,12 @@ export function useStudentTest(testId: string) {
     unansweredCount,
     wrongAttempts,
     handleWrongAttempt,
+    evaluatedQuestions,
+    setEvaluatedQuestions,
+    retryQueue,
+    setRetryQueue,
+    isRetryMode,
+    correctlyAnswered,
+    setCorrectlyAnswered,
   };
 }

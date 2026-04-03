@@ -32,6 +32,7 @@ import {
   NotebookBadge,
 } from "@/components/ui/notebook-card";
 import { getRecommendedVolumeAction } from "@/actions/skillTreeProgressActions";
+import { getSubjectTheme } from "@/constants/subjectThemes";
 
 // Module-level singleton – avoids re-instantiation on every render
 const testService = new TestService();
@@ -40,7 +41,7 @@ export default function StudentSkillTreePage() {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [isSubjectSelectorOpen, setIsSubjectSelectorOpen] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [loading, setLoading] = useState(false);
+
   const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null);
   const [nodeStats, setNodeStats] = useState<StudentNodeStats | null>(null);
   const [nodeStatsLoading, setNodeStatsLoading] = useState(false);
@@ -48,16 +49,16 @@ export default function StudentSkillTreePage() {
   const autoSelectedSubjectIdRef = useRef<number | null>(null);
   const [subjectNodes, setSubjectNodes] = useState<
     | {
-      id: number;
-      title: string;
-      description?: string;
-      node_type: string;
-      parent_node_id?: number | null;
-      position_x?: number;
-      position_y?: number;
-      order_index: number;
-      week_number?: number | null;
-    }[]
+        id: number;
+        title: string;
+        description?: string;
+        node_type: string;
+        parent_node_id?: number | null;
+        position_x?: number;
+        position_y?: number;
+        order_index: number;
+        week_number?: number | null;
+      }[]
     | null
   >(null);
   const [completedNodeIds, setCompletedNodeIds] = useState<number[]>([]);
@@ -73,23 +74,47 @@ export default function StudentSkillTreePage() {
 
   useEffect(() => {
     const fetchSubjects = async () => {
-      setLoading(true);
       try {
         const allSubjects = await subjectService.getSubjects();
-        setSubjects(allSubjects);
+        // Keep ONLY Vietnamese subjects
+        const filteredSubjects = allSubjects.filter(
+          (s) => s.name.includes("Tiếng Việt") || s.code.startsWith("TV"),
+        );
+        setSubjects(filteredSubjects);
 
-        if (allSubjects.length > 0) {
-          setSelectedSubject(allSubjects[0]);
+        if (filteredSubjects.length > 0) {
+          setSelectedSubject(filteredSubjects[0]);
         }
       } catch (error) {
         console.error("Failed to fetch subjects:", error);
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchSubjects();
   }, []);
+
+  // Separate effect for auto-selecting volume (SM-4) - RESTORED for TV
+  useEffect(() => {
+    const handleAutoSelectVolume = async () => {
+      if (
+        selectedSubject &&
+        user?.id &&
+        selectedSubject.code === "TV5" &&
+        autoSelectedSubjectIdRef.current !== selectedSubject.id
+      ) {
+        const recommendedVolume = await getRecommendedVolumeAction(
+          selectedSubject.id,
+          user.id,
+        );
+        autoSelectedSubjectIdRef.current = selectedSubject.id;
+        if (recommendedVolume && recommendedVolume !== selectedVolume) {
+          setSelectedVolume(recommendedVolume);
+        }
+      }
+    };
+
+    handleAutoSelectVolume();
+  }, [selectedSubject, user?.id]);
 
   // Fetch subject nodes and completion status
   useEffect(() => {
@@ -98,33 +123,14 @@ export default function StudentSkillTreePage() {
         setSubjectNodes(null);
         setSelectedNodeId(null);
         try {
-          let currentVolume = selectedVolume;
-
-          // Auto-select volume on initial load for subjects with volumes
-          if (
-            selectedSubject.code === "TV5" &&
-            autoSelectedSubjectIdRef.current !== selectedSubject.id
-          ) {
-            const recommendedVolume = await getRecommendedVolumeAction(
-              selectedSubject.id,
-              user.id,
-            );
-            autoSelectedSubjectIdRef.current = selectedSubject.id;
-            if (recommendedVolume && recommendedVolume !== selectedVolume) {
-              currentVolume = recommendedVolume;
-              setSelectedVolume(recommendedVolume);
-              return; // Let the state update trigger the useEffect again
-            }
-          }
-
           // Pass volume for subjects with volume support (e.g., TV5)
           const volumeParam =
-            selectedSubject.code === "TV5" ? currentVolume : undefined;
+            selectedSubject.code === "TV5" ? selectedVolume : undefined;
 
           // Fetch nodes and completion status in parallel
           const [{ nodes }, completedIds] = await Promise.all([
             fetchSubjectSkillTree(selectedSubject.id, user.id, volumeParam),
-            testService.getCompletedNodeIds(user.id),
+            testService.getCompletedNodeIds(user.id, selectedSubject.id),
           ]);
           setSubjectNodes(nodes || []);
           setCompletedNodeIds(completedIds);
@@ -187,74 +193,53 @@ export default function StudentSkillTreePage() {
     <RouteProtectedWrapper>
       <div className="flex flex-col h-screen bg-[#fdfbf7] font-sans text-slate-900 overflow-hidden notebook-paper-bg">
         {/* --- TOPBAR: NOTEBOOK STYLE --- */}
-        <div className="relative z-20 w-full h-20 bg-white/80 backdrop-blur-md border-b-4 border-black flex items-center justify-between px-6 shrink-0 shadow-[0_4px_0_0_rgba(0,0,0,0.1)]">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-blue-600 border-2 border-black rounded-lg flex items-center justify-center shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
-              <Compass className="w-7 h-7 text-white" />
+        <div className="relative z-20 w-full h-20 bg-white/80 backdrop-blur-md border-b-4 border-black flex items-center justify-between px-2 sm:px-6 shrink-0 shadow-[0_4px_0_0_rgba(0,0,0,0.1)]">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 border-2 border-black rounded-lg flex items-center justify-center shadow-[2px_2px_0_0_rgba(0,0,0,1)] sm:shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+              <Compass className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
             </div>
-            <div>
-              <h1 className="text-xl font-black text-black tracking-tight font-handwritten">
+            <div className="hidden sm:block text-left">
+              <h1 className="text-sm sm:text-xl font-black text-black tracking-tight font-handwritten whitespace-nowrap">
                 SỔ TAY CỦA EM
               </h1>
-              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+              <p className="text-[8px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                 {selectedSubject?.name || "Đang tải..."}
               </p>
             </div>
           </div>
 
-          <div className="relative flex-1 max-w-sm mx-4">
-            <div
-              onClick={() => setIsSubjectSelectorOpen(!isSubjectSelectorOpen)}
-              className="bg-white border-2 border-black rounded-xl px-4 py-2 cursor-pointer hover:bg-gray-50 transition-all shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center justify-between group"
-            >
-              <div className="flex items-center gap-3">
-                <Book className="w-5 h-5 text-blue-600" />
-                <span className="font-bold text-sm">
-                  {selectedSubject ? selectedSubject.name : "Chọn Môn Học"}
-                </span>
-              </div>
-              {isSubjectSelectorOpen ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
+          {/* --- STATIC SUBJECT INFO (No Picker) --- */}
+          <div className="flex-1 flex items-center justify-center px-1 sm:px-4">
+            <div className="bg-white border-2 border-black rounded-xl px-2 sm:px-6 py-1 sm:py-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)] sm:shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-1 sm:gap-3">
+              <Book className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600" />
+              <span className="font-black text-xs sm:text-lg uppercase tracking-tight whitespace-nowrap">
+                {selectedSubject?.name || "Tiếng Việt"}
+              </span>
             </div>
-
-            {isSubjectSelectorOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white border-4 border-black rounded-xl p-2 shadow-[8px_8px_0_0_rgba(0,0,0,1)] z-50 animate-in fade-in zoom-in-95 max-h-64 overflow-y-auto custom-scrollbar">
-                {subjects.map((subject) => (
-                  <div
-                    key={subject.id}
-                    onClick={() => handleSubjectSelect(subject)}
-                    className={`p-3 mb-2 last:mb-0 rounded-lg transition-all cursor-pointer font-bold border-2
-                      ${selectedSubject?.id === subject.id ? "bg-blue-100 border-black" : "hover:bg-gray-100 border-transparent"}
-                    `}
-                  >
-                    {subject.name}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
-          {/* Volume selector - only show for subjects with volumes (e.g., TV5) */}
+          <div className="w-px h-10 bg-black/10 mx-2 hidden md:block" />
+
+          {/* Volume selector - Restore for TV5 */}
           {selectedSubject?.code === "TV5" && (
-            <div className="flex items-center gap-1 bg-white border-2 border-black rounded-xl overflow-hidden shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+            <div className="flex items-center gap-1 bg-white border-2 border-black rounded-xl overflow-hidden shadow-[2px_2px_0_0_rgba(0,0,0,1)] sm:shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               <button
                 onClick={() => setSelectedVolume(1)}
-                className={`px-4 py-2 text-sm font-bold transition-all ${selectedVolume === 1
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-100"
-                  }`}
+                className={`px-2 sm:px-4 py-2 text-[10px] sm:text-sm font-bold transition-all border-r-2 border-black ${
+                  selectedVolume === 1
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-100"
+                }`}
               >
                 Tập 1
               </button>
               <button
                 onClick={() => setSelectedVolume(2)}
-                className={`px-4 py-2 text-sm font-bold transition-all ${selectedVolume === 2
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-100"
-                  }`}
+                className={`px-2 sm:px-4 py-2 text-[10px] sm:text-sm font-bold transition-all ${
+                  selectedVolume === 2
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-100"
+                }`}
               >
                 Tập 2
               </button>
@@ -266,29 +251,19 @@ export default function StudentSkillTreePage() {
         <div className="flex-1 relative z-10 flex w-full h-full overflow-hidden">
           {/* Tree View Section */}
           <div className="flex-1 relative h-full">
-            {loading ? (
-              <div className="h-full flex items-center justify-center">
-                <Loading message="Đang chuẩn bị trang giấy..." size="lg" />
-              </div>
-            ) : selectedSubject ? (
-              <div className="h-full w-full">
-                <VisualSkillTree
-                  gradeCode={selectedSubject.grade_level}
-                  isTeacherMode={false}
-                  subjectNodes={subjectNodes}
-                  completedNodeIds={completedNodeIds}
-                  onNodeSelected={(id: string | number) =>
-                    setSelectedNodeId(Number(id))
-                  }
-                />
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center">
-                <p className="text-gray-400 font-bold italic">
-                  Bé hãy chọn môn học để bắt đầu nhé!
-                </p>
-              </div>
-            )}
+            {/* Always render VisualSkillTree — its internal loader handles subjectNodes=null.
+                This eliminates the double-loader flash when subjects load then nodes load. */}
+            <div className="h-full w-full">
+              <VisualSkillTree
+                gradeCode={selectedSubject?.grade_level ?? ""}
+                isTeacherMode={false}
+                subjectNodes={selectedSubject ? subjectNodes : null}
+                completedNodeIds={completedNodeIds}
+                onNodeSelected={(id: string | number) =>
+                  setSelectedNodeId(Number(id))
+                }
+              />
+            </div>
 
             {/* Lesson Card Popup (Notebook Style) */}
             {selectedNodeId && (
@@ -311,7 +286,11 @@ export default function StudentSkillTreePage() {
                       <div
                         className="w-16 h-16 rounded-2xl flex items-center justify-center border-4 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
                         style={{
-                          backgroundColor: completedNodeIds.includes(selectedNodeId) ? "#22c55e" : "#fbbf24",
+                          backgroundColor: completedNodeIds.includes(
+                            selectedNodeId,
+                          )
+                            ? "#22c55e"
+                            : "#fbbf24",
                         }}
                       >
                         <Sparkles className="text-white w-8 h-8" />
@@ -321,11 +300,17 @@ export default function StudentSkillTreePage() {
                           {selectedNodeData?.title || "Bài học"}
                         </NotebookCardTitle>
                         <div className="flex gap-2 mt-1">
-                          <NotebookBadge variant="default" className="text-[10px] border-black border-2 bg-white text-black">
+                          <NotebookBadge
+                            variant="default"
+                            className="text-[10px] border-black border-2 bg-white text-black"
+                          >
                             Tuần {selectedNodeData?.week_number || "???"}
                           </NotebookBadge>
                           {completedNodeIds.includes(selectedNodeId) && (
-                            <NotebookBadge variant="success" className="text-[10px] border-black border-2">
+                            <NotebookBadge
+                              variant="success"
+                              className="text-[10px] border-black border-2"
+                            >
                               ĐÃ HOÀN THÀNH!
                             </NotebookBadge>
                           )}
@@ -341,21 +326,30 @@ export default function StudentSkillTreePage() {
                         Mục tiêu bài học
                       </div>
                       <p className="text-sm font-bold text-blue-900 leading-relaxed italic">
-                        "{selectedNodeData?.description || "Cùng khám phá kiến thức thú vị trong bài học này nhé!"}"
+                        "
+                        {selectedNodeData?.description ||
+                          "Cùng khám phá kiến thức thú vị trong bài học này nhé!"}
+                        "
                       </p>
                     </div>
 
                     {/* Progress Stats */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-white border-2 border-black rounded-xl p-3 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)]">
-                        <div className="text-[10px] font-black text-gray-500 uppercase mb-1">XP Đạt được</div>
+                        <div className="text-[10px] font-black text-gray-500 uppercase mb-1">
+                          XP Đạt được
+                        </div>
                         <div className="text-2xl font-black text-black">
                           {nodeStats?.stats?.bestXp || 0}
-                          <span className="text-sm text-gray-400 font-bold ml-1">/ {nodeStats?.stats?.requiredXp || 100}</span>
+                          <span className="text-sm text-gray-400 font-bold ml-1">
+                            / {nodeStats?.stats?.requiredXp || 100}
+                          </span>
                         </div>
                       </div>
                       <div className="bg-white border-2 border-black rounded-xl p-3 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)]">
-                        <div className="text-[10px] font-black text-gray-500 uppercase mb-1">Tiến độ</div>
+                        <div className="text-[10px] font-black text-gray-500 uppercase mb-1">
+                          Tiến độ
+                        </div>
                         <div className="text-2xl font-black text-green-600">
                           {nodeStats?.stats?.bestScore || 0}%
                         </div>
@@ -367,7 +361,9 @@ export default function StudentSkillTreePage() {
                       <div className="bg-pink-100 border-2 border-black px-4 py-2 rounded-lg transform -rotate-2 flex items-center gap-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
                         <PlusCircle className="w-5 h-5 text-pink-500" />
                         <span className="text-xs font-black text-pink-700 uppercase">
-                          {completedNodeIds.includes(selectedNodeId) ? "EM THẬT TUYỆT VỜI!" : "CỐ GẮNG LÊN NÀO!"}
+                          {completedNodeIds.includes(selectedNodeId)
+                            ? "EM THẬT TUYỆT VỜI!"
+                            : "CỐ GẮNG LÊN NÀO!"}
                         </span>
                       </div>
                     </div>

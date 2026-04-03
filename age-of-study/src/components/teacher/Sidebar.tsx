@@ -183,7 +183,7 @@ export function Sidebar({ className, isOpen = true, onClose }: SidebarProps) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-2 mb-4">
+          {/* <div className="flex items-center justify-between px-2 mb-4">
             <span className="text-sm font-bold text-indigo-200">
               Tiết kiệm mạng
             </span>
@@ -214,7 +214,7 @@ export function Sidebar({ className, isOpen = true, onClose }: SidebarProps) {
                 className="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"
               ></label>
             </div>
-          </div>
+          </div> */}
 
           <button
             onClick={handleLogout}

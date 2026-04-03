@@ -431,38 +431,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Chỉ giáo viên mới có thể sử dụng tính năng này' }, { status: 403 })
     }
 
-    // Fetch subject name for better AI context
-    let subjectNameInput = subject;
-    try {
-      if (subject && !isNaN(parseInt(subject))) {
-        const { data: subjectData } = await supabase
-          .from('subjects')
-          .select('name')
-          .eq('id', parseInt(subject))
-          .single();
-        if (subjectData && subjectData.name) {
-          subjectNameInput = subjectData.name;
-        }
-      }
-    } catch (e) {
-      console.error('Failed to fetch subject name', e);
-    }
+    const subjectId = parseInt(subject, 10)
+    let subjectName = subject
 
-    // Determine if we have actual source materials (file, KB, QB)
-    const hasSourceMaterials = !!file || fromKnowledgeBase || fromQuestionBank;
+    if (!Number.isNaN(subjectId)) {
+      const { data: subjectRecord } = await supabase
+        .from('subjects')
+        .select('name')
+        .eq('id', subjectId)
+        .single()
+
+      if (subjectRecord?.name) {
+        subjectName = subjectRecord.name
+      }
+    }
 
     // 7. Build prompt for Gemini
     let prompt = `${SYSTEM_PROMPT}
 
-**${hasSourceMaterials ? 'NGUỒN DỮ LIỆU ĐƯỢC CUNG CẤP (CHỈ SỬ DỤNG NỘI DUNG NÀY):' : 'CHỦ ĐỀ/YÊU CẦU:'}**
+**NGUỒN DỮ LIỆU ĐƯỢC CUNG CẤP (CHỈ SỬ DỤNG NỘI DUNG NÀY):**
 ${finalContext}
 
 **YÊU CẦU NGHIÊM NGẶT:**
-${hasSourceMaterials ? `1. KHÔNG ĐƯỢC sử dụng kiến thức bên ngoài tài liệu được cung cấp ở trên.
+1. KHÔNG ĐƯỢC sử dụng kiến thức bên ngoài tài liệu được cung cấp ở trên.
 2. Bạn CHỈ được phép tạo các loại câu hỏi sau: ${questionTypes.join(', ')}.
-3. Nếu tài liệu không đủ thông tin để tạo đủ số lượng câu hỏi, chỉ tạo số lượng tối đa có thể (không được bịa thêm).` : `1. Bạn được phép sử dụng kiến thức chuyên môn của mình dựa trên tiêu chuẩn giáo dục tiểu học Việt Nam để tạo bộ câu hỏi chất lượng nhất về chủ đề yêu cầu.
-2. Bạn CHỈ được phép tạo các loại câu hỏi sau: ${questionTypes.join(', ')}.`}
-4. Nếu chủ đề hoàn toàn không liên quan đến môn học ${subjectNameInput}, và là một nội dung vi phạm tiêu chuẩn giáo dục, hãy trả về mảng rỗng [].
+3. Nếu tài liệu không đủ thông tin để tạo đủ số lượng câu hỏi, chỉ tạo số lượng tối đa có thể (không được bịa thêm).
+4. Nếu tài liệu hoàn toàn không liên quan đến môn học ${subjectName}, hãy trả về mảng rỗng [].
 `;
 
     if (action === 'edit' && existingQuestions) {
@@ -480,7 +474,7 @@ Hãy trả về danh sách câu hỏi ĐÃ ĐƯỢC CHỈNH SỬA theo đúng y�
 Yêu cầu cụ thể:
 - Số lượng câu hỏi cần tạo: ${action === 'edit' ? 'Linh hoạt theo yêu cầu chỉnh sửa hoặc giữ nguyên số lượng cũ' : questionCount}
 - Độ khó: ${difficulty}
-- Môn học: ${subjectNameInput}
+- Môn học: ${subjectName}
 - Prompt/Yêu cầu người dùng (nếu có): ${textPrompt || 'Không có yêu cầu thêm'}
 
 Schema JSON:
@@ -509,35 +503,17 @@ Hãy trả về JSON theo đúng schema trên, không thêm bất kỳ nội dun
 
     })
 
+    // 9. Generate response
     let result;
-    const maxRetries = 2;
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        try {
-            result = await model.generateContent(prompt)
-            break; // Success, exit retry loop
-        } catch (apiError: any) {
-            console.warn(`[API] Gemini API Error on attempt ${attempt + 1}:`, apiError?.status || apiError?.message);
-            
-            if (attempt === maxRetries) {
-                if (apiError.status === 429) {
-                    return NextResponse.json({ 
-                        error: 'Hệ thống AI đang bận (Quá giới hạn lượt gọi). Vui lòng thử lại sau khoảng 1 phút.'
-                    }, { status: 429 })
-                }
-                if (apiError.status === 503 || apiError.message?.includes('503 Service Unavailable')) {
-                    return NextResponse.json({ 
-                        error: 'Hệ thống AI hiện đang quá tải do truy cập cao. Vui lòng thử lại sau giây lát.'
-                    }, { status: 503 })
-                }
-                throw apiError;
-            }
-            // Wait for 2 seconds before retrying
-            await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+        result = await model.generateContent(prompt)
+    } catch (apiError: any) {
+        if (apiError.status === 429) {
+            return NextResponse.json({ 
+                error: 'Hệ thống AI đang bận (Quá giới hạn lượt gọi). Vui lòng thử lại sau khoảng 1 phút.'
+            }, { status: 429 })
         }
-    }
-
-    if (!result) {
-        throw new Error('Failed to generate content after retries');
+        throw apiError;
     }
     const response = await result.response
     let text = response.text()

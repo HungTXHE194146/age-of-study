@@ -20,14 +20,6 @@ function getServerSupabase() {
   )
 }
 
-// --- Singleton anon client for JWT verification ---
-// Reused across requests to avoid instantiation overhead on every call.
-const anonClientSingleton = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
-
 // --- System Prompt (from SRS Section 6.2) ---
 const SYSTEM_PROMPT = `Bạn là Cú Mèo 🦉 - trợ giảng vui tính dành cho học sinh tiểu học (6-10 tuổi).
 
@@ -49,21 +41,8 @@ const MAX_CONTEXT_DOCUMENTS = 5
 const MAX_CONVERSATION_HISTORY = 10
 const CACHE_TTL_HOURS = 24
 
-// --- Module-level settings cache (5-min TTL) ---
-// system_settings rarely changes; querying DB on every chat message is wasteful.
-const SETTINGS_CACHE_TTL_MS = 5 * 60 * 1000
-let settingsCache: {
-  value: { temperature: number; maxTokens: number; rateLimit: number; bannedWords: string }
-  expiresAt: number
-} | null = null
-
-// --- Fetch system settings from DB (with module-level cache + fallback defaults) ---
+// --- Fetch system settings from DB (with fallback defaults) ---
 async function getAIChatSettings(supabase: SupabaseClient) {
-  // Return cached value if still fresh
-  if (settingsCache && Date.now() < settingsCache.expiresAt) {
-    return settingsCache.value
-  }
-
   try {
     const { data } = await supabase
       .from('system_settings')
@@ -72,28 +51,21 @@ async function getAIChatSettings(supabase: SupabaseClient) {
       .single()
 
     if (data) {
-      const value = {
+      return {
         temperature: parseFloat(data.ai_chat_temperature) || DEFAULT_AI_CHAT_TEMPERATURE,
         maxTokens: parseInt(data.ai_chat_max_tokens, 10) || DEFAULT_AI_CHAT_MAX_TOKENS,
         rateLimit: parseInt(data.ai_chat_rate_limit_per_minute, 10) || DEFAULT_RATE_LIMIT_PER_MINUTE,
         bannedWords: data.ai_chat_banned_words || '',
-      }
-      settingsCache = { value, expiresAt: Date.now() + SETTINGS_CACHE_TTL_MS }
-      return value
-    }
+      }    }
   } catch {
     // Fall through to defaults
   }
-
-  const defaults = {
+  return {
     temperature: DEFAULT_AI_CHAT_TEMPERATURE,
     maxTokens: DEFAULT_AI_CHAT_MAX_TOKENS,
     rateLimit: DEFAULT_RATE_LIMIT_PER_MINUTE,
     bannedWords: '',
   }
-  // Cache defaults too so we don't hammer DB on repeated failures
-  settingsCache = { value: defaults, expiresAt: Date.now() + SETTINGS_CACHE_TTL_MS }
-  return defaults
 }
 
 // ============================================================================
@@ -126,8 +98,12 @@ export async function POST(request: NextRequest) {
     const token = authHeader.replace('Bearer ', '')
     const supabase = getServerSupabase()
 
-    // Verify the JWT token using the singleton anon client (no new client per request)
-    const { data: { user: authUser }, error: authError } = await anonClientSingleton.auth.getUser(token)
+    // Verify the JWT token and get user
+    const { data: { user: authUser }, error: authError } = await createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    ).auth.getUser(token)
 
     if (authError || !authUser) {
       return NextResponse.json({ error: 'Phiên đăng nhập hết hạn' }, { status: 401 })
@@ -322,8 +298,13 @@ export async function DELETE(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
 
-    // Verify JWT using the singleton anon client
-    const { data: { user: authUser }, error: authError } = await anonClientSingleton.auth.getUser(token)
+    // Verify JWT using anon client
+    const anonClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+    const { data: { user: authUser }, error: authError } = await anonClient.auth.getUser(token)
 
     if (authError || !authUser) {
       return NextResponse.json({ error: 'Phiên đăng nhập hết hạn' }, { status: 401 })
@@ -516,8 +497,6 @@ async function retrieveContext(
         const nodeTitle = Array.isArray(section.nodes) 
           ? section.nodes[0]?.title 
           : section.nodes?.title || 'Bài học'
-
-
         
         // Add main content
         if (section.content && section.content.length > 0) {

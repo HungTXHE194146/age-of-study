@@ -26,6 +26,7 @@ import {
 import { questionBankService } from "@/lib/questionBankService";
 import Loading from "../ui/loading";
 import { QuestionEditor } from "./QuestionEditor";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface QuestionBankTabProps {
   onAddQuestions: (questions: Question[]) => void;
@@ -55,6 +56,19 @@ export function QuestionBankTab({
     type: "0" as QuestionType | "0",
     search: "",
   });
+
+  // Local search state for debouncing (M-7)
+  const [localSearch, setLocalSearch] = useState(filters.search);
+  const debouncedSearch = useDebounce(localSearch, 400);
+
+  // Update filters when debounced search changes
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      search: debouncedSearch,
+    }));
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
   // Selection state
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(
@@ -141,16 +155,10 @@ export function QuestionBankTab({
     }
   };
 
-  // Reload questions when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-    loadQuestions();
-  }, [filters]);
-
-  // Reload questions when page changes
+  // Reload questions when filters or page changes - Combined to prevent duplicate calls (M-6)
   useEffect(() => {
     loadQuestions();
-  }, [currentPage]);
+  }, [filters, currentPage]);
 
   const handleFilterChange = (
     key: string,
@@ -160,6 +168,8 @@ export function QuestionBankTab({
       ...prev,
       [key]: value,
     }));
+    // Reset to page 1 whenever a filter is changed
+    setCurrentPage(1);
   };
 
   const handleQuestionSelection = (questionId: string) => {
@@ -415,8 +425,8 @@ export function QuestionBankTab({
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange("search", e.target.value)}
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
                   placeholder="Tìm kiếm theo nội dung..."
                   className="pl-10"
                 />
@@ -429,7 +439,8 @@ export function QuestionBankTab({
       {/* Results Section */}
       <div className="flex justify-between items-center bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem] pb-2">
         <div className="text-xl font-bold font-handwritten text-gray-800">
-          Đã tìm thấy <span className="text-blue-700">{totalQuestions}</span> câu hỏi
+          Đã tìm thấy <span className="text-blue-700">{totalQuestions}</span>{" "}
+          câu hỏi
         </div>
         <div className="flex gap-2">
           <button
@@ -462,7 +473,10 @@ export function QuestionBankTab({
               <div className="h-[600px] overflow-y-auto custom-scrollbar pr-4">
                 <div className="space-y-6">
                   {filteredQuestions.map((question) => (
-                    <div key={question.id} className="p-6 bg-white border-2 border-dashed border-gray-400 rounded-xl hover:border-black hover:bg-yellow-50/50 transition-colors shadow-[4px_4px_0_0_rgba(0,0,0,1)] relative group">
+                    <div
+                      key={question.id}
+                      className="p-6 bg-white border-2 border-dashed border-gray-400 rounded-xl hover:border-black hover:bg-yellow-50/50 transition-colors shadow-[4px_4px_0_0_rgba(0,0,0,1)] relative group"
+                    >
                       <div className="flex flex-col md:flex-row items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -533,7 +547,7 @@ export function QuestionBankTab({
                                       {typeof option.text === "string"
                                         ? option.text
                                         : (option.text as { text?: string })
-                                          ?.text || ""}
+                                            ?.text || ""}
                                     </span>
                                   </div>
                                 ))}

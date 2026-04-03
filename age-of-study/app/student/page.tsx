@@ -11,6 +11,9 @@ import {
 import { calculateTier, getTierConfig } from "@/lib/tierSystem";
 import type { StudentWithClass } from "@/types/class";
 import { TestService } from "@/lib/testService";
+
+// Module-level singleton – avoids re-instantiation on every render/call
+const testService = new TestService();
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
@@ -107,16 +110,11 @@ export default function LearnPage() {
   const loadPendingTests = async (classId: number) => {
     if (!user) return;
     try {
-      const testService = new TestService();
-      const tests = await testService.getTestsByClass(classId);
-      const submissions = await testService.getStudentSubmissions(user.id);
-
-      // Count tests that have no submission
-      const pending = tests.filter(
-        (test) => !submissions.some((sub) => sub.test_id === test.id),
-      ).length;
-
-      setPendingTestsCount(pending);
+      const pendingTests = await testService.getPendingTestsByClass(
+        classId,
+        user.id,
+      );
+      setPendingTestsCount(pendingTests.length);
     } catch (error) {
       console.error("Failed to load pending tests:", error);
     }
@@ -193,46 +191,51 @@ export default function LearnPage() {
     );
   }
 
-  // Gamification logic
-  const xp = user?.total_xp ?? 0;
+  // Gamification logic — memoized to avoid recalculation on unrelated renders
   const streak = user?.current_streak ?? 0;
   const freezeCount = user?.freeze_count ?? 0;
 
-  const remainder = xp % 1000;
-  const xpToNextLevel = remainder === 0 && xp > 0 ? 0 : 1000 - remainder;
-  const progressPercent =
-    remainder === 0 && xp > 0 ? 100 : (remainder / 1000) * 100;
-  // Use the same tier system as the leaderboard (XP-based)
-  const tierLevel = calculateTier(xp);
-  const tierConfig = getTierConfig(tierLevel);
-  const rank = {
-    name: tierConfig.name,
-    color: `text-${tierConfig.color}`,
-    bg:
-      tierLevel === "bronze"
-        ? "bg-amber-100"
-        : tierLevel === "silver"
-          ? "bg-gray-100"
-          : tierLevel === "gold"
-            ? "bg-yellow-100"
-            : "bg-cyan-100",
-    border:
-      tierLevel === "bronze"
-        ? "border-amber-200"
-        : tierLevel === "silver"
-          ? "border-gray-200"
-          : tierLevel === "gold"
-            ? "border-yellow-200"
-            : "border-cyan-200",
-    icon: tierConfig.icon,
-  };
+  const { xp, xpToNextLevel, progressPercent, rank, greeting } = useMemo(() => {
+    const xp = user?.total_xp ?? 0;
+    const remainder = xp % 1000;
+    const xpToNextLevel = remainder === 0 && xp > 0 ? 0 : 1000 - remainder;
+    const progressPercent =
+      remainder === 0 && xp > 0 ? 100 : (remainder / 1000) * 100;
 
-  const greeting = (() => {
+    const tierLevel = calculateTier(xp);
+    const tierConfig = getTierConfig(tierLevel);
+    const rank = {
+      name: tierConfig.name,
+      color: `text-${tierConfig.color}`,
+      bg:
+        tierLevel === "bronze"
+          ? "bg-amber-100"
+          : tierLevel === "silver"
+            ? "bg-gray-100"
+            : tierLevel === "gold"
+              ? "bg-yellow-100"
+              : "bg-cyan-100",
+      border:
+        tierLevel === "bronze"
+          ? "border-amber-200"
+          : tierLevel === "silver"
+            ? "border-gray-200"
+            : tierLevel === "gold"
+              ? "border-yellow-200"
+              : "border-cyan-200",
+      icon: tierConfig.icon,
+    };
+
     const hour = new Date().getHours();
-    if (hour < 12) return "Chào buổi sáng";
-    if (hour < 18) return "Chào buổi chiều";
-    return "Chào buổi tối";
-  })();
+    const greeting =
+      hour < 12
+        ? "Chào buổi sáng"
+        : hour < 18
+          ? "Chào buổi chiều"
+          : "Chào buổi tối";
+
+    return { xp, xpToNextLevel, progressPercent, rank, greeting };
+  }, [user?.total_xp]);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">

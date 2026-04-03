@@ -1,10 +1,34 @@
 import { useState, useRef, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Upload, FileDown, CheckCircle, AlertCircle, Users, UserPlus, Edit3 } from "lucide-react";
+import {
+  Upload,
+  FileDown,
+  CheckCircle,
+  AlertCircle,
+  Users,
+  UserPlus,
+  Edit3,
+} from "lucide-react";
 import * as xlsx from "xlsx";
 import Loading, { LoadingSpinner } from "@/components/ui/loading";
 import { motion, AnimatePresence } from "framer-motion";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
+
+async function getAuthToken(): Promise<string | null> {
+  const supabase = getSupabaseBrowserClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
+}
 
 interface ParsedStudent {
   username: string; // Mã định danh
@@ -57,12 +81,14 @@ export function AddStudentFromExcelModal({
     setIsParsing(true);
     try {
       const data = await file.arrayBuffer();
-      const workbook = xlsx.read(data, { type: 'array' });
+      const workbook = xlsx.read(data, { type: "array" });
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
 
       // Convert to JSON array of arrays to find header row dynamically
-      const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+        header: 1,
+      }) as any[][];
 
       if (jsonData.length < 2) {
         throw new Error("File không có dữ liệu hợp lệ.");
@@ -85,27 +111,54 @@ export function AddStudentFromExcelModal({
         if (!row || !Array.isArray(row)) continue;
 
         for (let j = 0; j < row.length; j++) {
-          const cellStr = String(row[j] || "").toLowerCase().replace(/\s+/g, '');
-          if (cellStr.includes('mãđịnhdanh') || cellStr.includes('madinhdanh') || cellStr === 'username') {
+          const cellStr = String(row[j] || "")
+            .toLowerCase()
+            .replace(/\s+/g, "");
+          if (
+            cellStr.includes("mãđịnhdanh") ||
+            cellStr.includes("madinhdanh") ||
+            cellStr === "username"
+          ) {
             usernameColIdx = j;
             headerRowIdx = i;
           }
-          if (cellStr.includes('họvàtên') || cellStr.includes('họtên') || cellStr.includes('hovaten') || cellStr === 'hoten') {
+          if (
+            cellStr.includes("họvàtên") ||
+            cellStr.includes("họtên") ||
+            cellStr.includes("hovaten") ||
+            cellStr === "hoten"
+          ) {
             nameColIdx = j;
             if (headerRowIdx === -1) headerRowIdx = i;
           }
-          if (cellStr.includes('ngàysinh') || cellStr.includes('ngaysinh')) dobColIdx = j;
-          if (cellStr === 'giớitính' || cellStr === 'gioitinh' || cellStr.includes('giới')) genderColIdx = j;
-          if (cellStr.includes('dântộc') || cellStr.includes('dantoc')) ethnicityColIdx = j;
-          if (cellStr.includes('sđt') || cellStr.includes('sdt') || cellStr.includes('điệnthoại')) phoneColIdx = j;
-          if (cellStr.includes('trạngthái') || cellStr.includes('trangthai')) statusColIdx = j;
-          if (cellStr.includes('sốbuổihọc') || cellStr.includes('sobuoihoc')) sessionsColIdx = j;
+          if (cellStr.includes("ngàysinh") || cellStr.includes("ngaysinh"))
+            dobColIdx = j;
+          if (
+            cellStr === "giớitính" ||
+            cellStr === "gioitinh" ||
+            cellStr.includes("giới")
+          )
+            genderColIdx = j;
+          if (cellStr.includes("dântộc") || cellStr.includes("dantoc"))
+            ethnicityColIdx = j;
+          if (
+            cellStr.includes("sđt") ||
+            cellStr.includes("sdt") ||
+            cellStr.includes("điệnthoại")
+          )
+            phoneColIdx = j;
+          if (cellStr.includes("trạngthái") || cellStr.includes("trangthai"))
+            statusColIdx = j;
+          if (cellStr.includes("sốbuổihọc") || cellStr.includes("sobuoihoc"))
+            sessionsColIdx = j;
         }
         if (usernameColIdx !== -1 && nameColIdx !== -1) break;
       }
 
       if (usernameColIdx === -1 || nameColIdx === -1) {
-        throw new Error("Không tìm thấy cột 'Mã định danh' hoặc 'Họ tên' trong file. Vui lòng kiểm tra lại định dạng.");
+        throw new Error(
+          "Không tìm thấy cột 'Mã định danh' hoặc 'Họ tên' trong file. Vui lòng kiểm tra lại định dạng.",
+        );
       }
 
       const students: ParsedStudent[] = [];
@@ -123,12 +176,30 @@ export function AddStudentFromExcelModal({
 
         const cleanUsername = String(rawUsername).trim().toLowerCase();
         const cleanName = String(rawName).trim();
-        const cleanDob = dobColIdx !== -1 && row[dobColIdx] ? String(row[dobColIdx]).trim() : undefined;
-        const cleanGender = genderColIdx !== -1 && row[genderColIdx] ? String(row[genderColIdx]).trim() : undefined;
-        const cleanEthnicity = ethnicityColIdx !== -1 && row[ethnicityColIdx] ? String(row[ethnicityColIdx]).trim() : undefined;
-        const cleanPhone = phoneColIdx !== -1 && row[phoneColIdx] ? String(row[phoneColIdx]).trim() : undefined;
-        const cleanStatus = statusColIdx !== -1 && row[statusColIdx] ? String(row[statusColIdx]).trim() : undefined;
-        const cleanSessions = sessionsColIdx !== -1 && row[sessionsColIdx] ? String(row[sessionsColIdx]).trim() : undefined;
+        const cleanDob =
+          dobColIdx !== -1 && row[dobColIdx]
+            ? String(row[dobColIdx]).trim()
+            : undefined;
+        const cleanGender =
+          genderColIdx !== -1 && row[genderColIdx]
+            ? String(row[genderColIdx]).trim()
+            : undefined;
+        const cleanEthnicity =
+          ethnicityColIdx !== -1 && row[ethnicityColIdx]
+            ? String(row[ethnicityColIdx]).trim()
+            : undefined;
+        const cleanPhone =
+          phoneColIdx !== -1 && row[phoneColIdx]
+            ? String(row[phoneColIdx]).trim()
+            : undefined;
+        const cleanStatus =
+          statusColIdx !== -1 && row[statusColIdx]
+            ? String(row[statusColIdx]).trim()
+            : undefined;
+        const cleanSessions =
+          sessionsColIdx !== -1 && row[sessionsColIdx]
+            ? String(row[sessionsColIdx]).trim()
+            : undefined;
 
         if (cleanUsername && cleanName && !usedUsernames.has(cleanUsername)) {
           students.push({
@@ -139,14 +210,16 @@ export function AddStudentFromExcelModal({
             ethnicity: cleanEthnicity,
             phone_number: cleanPhone,
             enroll_status: cleanStatus,
-            sessions_per_week: cleanSessions
+            sessions_per_week: cleanSessions,
           });
           usedUsernames.add(cleanUsername);
         }
       }
 
       if (students.length === 0) {
-        throw new Error("Không tìm thấy dữ liệu học sinh hợp lệ nào từ các cột đã chọn.");
+        throw new Error(
+          "Không tìm thấy dữ liệu học sinh hợp lệ nào từ các cột đã chọn.",
+        );
       }
 
       setParsedData(students);
@@ -161,7 +234,7 @@ export function AddStudentFromExcelModal({
   const downloadTemplate = () => {
     const ws = xlsx.utils.json_to_sheet([
       {
-        "STT": 1,
+        STT: 1,
         "Mã định danh Bộ GD&ĐT": "0123456789",
         "Họ tên": "Nguyễn Văn A",
         "Ngày sinh": "01/01/2015",
@@ -169,10 +242,10 @@ export function AddStudentFromExcelModal({
         "Dân tộc": "Kinh",
         "Trạng thái": "Đang học",
         "SĐT liên hệ": "0912345678",
-        "Số buổi học trên tuần": "9 buổi/tuần"
+        "Số buổi học trên tuần": "9 buổi/tuần",
       },
       {
-        "STT": 2,
+        STT: 2,
         "Mã định danh Bộ GD&ĐT": "0987654321",
         "Họ tên": "Trần Thị B",
         "Ngày sinh": "15/06/2015",
@@ -180,8 +253,8 @@ export function AddStudentFromExcelModal({
         "Dân tộc": "Tày",
         "Trạng thái": "Đang học",
         "SĐT liên hệ": "0987654321",
-        "Số buổi học trên tuần": "9 buổi/tuần"
-      }
+        "Số buổi học trên tuần": "9 buổi/tuần",
+      },
     ]);
     const wb = xlsx.utils.book_new();
     xlsx.utils.book_append_sheet(wb, ws, "HocSinh");
@@ -196,10 +269,12 @@ export function AddStudentFromExcelModal({
     setSuccessResult(null);
 
     try {
+      const token = await getAuthToken();
       const response = await fetch("/api/teacher/students/batch-create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           class_id: classId,
@@ -210,7 +285,9 @@ export function AddStudentFromExcelModal({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Lỗi hệ thống khi tạo tài khoản hàng loạt.");
+        throw new Error(
+          result.error || "Lỗi hệ thống khi tạo tài khoản hàng loạt.",
+        );
       }
 
       setSuccessResult({
@@ -250,27 +327,46 @@ export function AddStudentFromExcelModal({
             <Users className="w-6 h-6" /> Nhập danh sách từ Excel
           </DialogTitle>
           <DialogDescription className="text-blue-700/80 text-sm mt-1">
-            Tự động tạo tài khoản học sinh hàng loạt với tên đăng nhập từ Mã định danh và mật khẩu mặc định là <strong className="text-blue-900 font-mono bg-blue-100 px-1 rounded">Ngày sinh (ddmmyyyy)</strong>.
+            Tự động tạo tài khoản học sinh hàng loạt với tên đăng nhập từ Mã
+            định danh và mật khẩu mặc định là{" "}
+            <strong className="text-blue-900 font-mono bg-blue-100 px-1 rounded">
+              Ngày sinh (ddmmyyyy)
+            </strong>
+            .
           </DialogDescription>
         </DialogHeader>
 
         <div className="p-6">
           {successResult ? (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4"
+            >
               <div className="text-center py-6">
                 <div className="mx-auto w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4 shadow-sm">
                   <CheckCircle className="w-8 h-8" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">Hoàn Tất Tiến Trình!</h3>
+                <h3 className="text-xl font-bold text-gray-900">
+                  Hoàn Tất Tiến Trình!
+                </h3>
                 <div className="mt-4 flex justify-center gap-6">
                   <div className="bg-green-50 px-4 py-2 rounded-lg border border-green-100">
-                    <span className="block text-2xl font-black text-green-600">{successResult.successCount}</span>
-                    <span className="text-xs text-green-700 font-medium">Thành công</span>
+                    <span className="block text-2xl font-black text-green-600">
+                      {successResult.successCount}
+                    </span>
+                    <span className="text-xs text-green-700 font-medium">
+                      Thành công
+                    </span>
                   </div>
                   {successResult.failedCount > 0 && (
                     <div className="bg-red-50 px-4 py-2 rounded-lg border border-red-100">
-                      <span className="block text-2xl font-black text-red-600">{successResult.failedCount}</span>
-                      <span className="text-xs text-red-700 font-medium">Thất bại</span>
+                      <span className="block text-2xl font-black text-red-600">
+                        {successResult.failedCount}
+                      </span>
+                      <span className="text-xs text-red-700 font-medium">
+                        Thất bại
+                      </span>
                     </div>
                   )}
                 </div>
@@ -282,13 +378,17 @@ export function AddStudentFromExcelModal({
                     <AlertCircle className="w-4 h-4" /> Chi tiết lỗi:
                   </h4>
                   <ul className="list-disc pl-5 text-sm text-red-700 space-y-1">
-                    {successResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+                    {successResult.errors.map((e, i) => (
+                      <li key={i}>{e}</li>
+                    ))}
                   </ul>
                 </div>
               )}
 
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={handleClose}>Đóng</Button>
+                <Button variant="outline" onClick={handleClose}>
+                  Đóng
+                </Button>
               </div>
             </motion.div>
           ) : (
@@ -300,8 +400,12 @@ export function AddStudentFromExcelModal({
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Upload className="w-10 h-10 text-blue-500 mx-auto mb-3" />
-                  <p className="text-gray-900 font-medium text-lg mb-1">Nhấn để chọn file Excel (.xlsx, .xls)</p>
-                  <p className="text-gray-500 text-sm mb-4">Hoặc kéo thả file vào đây</p>
+                  <p className="text-gray-900 font-medium text-lg mb-1">
+                    Nhấn để chọn file Excel (.xlsx, .xls)
+                  </p>
+                  <p className="text-gray-500 text-sm mb-4">
+                    Hoặc kéo thả file vào đây
+                  </p>
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -311,7 +415,16 @@ export function AddStudentFromExcelModal({
                   />
 
                   <div className="mt-6 pt-4 border-t border-gray-100">
-                    <Button type="button" variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); downloadTemplate(); }} className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        downloadTemplate();
+                      }}
+                      className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
+                    >
                       <FileDown className="w-4 h-4" /> Tải file mẫu
                     </Button>
                   </div>
@@ -323,14 +436,21 @@ export function AddStudentFromExcelModal({
                       <Upload className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="font-semibold text-blue-900 text-sm">{file.name}</p>
+                      <p className="font-semibold text-blue-900 text-sm">
+                        {file.name}
+                      </p>
                       <p className="text-xs text-blue-600">
-                        {isParsing ? "Đang đọc dữ liệu..." : `Tìm thấy ${parsedData.length} học sinh hợp lệ`}
+                        {isParsing
+                          ? "Đang đọc dữ liệu..."
+                          : `Tìm thấy ${parsedData.length} học sinh hợp lệ`}
                       </p>
                     </div>
                   </div>
                   {!isUploading && (
-                    <button onClick={resetState} className="text-sm font-medium text-blue-600 hover:underline">
+                    <button
+                      onClick={resetState}
+                      className="text-sm font-medium text-blue-600 hover:underline"
+                    >
                       Chọn lại
                     </button>
                   )}
@@ -340,7 +460,11 @@ export function AddStudentFromExcelModal({
               {/* Error Alert */}
               <AnimatePresence>
                 {error && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                  >
                     <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl border border-red-200 text-sm flex items-start gap-2">
                       <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                       <span className="font-medium">{error}</span>
@@ -359,18 +483,32 @@ export function AddStudentFromExcelModal({
                           <th className="px-4 py-3">STT</th>
                           <th className="px-4 py-3">Mã định danh</th>
                           <th className="px-4 py-3">Họ và tên</th>
-                          <th className="px-4 py-3 hidden md:table-cell">Ngày sinh</th>
-                          <th className="px-4 py-3 hidden md:table-cell">Giới tính</th>
+                          <th className="px-4 py-3 hidden md:table-cell">
+                            Ngày sinh
+                          </th>
+                          <th className="px-4 py-3 hidden md:table-cell">
+                            Giới tính
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {parsedData.slice(0, 50).map((row, idx) => (
                           <tr key={idx} className="hover:bg-blue-50/50">
-                            <td className="px-4 py-2 text-gray-500 w-12">{idx + 1}</td>
-                            <td className="px-4 py-2 font-mono font-medium text-blue-700">{row.username}</td>
-                            <td className="px-4 py-2 font-medium text-gray-900">{row.full_name}</td>
-                            <td className="px-4 py-2 text-gray-600 hidden md:table-cell">{row.dob || '-'}</td>
-                            <td className="px-4 py-2 text-gray-600 hidden md:table-cell">{row.gender || '-'}</td>
+                            <td className="px-4 py-2 text-gray-500 w-12">
+                              {idx + 1}
+                            </td>
+                            <td className="px-4 py-2 font-mono font-medium text-blue-700">
+                              {row.username}
+                            </td>
+                            <td className="px-4 py-2 font-medium text-gray-900">
+                              {row.full_name}
+                            </td>
+                            <td className="px-4 py-2 text-gray-600 hidden md:table-cell">
+                              {row.dob || "-"}
+                            </td>
+                            <td className="px-4 py-2 text-gray-600 hidden md:table-cell">
+                              {row.gender || "-"}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -389,7 +527,12 @@ export function AddStudentFromExcelModal({
 
         {!successResult && (
           <DialogFooter className="p-4 border-t border-gray-100 bg-gray-50/50">
-            <Button variant="outline" onClick={handleClose} disabled={isUploading} className="font-semibold text-gray-600">
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              disabled={isUploading}
+              className="font-semibold text-gray-600"
+            >
               Hủy bỏ
             </Button>
             <Button
@@ -397,7 +540,13 @@ export function AddStudentFromExcelModal({
               disabled={isUploading || isParsing || parsedData.length === 0}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 shadow-md gap-2"
             >
-              {isUploading ? <><LoadingSpinner size="sm" /> Đang tạo...</> : "Tải lên Dữ liệu"}
+              {isUploading ? (
+                <>
+                  <LoadingSpinner size="sm" /> Đang tạo...
+                </>
+              ) : (
+                "Tải lên Dữ liệu"
+              )}
             </Button>
           </DialogFooter>
         )}
@@ -452,9 +601,13 @@ export function AddStudentModal({
     setError(null);
 
     try {
+      const token = await getAuthToken();
       const response = await fetch("/api/teacher/students/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           full_name: fullName.trim(),
           username: username.trim().toLowerCase(),
@@ -495,7 +648,10 @@ export function AddStudentModal({
               </DialogTitle>
             </div>
             <DialogDescription className="text-gray-700 font-bold mt-2 font-handwritten text-lg ml-14">
-              Mật khẩu mặc định: <span className="bg-yellow-200 px-2 border border-black rounded-md">Ngày sinh (ddmmyyyy)</span>
+              Mật khẩu mặc định:{" "}
+              <span className="bg-yellow-200 px-2 border border-black rounded-md">
+                Ngày sinh (ddmmyyyy)
+              </span>
             </DialogDescription>
           </div>
 
@@ -535,7 +691,11 @@ export function AddStudentModal({
                     type="text"
                     placeholder="Ví dụ: nguyenvana1A"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                    onChange={(e) =>
+                      setUsername(
+                        e.target.value.toLowerCase().replace(/\s/g, ""),
+                      )
+                    }
                     required
                     disabled={isSubmitting}
                     className="w-full px-4 py-2 bg-transparent border-b-2 border-dashed border-gray-400 focus:border-blue-500 focus:outline-none transition-colors font-mono font-bold text-blue-700"
@@ -602,7 +762,13 @@ export function AddStudentModal({
                   disabled={isSubmitting}
                   className="px-6 py-2 bg-[#ffde59] border-2 border-black text-black font-black rounded hover:bg-[#efce49] transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,1)] disabled:opacity-50 flex items-center gap-2"
                 >
-                  {isSubmitting ? <><LoadingSpinner size="sm" /> Đang lưu...</> : "Tạo mới"}
+                  {isSubmitting ? (
+                    <>
+                      <LoadingSpinner size="sm" /> Đang lưu...
+                    </>
+                  ) : (
+                    "Tạo mới"
+                  )}
                 </button>
               </div>
             </div>
@@ -660,17 +826,24 @@ export function EditStudentModal({
     setError(null);
 
     try {
-      const response = await fetch(`/api/teacher/students/${student.student_id}/update`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          full_name: fullName.trim(),
-          username: username.trim().toLowerCase(),
-          dob: dob.trim(),
-          gender: gender.trim(),
-          phone_number: phone.trim(),
-        }),
-      });
+      const token = await getAuthToken();
+      const response = await fetch(
+        `/api/teacher/students/${student.student_id}/update`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            full_name: fullName.trim(),
+            username: username.trim().toLowerCase(),
+            dob: dob.trim(),
+            gender: gender.trim(),
+            phone_number: phone.trim(),
+          }),
+        },
+      );
 
       const result = await response.json();
 
@@ -702,7 +875,10 @@ export function EditStudentModal({
               </DialogTitle>
             </div>
             <DialogDescription className="text-gray-700 font-bold mt-2 font-handwritten text-lg ml-14">
-              Cập nhật hồ sơ cho <span className="text-blue-700">{student?.profile?.username}</span>
+              Cập nhật hồ sơ cho{" "}
+              <span className="text-blue-700">
+                {student?.profile?.username}
+              </span>
             </DialogDescription>
           </div>
 
@@ -742,7 +918,11 @@ export function EditStudentModal({
                     type="text"
                     placeholder="Ví dụ: nguyenvana1A"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                    onChange={(e) =>
+                      setUsername(
+                        e.target.value.toLowerCase().replace(/\s/g, ""),
+                      )
+                    }
                     required
                     disabled={isSubmitting}
                     className="w-full px-4 py-2 bg-transparent border-b-2 border-dashed border-gray-400 focus:border-blue-500 focus:outline-none transition-colors font-mono font-bold text-blue-700"
@@ -809,7 +989,13 @@ export function EditStudentModal({
                   disabled={isSubmitting}
                   className="px-6 py-2 bg-[#ffde59] border-2 border-black text-black font-black rounded hover:bg-[#efce49] transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,1)] disabled:opacity-50 flex items-center gap-2"
                 >
-                  {isSubmitting ? <><LoadingSpinner size="sm" /> Đang lưu...</> : "Cập nhật"}
+                  {isSubmitting ? (
+                    <>
+                      <LoadingSpinner size="sm" /> Đang lưu...
+                    </>
+                  ) : (
+                    "Cập nhật"
+                  )}
                 </button>
               </div>
             </div>

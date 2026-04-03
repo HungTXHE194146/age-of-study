@@ -103,7 +103,7 @@ async function findOrCreateNode(params: {
 }): Promise<number> {
   const { subjectId, parentId, title, description, nodeType, weekNumber, volumeNumber, orderIndex, positionX, positionY } = params
 
-  // Dedup query matching the unique index (subject_id, title, node_type, volume_number)
+  // Dedup query matching the unique index (subject_id, title, node_type, volume_number, week_number)
   const { data: existing } = await supabase
     .from('nodes')
     .select('id')
@@ -111,6 +111,7 @@ async function findOrCreateNode(params: {
     .eq('title', title)
     .eq('node_type', nodeType)
     .eq('volume_number', volumeNumber)
+    .eq('week_number', weekNumber)
     .maybeSingle()
   
   if (existing) {

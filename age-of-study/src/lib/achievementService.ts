@@ -326,49 +326,28 @@ export async function unlockAvatar(
   const supabase = getSupabaseBrowserClient();
 
   try {
-    // Check if user already owns this avatar
-    // Query all avatars to avoid 406 error with emoji in URL
-    const { data: userAvatars } = await supabase
-      .from('user_avatars')
-      .select('*')
-      .eq('user_id', userId);
+    // Optimized: Use single RPC for atomic purchase (SC-4)
+    const { data: result, error: rpcError } = await supabase.rpc('purchase_avatar', {
+      p_user_id: userId,
+      p_avatar_code: input.avatar_code,
+      p_cost: input.xp_cost,
+      p_source: input.source,
+      p_avatar_type: input.avatar_type,
+    });
 
-    const existing = userAvatars?.find((a: UserAvatar) => a.avatar_code === input.avatar_code);
-
-    if (existing && existing.is_unlocked) {
-      return { data: null, error: 'Bạn đã có avatar này rồi!' };
+    if (rpcError) {
+      console.error('RPC Error unlocking avatar:', rpcError);
+      return { data: null, error: rpcError.message };
     }
 
-    // Check if user has enough XP
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('total_xp')
-      .eq('id', userId)
-      .single();
-
-    if (!profile || profile.total_xp < input.xp_cost) {
-      return { data: null, error: 'Không đủ XP để mở khóa avatar này!' };
+    if (!result || !result.success) {
+      return { data: null, error: result?.error || 'RPC returned no result' };
     }
 
-    // Deduct XP from user (only for purchases, not rewards)
-    if (input.source === 'purchase' && input.xp_cost > 0) {
-      const newXP = profile.total_xp - input.xp_cost;
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ total_xp: newXP, updated_at: new Date().toISOString() })
-        .eq('id', userId);
-
-      if (updateError) {
-        console.error('Error updating XP:', updateError);
-        return { data: null, error: 'Không thể trừ XP!' };
-      }
-    }
-
-    // Insert or update user avatar
-    const { data: newAvatar, error: insertError } = await supabase
-      .from('user_avatars')
-      .upsert({
+    // Since the RPC doesn't return the full object, we fetch it or just return a simulated one
+    // But for consistency with the UI, let's return the basic info as the RPC already handled the insert.
+    return { 
+      data: {
         user_id: userId,
         avatar_code: input.avatar_code,
         avatar_type: input.avatar_type,
@@ -376,16 +355,9 @@ export async function unlockAvatar(
         unlocked_at: new Date().toISOString(),
         xp_cost: input.xp_cost,
         source: input.source,
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('Error unlocking avatar:', insertError);
-      return { data: null, error: insertError.message };
-    }
-
-    return { data: newAvatar, error: null };
+      } as UserAvatar, 
+      error: null 
+    };
   } catch (error) {
     console.error('Unexpected error in unlockAvatar:', error);
     return {
@@ -408,18 +380,17 @@ export async function changeActiveAvatar(
   const supabase = getSupabaseBrowserClient();
 
   try {
-    // Check if user owns this avatar
-    // Query all avatars to avoid 406 error with emoji in URL
-    const { data: userAvatars } = await supabase
+    // Optimized: Only fetch the specific avatar requested (SM-6)
+    const { data: avatar, error: avatarError } = await supabase
       .from('user_avatars')
       .select('*')
       .eq('user_id', userId)
-      .eq('is_unlocked', true);
+      .eq('is_unlocked', true)
+      .eq('avatar_code', avatarCode)
+      .single();
 
-    const avatar = userAvatars?.find((a: UserAvatar) => a.avatar_code === avatarCode);
-
-    if (!avatar) {
-      return { data: null, error: 'Bạn chưa mở khóa avatar này!' };
+    if (avatarError || !avatar) {
+      return { data: null, error: 'Bạn chưa mở khóa hoặc không tìm thấy avatar này!' };
     }
 
     // Update user's active avatar

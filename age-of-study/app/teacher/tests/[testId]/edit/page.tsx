@@ -290,6 +290,15 @@ function TestEditContent() {
     loadData();
   }, [testId, user?.id]);
 
+  // Load nodes when subject changes
+  useEffect(() => {
+    if (testDetails.subject) {
+      loadNodes(testDetails.subject);
+    } else {
+      setNodes([]);
+    }
+  }, [testDetails.subject]);
+
   const loadNodes = async (subjectId: string) => {
     if (!subjectId) return;
     setIsLoadingNodes(true);

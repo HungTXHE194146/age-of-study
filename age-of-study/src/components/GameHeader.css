@@ -77,6 +77,13 @@
   border: 1.5px solid #fde68a;
 }
 
+.hud-badge--shop {
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: #166534;
+  border: 1.5px solid #bbf7d0;
+  cursor: pointer;
+}
+
 /* Nav Item base */
 .hud-nav-item {
   display: flex;

@@ -142,6 +142,9 @@ export async function createClass(
           error: `Class created but teacher assignment failed: ${assignError.message}` 
         };
       }
+      
+      // Invalidate cache for this specific teacher
+      invalidateTeacherClassesCache(input.homeroom_teacher_id);
     }
 
     return { data: classData, error: null };
@@ -251,16 +254,14 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
   const supabase = getSupabaseBrowserClient();
 
   try {
-    // Step 1: Fetch class info, teachers, and students in parallel
-    // Students query intentionally excludes activity_logs / student_node_progress
-    // to avoid over-fetching (40 students × 100 records = 4000 unnecessary rows)
+    // Execute all queries in parallel for better performance
     const [classResult, teachersResult, studentsResult] = await Promise.all([
       supabase
         .from('classes')
         .select('*')
         .eq('id', classId)
         .single(),
-
+      
       supabase
         .from('class_teachers')
         .select(`
@@ -269,7 +270,7 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
           subject:subjects(id, name)
         `)
         .eq('class_id', classId),
-
+      
       supabase
         .from('class_students')
         .select(`
@@ -284,57 +285,52 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
         .order('joined_at', { ascending: true })
     ]);
 
+    // Check for errors
     if (classResult.error) {
       console.error('Get class error:', classResult.error);
       return { data: null, error: classResult.error.message };
     }
+
     if (teachersResult.error) {
       console.error('Get class teachers error:', teachersResult.error);
       return { data: null, error: teachersResult.error.message };
     }
+
     if (studentsResult.error) {
       console.error('Get class students error:', studentsResult.error);
       return { data: null, error: studentsResult.error.message };
     }
 
-    const studentsData = studentsResult.data || [];
-    const studentIds = studentsData.map((s: any) => s.profile.id as string);
-
-    // Step 2: Fetch latest activity & latest progress for all students in 2 batch queries
-    // ORDER BY DESC so the first record per student_id is already the latest
-    const [activitiesResult, progressResult] = await Promise.all([
-      studentIds.length > 0
-        ? supabase
-            .from('activity_logs')
-            .select('id, student_id, activity_type, description, xp_earned, created_at')
-            .in('student_id', studentIds)
-            .order('created_at', { ascending: false })
-        : Promise.resolve({ data: [], error: null }),
-
-      studentIds.length > 0
-        ? supabase
-            .from('student_node_progress')
-            .select('student_id, node_id, status, score, last_accessed_at, completed_at, nodes(title)')
-            .in('student_id', studentIds)
-            .order('last_accessed_at', { ascending: false, nullsFirst: false })
-        : Promise.resolve({ data: [], error: null }),
-    ]);
-
-    // Dedup: keep only the first (= latest) record per student_id
-    const latestActivityMap = new Map<string, any>();
-    for (const row of activitiesResult.data || []) {
-      if (!latestActivityMap.has(row.student_id)) latestActivityMap.set(row.student_id, row);
-    }
-
-    const latestProgressMap = new Map<string, any>();
-    for (const row of progressResult.data || []) {
-      if (!latestProgressMap.has(row.student_id)) latestProgressMap.set(row.student_id, row);
-    }
-
-    // Step 3: Build response — same shape as before
     const classData = classResult.data;
     const teachersData = teachersResult.data || [];
+    const studentsData = studentsResult.data || [];
 
+    // Optimize: Fetch activity_logs and student_node_progress separately with limits
+    const studentIds = studentsData.map((s: any) => s.profile.id);
+    let activityLogs: any[] = [];
+    let progressLogs: any[] = [];
+
+    if (studentIds.length > 0) {
+      const limitCount = studentIds.length * 2;
+      const [logsRes, progRes] = await Promise.all([
+        supabase
+          .from('activity_logs')
+          .select('*')
+          .in('student_id', studentIds)
+          .order('created_at', { ascending: false })
+          .limit(limitCount),
+        supabase
+          .from('student_node_progress')
+          .select('*, nodes(title)')
+          .in('student_id', studentIds)
+          .order('last_accessed_at', { ascending: false, nullsFirst: false })
+          .limit(limitCount)
+      ]);
+      activityLogs = logsRes.data || [];
+      progressLogs = progRes.data || [];
+    }
+
+    // Find homeroom teacher
     const homeroomTeachers = teachersData.filter((ct: any) => ct.is_homeroom);
     const homeroomTeacher = homeroomTeachers.length > 0 ? {
       id: homeroomTeachers[0].teacher.id,
@@ -342,22 +338,42 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
       subjects: homeroomTeachers.map((ct: any) => ct.subject).filter(Boolean),
     } : null;
 
+    // Get subject teachers (not homeroom)
     const subjectTeachers = teachersData
       .filter((ct: any) => !ct.is_homeroom)
-      .map((ct: any) => ({ teacher: ct.teacher, subject: ct.subject }));
+      .map((ct: any) => ({
+        teacher: ct.teacher,
+        subject: ct.subject,
+      }));
 
     const classDetail: ClassDetail = {
       ...classData,
       homeroom_teacher: homeroomTeacher,
       subject_teachers: subjectTeachers,
-      students: studentsData.map((s: any) => ({
-        ...s,
-        profile: {
-          ...s.profile,
-          latest_activity: latestActivityMap.get(s.profile.id) ?? null,
-          latest_progress: latestProgressMap.get(s.profile.id) ?? null,
-        },
-      })),
+      students: studentsData.map((s: any) => {
+        // Find the latest activity
+        let latestActivity = null;
+        const studentActivities = activityLogs.filter((a: any) => a.student_id === s.profile.id);
+        if (studentActivities.length > 0) {
+          latestActivity = studentActivities[0];
+        }
+
+        // Find the latest progress node
+        let latestProgress = null;
+        const studentProgress = progressLogs.filter((p: any) => p.student_id === s.profile.id);
+        if (studentProgress.length > 0) {
+          latestProgress = studentProgress[0];
+        }
+
+        return {
+          ...s,
+          profile: {
+            ...s.profile,
+            latest_activity: latestActivity,
+            latest_progress: latestProgress
+          }
+        };
+      }),
     };
 
     console.log('Class detail loaded:', {
@@ -375,7 +391,6 @@ export async function getClassDetail(classId: number): Promise<ClassDetailRespon
     return { data: null, error: message };
   }
 }
-
 
 /**
  * Get all subjects taught in a class
@@ -478,6 +493,14 @@ function mergeHomeroomAndSubjectMaps(
  * Get all classes assigned to a teacher (both homeroom and subject)
  */
 let teacherClassesCache: { userId: string, data: any, timestamp: number } | null = null;
+
+export function invalidateTeacherClassesCache(teacherId?: string) {
+  if (teacherId && teacherClassesCache?.userId === teacherId) {
+    teacherClassesCache = null;
+  } else if (!teacherId) {
+    teacherClassesCache = null;
+  }
+}
 
 export async function getTeacherClasses(
 
@@ -627,6 +650,7 @@ export async function assignTeacherToClass(
       return { data: null, error: error.message };
     }
 
+    invalidateTeacherClassesCache(input.teacher_id);
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -657,6 +681,7 @@ export async function removeTeacherFromClass(
       return { data: null, error: error.message };
     }
 
+    invalidateTeacherClassesCache(teacherId);
     return { data: true, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -794,6 +819,8 @@ export async function joinClassByCode(
       return { data: null, error: error.message };
     }
 
+    // Since we don't know the exact teacher id here, invalidate all caches
+    invalidateTeacherClassesCache();
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

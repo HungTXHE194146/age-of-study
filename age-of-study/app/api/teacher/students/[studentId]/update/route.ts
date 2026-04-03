@@ -46,6 +46,30 @@ export async function PUT(
       );
     }
 
+    // Verify Resource Scope (Student must be in a class taught by this teacher)
+    const { data: teacherClasses } = await supabaseAdmin
+      .from("class_teachers")
+      .select("class_id")
+      .eq("teacher_id", teacherId);
+
+    const classIds = teacherClasses?.map(c => c.class_id) || [];
+
+    const { data: isAssociated, error: scopeError } = await supabaseAdmin
+      .from("class_students")
+      .select("class_id")
+      .eq("student_id", studentId)
+      .in("class_id", classIds)
+      .limit(1)
+      .single();
+
+    if (scopeError || !isAssociated) {
+      return NextResponse.json(
+        { error: "Bạn không có quyền cập nhật thông tin học sinh này. (Unauthorized for this student scope)" },
+        { status: 403 }
+      );
+    }
+
+
     const cleanUsername = username.toString().toLowerCase().trim();
 
     // Get old values for audit log

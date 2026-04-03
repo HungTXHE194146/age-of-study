@@ -222,16 +222,73 @@ function CreateTestContent() {
       setSubjects(subjectList);
       setIsLoadingSubjects(false);
 
+      // Default to "Tiếng Việt 5" if found
+      const defaultSubject = subjectList.find(
+        (s) =>
+          s.name.toLowerCase().includes("tiếng việt") && s.name.includes("5"),
+      );
+
+      let teacherClassesList: any[] = [];
       if (user?.id) {
         setIsLoadingClasses(true);
-        const classes = await fetchTeacherClassesData(user.id);
-        setTeacherClasses(classes);
+        teacherClassesList = await fetchTeacherClassesData(user.id);
+        setTeacherClasses(teacherClassesList);
         setIsLoadingClasses(false);
       }
+
+      setTestDetails((prev) => {
+        const updates: Partial<TestDetails> = {};
+
+        // Only set default subject if it's not already set (e.g. from draft)
+        if (!prev.subject && defaultSubject) {
+          updates.subject = defaultSubject.id.toString();
+        }
+
+        // Only set default class if it's not already set (e.g. from URL or draft)
+        if (!prev.classId && teacherClassesList.length > 0) {
+          updates.classId = teacherClassesList[0].id.toString();
+        }
+
+        if (Object.keys(updates).length > 0) {
+          return { ...prev, ...updates };
+        }
+        return prev;
+      });
     }
 
     loadInitialData();
   }, [user?.id]);
+
+  // Load nodes when subject changes
+  useEffect(() => {
+    const loadNodesForSubject = async () => {
+      const subjectId = testDetails.subject;
+      if (!subjectId) {
+        setNodes([]);
+        return;
+      }
+
+      try {
+        setIsLoadingNodes(true);
+        const supabase = await getSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from("nodes")
+          .select("id, title")
+          .eq("subject_id", parseInt(subjectId))
+          .order("title", { ascending: true });
+
+        if (error) throw error;
+        setNodes(data || []);
+      } catch (error) {
+        console.error("Error fetching nodes in create page:", error);
+        setNodes([]);
+      } finally {
+        setIsLoadingNodes(false);
+      }
+    };
+
+    loadNodesForSubject();
+  }, [testDetails.subject]);
 
   // Network & Sync Logic
   useEffect(() => {

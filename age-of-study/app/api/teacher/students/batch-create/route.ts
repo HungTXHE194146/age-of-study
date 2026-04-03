@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { formatBirthdayToPassword } from "@/lib/utils";
+import { verifyTeacher } from "@/lib/adminAuth";
 
 // Init Supabase Client with Service Role Key to bypass RLS and create users directly
 const supabaseAdmin = createClient(
@@ -16,6 +17,13 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify teacher authentication
+    const authResult = await verifyTeacher(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const teacherId = authResult.userId;
+
     const body = await request.json();
     const { students, class_id } = body;
 
@@ -26,6 +34,22 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Verify Resource Scope (Teacher must be assigned to this class)
+    const { data: isAssigned, error: assignmentError } = await supabaseAdmin
+      .from("class_teachers")
+      .select("class_id")
+      .eq("class_id", class_id)
+      .eq("teacher_id", teacherId)
+      .single();
+
+    if (assignmentError || !isAssigned) {
+      return NextResponse.json(
+        { error: "Bạn không có quyền thêm học sinh vào lớp này. (Unauthorized for this class scope)" },
+        { status: 403 }
+      );
+    }
+
 
     const results = {
       successCount: 0,

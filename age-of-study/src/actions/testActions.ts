@@ -131,23 +131,28 @@ export async function syncTestProgressAction(
           .eq("node_id", testData.node_id)
           .single();
 
-        let currentBestXp = xpEarned;
+        let currentBestScore = score;
         let submitCount = 1;
 
         if (existingProgress) {
-          // Keep highest XP (stored in score column for this task)
-          const existingBestXp = existingProgress.score ? parseFloat(existingProgress.score) : 0;
-          if (existingBestXp > currentBestXp) {
-            currentBestXp = existingBestXp;
+          // Keep highest percentage score
+          // Migration: if existing score > 100 (old XP-based storage), treat as 100 for comparison
+          const rawScore = existingProgress.score ? parseFloat(existingProgress.score) : 0;
+          const existingBestScore = rawScore > 100 ? 100 : rawScore;
+          
+          if (existingBestScore > currentBestScore) {
+            currentBestScore = existingBestScore;
           }
           submitCount = (existingProgress.submit_count || 0) + 1;
         }
 
-        // Check if now completed based on XP
-        const isCompleted = currentBestXp >= nodeRequiredXp;
+        // Check if now completed based on score (standard 50% pass)
+        // Or keep XP-based completion if that was the intended gamification logic
+        // For educational apps, score-based completion (>= 50%) is usually better for Principals.
+        // Actually, let's stick to score-based completion for simplicity and clarity
+        const isCompleted = currentBestScore >= 50; 
         let finalStatus = isCompleted ? "completed" : "in_progress";
         
-        // If it was already completed, don't revert to in_progress
         if (existingProgress?.status === "completed") {
           finalStatus = "completed";
         }
@@ -156,7 +161,7 @@ export async function syncTestProgressAction(
           ? new Date().toISOString() 
           : existingProgress?.completed_at;
 
-        // Update progress with best stats (XP based, stored in score as text)
+        // Update progress with best stats (Score strictly as 0-100%)
         await supabase
           .from("student_node_progress")
           .upsert({
@@ -164,7 +169,7 @@ export async function syncTestProgressAction(
             node_id: testData.node_id,
             status: finalStatus,
             completed_at: finalCompletedAt,
-            score: currentBestXp.toString(), // Use score column to store best_xp as text
+            score: currentBestScore.toString(), 
             submit_count: submitCount,
             last_accessed_at: new Date().toISOString()
           }, { onConflict: "student_id, node_id" });

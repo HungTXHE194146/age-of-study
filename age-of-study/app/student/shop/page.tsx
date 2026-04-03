@@ -62,6 +62,11 @@ export default function ShopPage() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [localFreezeCount, setLocalFreezeCount] = useState<number | null>(null);
   const [localXP, setLocalXP] = useState<number | null>(null);
+  const [confirmingItem, setConfirmingItem] = useState<{
+    item: ShopItem;
+    quantity: number;
+    totalCost: number;
+  } | null>(null);
 
   if (!user) return null;
 
@@ -90,24 +95,38 @@ export default function ShopPage() {
   async function handlePurchase(item: ShopItem) {
     if (!user) return;
     const qty = quantities[item.id] ?? 1;
+    const totalCost = qty * item.xpCostPer;
+
+    if (currentXP < totalCost) {
+      addToast("error", "Không đủ XP...");
+      return;
+    }
 
     if (item.id === "streak_freezer") {
-      setLoading(item.id);
-      const { data, error } = await purchaseFreezer(
-        user.id,
-        qty,
-        item.xpCostPer,
-      );
-      setLoading(null);
+      setConfirmingItem({ item, quantity: qty, totalCost });
+    }
+  }
 
-      if (error) {
-        addToast("error", error);
-      } else if (data) {
-        setLocalXP(data.newXP);
-        setLocalFreezeCount(data.newFreezeCount);
-        addToast("success", `Mua thành công ${qty} Streak Freezer! 🧊`);
-        checkAuth();
-      }
+  async function executePurchase() {
+    if (!user || !confirmingItem) return;
+    const { item, quantity, totalCost } = confirmingItem;
+
+    setLoading(item.id);
+    const { data, error } = await purchaseFreezer(
+      user.id,
+      quantity,
+      item.xpCostPer,
+    );
+    setLoading(null);
+    setConfirmingItem(null);
+
+    if (error) {
+      addToast("error", error);
+    } else if (data) {
+      setLocalXP(data.newXP);
+      setLocalFreezeCount(data.newFreezeCount);
+      addToast("success", `Mua thành công ${quantity} Streak Freezer! 🧊`);
+      checkAuth();
     }
   }
 
@@ -349,6 +368,91 @@ export default function ShopPage() {
               />
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Confirmation Modal ── */}
+      <AnimatePresence>
+        {confirmingItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setConfirmingItem(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-sm bg-[#191919] border border-[#2A2A2A] rounded-xl overflow-hidden shadow-2xl"
+            >
+              <div className="p-6">
+                <h3 className="text-xl font-black text-white mb-2 uppercase flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-amber-400" />
+                  Xác nhận mua
+                </h3>
+                <p className="text-gray-400 text-sm mb-6">
+                  Bạn có chắc muốn mua{" "}
+                  <span className="text-white font-bold">
+                    {confirmingItem.quantity} {confirmingItem.item.name}
+                  </span>{" "}
+                  không?
+                </p>
+
+                <div className="space-y-3 font-mono text-sm mb-6">
+                  <div className="flex justify-between text-gray-400">
+                    <span>XP Hiện tại:</span>
+                    <span className="text-white tabular-nums">
+                      {currentXP.toLocaleString("vi-VN")} XP
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-red-400">
+                    <span>Chi phí:</span>
+                    <span className="tabular-nums">
+                      -{confirmingItem.totalCost.toLocaleString("vi-VN")} XP
+                    </span>
+                  </div>
+                  <div className="border-t border-[#333] pt-3 flex justify-between text-amber-400 font-bold">
+                    <span>XP Còn lại:</span>
+                    <span className="tabular-nums">
+                      {(currentXP - confirmingItem.totalCost).toLocaleString(
+                        "vi-VN",
+                      )}{" "}
+                      XP
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setConfirmingItem(null)}
+                    disabled={loading !== null}
+                    className="flex-1 px-4 py-2.5 bg-[#2A2A2A] text-white font-bold text-sm uppercase rounded hover:bg-[#333] transition-colors"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={executePurchase}
+                    disabled={loading !== null}
+                    className="flex-1 px-4 py-2.5 bg-amber-400 text-black font-bold text-sm uppercase rounded hover:bg-amber-300 transition-colors flex justify-center items-center"
+                  >
+                    {loading ? (
+                      <motion.span
+                        animate={{ opacity: [1, 0.4, 1] }}
+                        transition={{ repeat: Infinity, duration: 0.8 }}
+                      >
+                        Đang mua...
+                      </motion.span>
+                    ) : (
+                      "Xác nhận"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

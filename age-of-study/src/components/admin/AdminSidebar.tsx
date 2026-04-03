@@ -112,7 +112,7 @@ export default function AdminSidebar({
       <div
         className={`
           fixed lg:static inset-y-0 left-0 z-50
-          w-64 bg-white border-r border-gray-200 h-full flex flex-col
+          w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col
           transition-transform duration-300 ease-in-out
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
@@ -147,8 +147,7 @@ export default function AdminSidebar({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <ul className="space-y-2">
+        <nav className="flex-1 p-4 overflow-y-auto">          <ul className="space-y-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;

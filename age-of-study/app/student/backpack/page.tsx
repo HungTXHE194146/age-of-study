@@ -56,11 +56,11 @@ const TABS: Tab[] = [
 
 export default function BackpackPage() {
   const router = useRouter();
-  const { user, checkAuth } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabType>("badges");
 
-  const handleAvatarChanged = async () => {
-    await checkAuth();
+  const handleAvatarChanged = (avatarCode: string) => {
+    updateUser({ avatar_url: avatarCode });
   };
 
   if (!user) {

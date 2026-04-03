@@ -27,6 +27,8 @@ export interface Profile {
   full_name: string | null
   avatar_url: string | null
   role: 'system_admin' | 'teacher' | 'student'
+  phone_number: string | null
+  dob: string | null
   
   // Student profile fields
   age: number | null

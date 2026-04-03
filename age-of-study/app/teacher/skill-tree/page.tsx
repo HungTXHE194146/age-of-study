@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/useAuthStore";
 import { Button } from "@/components/ui/button";
 import { RouteProtectedWrapper } from "@/lib/routeMiddleware";
 import {
@@ -26,9 +27,17 @@ import { getTeacherNodeStats, TeacherNodeStats } from "@/lib/nodeStatsService";
 import NodeEditorForm from "@/components/teacher/NodeEditorForm";
 import { deleteNode } from "@/lib/nodeManagement";
 import { Node } from "@/lib/gradeSkillTreeService";
-import { NotebookCard, NotebookCardHeader, NotebookCardTitle, NotebookCardContent, NotebookButton, NotebookBadge } from "@/components/ui/notebook-card";
+import {
+  NotebookCard,
+  NotebookCardHeader,
+  NotebookCardTitle,
+  NotebookCardContent,
+  NotebookButton,
+  NotebookBadge,
+} from "@/components/ui/notebook-card";
 
 export default function TeacherSkillTreePage() {
+  const { user } = useAuthStore();
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [isSubjectSelectorOpen, setIsSubjectSelectorOpen] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -42,15 +51,16 @@ export default function TeacherSkillTreePage() {
   const [nodeToEdit, setNodeToEdit] = useState<Node | null>(null);
   const [allNodesAsNode, setAllNodesAsNode] = useState<Node[]>([]);
   const [subjectNodes, setSubjectNodes] = useState<
-    {
-      id: number;
-      title: string;
-      node_type: string;
-      parent_node_id?: number | null;
-      position_x?: number;
-      position_y?: number;
-      order_index: number;
-    }[] | null
+    | {
+        id: number;
+        title: string;
+        node_type: string;
+        parent_node_id?: number | null;
+        position_x?: number;
+        position_y?: number;
+        order_index: number;
+      }[]
+    | null
   >(null);
   const router = useRouter();
 
@@ -111,25 +121,31 @@ export default function TeacherSkillTreePage() {
     }
   }, [selectedSubject]);
 
-  const handleEditNode = useCallback((nodeId: number) => {
-    const node = allNodesAsNode.find(n => n.id === nodeId);
-    if (node) {
-      setNodeToEdit(node);
-      setIsEditorOpen(true);
-    }
-  }, [allNodesAsNode]);
-
-  const handleDeleteNode = useCallback(async (nodeId: number) => {
-    if (confirm("Bạn có chắc chắn muốn xóa bài học này?")) {
-      const result = await deleteNode(nodeId);
-      if (result.success) {
-        refreshNodes();
-        if (selectedNodeId === nodeId) setSelectedNodeId(null);
-      } else {
-        alert(`Lỗi: ${result.error}`);
+  const handleEditNode = useCallback(
+    (nodeId: number) => {
+      const node = allNodesAsNode.find((n) => n.id === nodeId);
+      if (node) {
+        setNodeToEdit(node);
+        setIsEditorOpen(true);
       }
-    }
-  }, [refreshNodes, selectedNodeId]);
+    },
+    [allNodesAsNode],
+  );
+
+  const handleDeleteNode = useCallback(
+    async (nodeId: number) => {
+      if (confirm("Bạn có chắc chắn muốn xóa bài học này?")) {
+        const result = await deleteNode(nodeId);
+        if (result.success) {
+          refreshNodes();
+          if (selectedNodeId === nodeId) setSelectedNodeId(null);
+        } else {
+          alert(`Lỗi: ${result.error}`);
+        }
+      }
+    },
+    [refreshNodes, selectedNodeId],
+  );
 
   const handleAddNode = useCallback(() => {
     setNodeToEdit(null);
@@ -146,7 +162,7 @@ export default function TeacherSkillTreePage() {
       if (selectedNodeId) {
         setNodeStatsLoading(true);
         try {
-          const stats = await getTeacherNodeStats(selectedNodeId);
+          const stats = await getTeacherNodeStats(selectedNodeId, user?.id);
           setNodeStats(stats);
         } catch (error) {
           console.error("Failed to fetch node stats:", error);
@@ -279,20 +295,32 @@ export default function TeacherSkillTreePage() {
 
               {selectedNodeId ? (
                 nodeStatsLoading ? (
-                  <div className="flex justify-center p-6"><Loading size="md" /></div>
+                  <div className="flex justify-center p-6">
+                    <Loading size="md" />
+                  </div>
                 ) : (
                   <div className="space-y-6">
                     <NotebookCard className="bg-orange-50/50">
                       <NotebookCardContent className="pt-6">
-                        <h3 className="text-gray-800 font-bold mb-3 uppercase text-sm">Tình hình hoàn thành</h3>
+                        <h3 className="text-gray-800 font-bold mb-3 uppercase text-sm">
+                          Tình hình hoàn thành
+                        </h3>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="bg-green-100 p-3 rounded-lg border-2 border-green-800 text-center shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
-                            <div className="text-2xl font-black text-green-900">{nodeStats?.stats?.completedSubmissions || 0}</div>
-                            <div className="text-xs font-bold text-green-800">Đã xong</div>
+                            <div className="text-2xl font-black text-green-900">
+                              {nodeStats?.stats?.completedSubmissions || 0}
+                            </div>
+                            <div className="text-xs font-bold text-green-800">
+                              Đã xong
+                            </div>
                           </div>
                           <div className="bg-blue-100 p-3 rounded-lg border-2 border-blue-800 text-center shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
-                            <div className="text-2xl font-black text-blue-900">{nodeStats?.stats?.inProgressSubmissions || 0}</div>
-                            <div className="text-xs font-bold text-blue-800">Đang học</div>
+                            <div className="text-2xl font-black text-blue-900">
+                              {nodeStats?.stats?.inProgressSubmissions || 0}
+                            </div>
+                            <div className="text-xs font-bold text-blue-800">
+                              Đang học
+                            </div>
                           </div>
                         </div>
                       </NotebookCardContent>
@@ -301,23 +329,45 @@ export default function TeacherSkillTreePage() {
                     <NotebookCard className="bg-purple-50/50">
                       <NotebookCardContent className="pt-6">
                         <div className="flex items-center justify-between mb-4 border-b-2 border-dashed border-gray-300 pb-2">
-                          <h3 className="text-gray-800 font-bold uppercase text-sm">Bài Kiểm Tra</h3>
-                          <NotebookBadge variant="danger" className="text-xs py-1 px-2">{nodeStats?.tests?.length || 0} bài</NotebookBadge>
+                          <h3 className="text-gray-800 font-bold uppercase text-sm">
+                            Bài Kiểm Tra
+                          </h3>
+                          <NotebookBadge
+                            variant="danger"
+                            className="text-xs py-1 px-2"
+                          >
+                            {nodeStats?.tests?.length || 0} bài
+                          </NotebookBadge>
                         </div>
                         <div className="space-y-3">
                           {nodeStats?.tests && nodeStats.tests.length > 0 ? (
                             nodeStats.tests.map((t) => (
-                              <div key={t.id} className="bg-white p-3 rounded-lg border-2 border-black hover:bg-yellow-100 hover:-translate-y-1 transition-transform cursor-pointer shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
-                                <div className="font-bold text-gray-900 text-base line-clamp-1">{t.title || 'Bài test'}</div>
+                              <div
+                                key={t.id}
+                                className="bg-white p-3 rounded-lg border-2 border-black hover:bg-yellow-100 hover:-translate-y-1 transition-transform cursor-pointer shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+                              >
+                                <div className="font-bold text-gray-900 text-base line-clamp-1">
+                                  {t.title || "Bài test"}
+                                </div>
                                 <div className="text-xs font-bold text-gray-500 mt-1 flex justify-between uppercase">
-                                  <span className={t.type === 'practice' ? 'text-blue-600' : 'text-purple-600'}>
-                                    {t.type === 'practice' ? 'Luyện tập' : 'Kiểm tra'}
+                                  <span
+                                    className={
+                                      t.type === "practice"
+                                        ? "text-blue-600"
+                                        : "text-purple-600"
+                                    }
+                                  >
+                                    {t.type === "practice"
+                                      ? "Luyện tập"
+                                      : "Kiểm tra"}
                                   </span>
                                 </div>
                               </div>
                             ))
                           ) : (
-                            <div className="text-sm font-bold text-gray-500 italic text-center py-4 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">Chưa có bài kiểm tra.</div>
+                            <div className="text-sm font-bold text-gray-500 italic text-center py-4 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">
+                              Chưa có bài kiểm tra.
+                            </div>
                           )}
                         </div>
                       </NotebookCardContent>
@@ -328,7 +378,8 @@ export default function TeacherSkillTreePage() {
                 <div className="bg-white p-8 rounded-xl border-4 border-dashed border-gray-300 text-center flex flex-col items-center justify-center min-h-[300px]">
                   <Book className="w-16 h-16 text-gray-300 mb-4" />
                   <p className="text-gray-500 font-bold text-base">
-                    Bấm vào một Bài học (Note) bất kỳ trên cây kỹ năng để xem thống kê số liệu và danh sách Bài kiểm tra chi tiết.
+                    Bấm vào một Bài học (Note) bất kỳ trên cây kỹ năng để xem
+                    thống kê số liệu và danh sách Bài kiểm tra chi tiết.
                   </p>
                 </div>
               )}

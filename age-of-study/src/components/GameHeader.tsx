@@ -4,9 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/store/useAuthStore";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, ShoppingCart } from "lucide-react";
 import Image from "next/image";
-import { Tooltip } from "@/components/ui/tooltip";
 import "./GameHeader.css";
 
 /* ─────────────────────────────────────
@@ -16,15 +15,14 @@ interface NavItem {
   icon: string;
   label: string;
   href: string;
-  description: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { icon: "🏠", label: "Tổng quan", href: "/student", description: "Xem tóm tắt tiến độ, nhiệm vụ và thành tựu cá nhân." },
-  { icon: "🏫", label: "Lớp học", href: "/student/classes", description: "Truy cập các lớp học và danh sách bài học đang tham gia." },
-  { icon: "⚔️", label: "Học tập", href: "/student/skill-tree", description: "Khám phá cây kỹ năng, rèn luyện và thăng tiến trình độ." },
-  { icon: "🏆", label: "Xếp hạng", href: "/student/leaderboard", description: "Theo dõi bảng xếp hạng vinh danh các chiến binh xuất sắc." },
-  { icon: "🎒", label: "Balo", href: "/student/backpack", description: "Quản lý vật phẩm, trang bị và phần thưởng đã thu thập." },
+  { icon: "🏠", label: "Tổng quan", href: "/student" },
+  { icon: "🏫", label: "Lớp học", href: "/student/classes" },
+  { icon: "📚", label: "Học tập", href: "/student/skill-tree" },
+  { icon: "🏆", label: "Xếp hạng", href: "/student/leaderboard" },
+  { icon: "🎒", label: "Balo", href: "/student/backpack" },
 ];
 
 /* ─────────────────────────────────────
@@ -163,34 +161,33 @@ export default function GameHeader() {
                 (item.href !== "/student" && pathname.startsWith(item.href));
 
               return (
-                <Tooltip key={item.href} content={item.description} className="z-[100]" position="bottom">
-                  <motion.div
-                    className={`hud-nav-item ${isActive ? "hud-nav-item--active" : ""}`}
-                    variants={WIGGLE_VARIANTS}
-                    initial="idle"
-                    whileHover="hover"
-                    whileTap={{ scale: 0.92 }}
-                    onClick={() => router.push(item.href)}
-                    role="link"
-                    tabIndex={0}
-                    aria-label={item.label}
-                    aria-current={isActive ? "page" : undefined}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        router.push(item.href);
-                      }
-                    }}
+                <motion.div
+                  key={item.href}
+                  className={`hud-nav-item ${isActive ? "hud-nav-item--active" : ""}`}
+                  variants={WIGGLE_VARIANTS}
+                  initial="idle"
+                  whileHover="hover"
+                  whileTap={{ scale: 0.92 }}
+                  onClick={() => router.push(item.href)}
+                  role="link"
+                  tabIndex={0}
+                  aria-label={item.label}
+                  aria-current={isActive ? "page" : undefined}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(item.href);
+                    }
+                  }}
+                >
+                  <motion.span
+                    className="hud-nav-icon"
+                    {...(isActive ? BOUNCE_ACTIVE : {})}
                   >
-                    <motion.span
-                      className="hud-nav-icon"
-                      {...(isActive ? BOUNCE_ACTIVE : {})}
-                    >
-                      {item.icon}
-                    </motion.span>
-                    <span className="hud-nav-label">{item.label}</span>
-                  </motion.div>
-                </Tooltip>
+                    {item.icon}
+                  </motion.span>
+                  <span className="hud-nav-label">{item.label}</span>
+                </motion.div>
               );
             })}
           </nav>
@@ -228,6 +225,34 @@ export default function GameHeader() {
               <span className="whitespace-nowrap text-xs sm:text-sm">
                 {formatXP(xp)}
                 <span className="hidden xs:inline"> XP</span>
+              </span>
+            </motion.div>
+
+            {/* Shop Badge */}
+            <motion.div
+              className="hud-badge hud-badge--shop cursor-pointer"
+              whileHover={{ scale: 1.08 }}
+              transition={SPRING}
+              onClick={() => router.push("/student/shop")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  router.push("/student/shop");
+                }
+              }}
+              aria-label="Cửa hàng"
+            >
+              <span
+                role="img"
+                aria-label="Shop"
+                className="text-base sm:text-lg"
+              >
+                🛍️
+              </span>
+              <span className="whitespace-nowrap text-xs sm:text-sm">
+                Cửa hàng
               </span>
             </motion.div>
 
@@ -302,6 +327,27 @@ export default function GameHeader() {
                     <div className="hud-dropdown-divider" />
 
                     <div
+                      className="hud-dropdown-item"
+                      role="menuitem"
+                      tabIndex={0}
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        router.push("/student/shop");
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          setDropdownOpen(false);
+                          router.push("/student/shop");
+                        }
+                      }}
+                    >
+                      <ShoppingCart size={16} />
+                      <span>Cửa hàng</span>
+                    </div>
+
+                    <div className="hud-dropdown-divider" />
+
+                    <div
                       className="hud-dropdown-item hud-dropdown-item--danger"
                       role="menuitem"
                       tabIndex={0}
@@ -332,31 +378,30 @@ export default function GameHeader() {
               (item.href !== "/student" && pathname.startsWith(item.href));
 
             return (
-              <Tooltip key={item.href} content={item.description} className="z-[100]" position="top">
-                <motion.div
-                  className={`hud-bottom-item ${isActive ? "hud-bottom-item--active" : ""}`}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => router.push(item.href)}
-                  role="link"
-                  tabIndex={0}
-                  aria-label={item.label}
-                  aria-current={isActive ? "page" : undefined}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      router.push(item.href);
-                    }
-                  }}
+              <motion.div
+                key={item.href}
+                className={`hud-bottom-item ${isActive ? "hud-bottom-item--active" : ""}`}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => router.push(item.href)}
+                role="link"
+                tabIndex={0}
+                aria-label={item.label}
+                aria-current={isActive ? "page" : undefined}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    router.push(item.href);
+                  }
+                }}
+              >
+                <motion.span
+                  className="hud-bottom-icon"
+                  {...(isActive ? BOUNCE_ACTIVE : {})}
                 >
-                  <motion.span
-                    className="hud-bottom-icon"
-                    {...(isActive ? BOUNCE_ACTIVE : {})}
-                  >
-                    {item.icon}
-                  </motion.span>
-                  <span className="hud-bottom-label">{item.label}</span>
-                </motion.div>
-              </Tooltip>
+                  {item.icon}
+                </motion.span>
+                <span className="hud-bottom-label">{item.label}</span>
+              </motion.div>
             );
           })}
         </div>

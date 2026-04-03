@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   NotebookCard,
   NotebookCardHeader,
@@ -17,11 +17,12 @@ import {
   LogOut,
   KeyRound,
   Save,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import UserAvatar from "@/components/admin/UserAvatar";
 import { useRouter } from "next/navigation";
 import { MFASettings } from "@/components/auth/MFASettings";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 export default function TeacherSettingsPage() {
   const { user, logout } = useAuthStore();
@@ -34,7 +35,10 @@ export default function TeacherSettingsPage() {
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [saveMessage, setSaveMessage] = useState({ type: "", text: "" });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { checkAuth } = useAuthStore();
 
   useEffect(() => {
     if (user) {
@@ -51,14 +55,84 @@ export default function TeacherSettingsPage() {
   };
 
   const handleSaveProfile = async () => {
+    if (!user) return;
     setIsSaving(true);
     setSaveMessage({ type: "", text: "" });
-    // Simulate API call for saving profile
-    setTimeout(() => {
-      setIsSaving(false);
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: formData.full_name,
+          phone_number: formData.phone_number,
+          dob: formData.dob,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      await checkAuth();
       setSaveMessage({ type: "success", text: "Đã lưu thông tin thành công!" });
+    } catch (error: any) {
+      console.error("Error saving profile:", error);
+      setSaveMessage({
+        type: "error",
+        text: `Lỗi: ${error.message || "Không thể lưu thông tin"}`,
+      });
+    } finally {
+      setIsSaving(false);
       setTimeout(() => setSaveMessage({ type: "", text: "" }), 3000);
-    }, 1000);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setSaveMessage({ type: "error", text: "Ảnh quá lớn (tối đa 2MB)" });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("id", user.id);
+
+      if (updateError) throw updateError;
+
+      await checkAuth();
+      setSaveMessage({ type: "success", text: "Đã cập nhật ảnh đại diện!" });
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error);
+      setSaveMessage({
+        type: "error",
+        text: "Không thể tải ảnh lên. Vui lòng thử lại.",
+      });
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => setSaveMessage({ type: "", text: "" }), 3000);
+    }
   };
 
   const handleLogout = async () => {
@@ -114,7 +188,22 @@ export default function TeacherSettingsPage() {
                   Ảnh đại diện
                 </div>
               </div>
-              <Button variant="outline" className="border-2 border-black font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleAvatarUpload}
+                accept="image/*"
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="border-2 border-black font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+              >
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : null}
                 Đổi ảnh
               </Button>
             </div>
@@ -123,7 +212,9 @@ export default function TeacherSettingsPage() {
             <div className="flex-1 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-1">
-                  <label className="text-sm font-bold text-gray-700 uppercase tracking-wider font-handwritten text-lg">Họ và Tên</label>
+                  <label className="text-sm font-bold text-gray-700 uppercase tracking-wider font-handwritten text-lg">
+                    Họ và Tên
+                  </label>
                   <input
                     type="text"
                     name="full_name"
@@ -134,7 +225,9 @@ export default function TeacherSettingsPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-sm font-bold text-gray-700 uppercase tracking-wider font-handwritten text-lg">Mã Giáo Viên (Username)</label>
+                  <label className="text-sm font-bold text-gray-700 uppercase tracking-wider font-handwritten text-lg">
+                    Mã Giáo Viên (Username)
+                  </label>
                   <input
                     type="text"
                     value={user.username || ""}
@@ -144,14 +237,18 @@ export default function TeacherSettingsPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-sm font-bold text-gray-700 uppercase tracking-wider font-handwritten text-lg">Vai trò</label>
+                  <label className="text-sm font-bold text-gray-700 uppercase tracking-wider font-handwritten text-lg">
+                    Vai trò
+                  </label>
                   <div className="w-full px-4 py-2 bg-transparent border-b-2 border-dashed border-gray-400 font-bold text-indigo-700">
                     Giáo Viên
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-sm font-bold text-gray-700 uppercase tracking-wider font-handwritten text-lg">Số điện thoại</label>
+                  <label className="text-sm font-bold text-gray-700 uppercase tracking-wider font-handwritten text-lg">
+                    Số điện thoại
+                  </label>
                   <div className="relative">
                     <Phone className="absolute left-0 top-3 text-gray-400 w-4 h-4 hidden" />
                     <input
@@ -169,7 +266,13 @@ export default function TeacherSettingsPage() {
               <div className="pt-4 flex items-center justify-between border-t-2 border-dashed border-gray-200">
                 <div className="text-sm font-bold min-h-[20px]">
                   {saveMessage.text && (
-                    <span className={saveMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}>
+                    <span
+                      className={
+                        saveMessage.type === "success"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }
+                    >
                       {saveMessage.text}
                     </span>
                   )}
@@ -179,7 +282,11 @@ export default function TeacherSettingsPage() {
                   disabled={isSaving}
                   className="bg-[#ffde59] hover:bg-[#efce49] text-black border-2 border-black font-black px-8 py-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-[0_0_0_0_rgba(0,0,0,1)] transition-all flex items-center gap-2"
                 >
-                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
                   Lưu Thay Đổi
                 </Button>
               </div>
@@ -206,7 +313,9 @@ export default function TeacherSettingsPage() {
                   <KeyRound className="w-5 h-5 text-gray-700" />
                   <p className="font-bold text-lg">Mật khẩu tài khoản</p>
                 </div>
-                <p className="text-sm text-gray-600 mb-4">Thay đổi mật khẩu định kỳ để bảo vệ dữ liệu lớp học.</p>
+                <p className="text-sm text-gray-600 mb-4">
+                  Thay đổi mật khẩu định kỳ để bảo vệ dữ liệu lớp học.
+                </p>
                 <Button className="w-full bg-gray-800 hover:bg-black text-white font-bold border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,0.5)]">
                   Đổi Mật Khẩu Mới
                 </Button>
@@ -217,7 +326,10 @@ export default function TeacherSettingsPage() {
                   <LogOut className="w-5 h-5 text-red-600" />
                   <p className="font-bold text-lg text-red-700">Đăng xuất</p>
                 </div>
-                <p className="text-sm text-red-600/80 mb-4">Đăng xuất khỏi thiết bị này. Bạn sẽ cần nhập lại mật khẩu khi quay lại.</p>
+                <p className="text-sm text-red-600/80 mb-4">
+                  Đăng xuất khỏi thiết bị này. Bạn sẽ cần nhập lại mật khẩu khi
+                  quay lại.
+                </p>
                 <Button
                   onClick={handleLogout}
                   variant="danger"
@@ -246,7 +358,6 @@ export default function TeacherSettingsPage() {
           <MFASettings userId={user.id} />
         </NotebookCardContent>
       </NotebookCard>
-
     </div>
   );
 }

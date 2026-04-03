@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useClassStore } from "@/store/useClassStore";
 import { getClassDetail } from "@/lib/classService";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,9 +29,18 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { AddStudentModal, AddStudentFromExcelModal } from "@/components/student-management-modals";
-import { NotebookCard, NotebookCardHeader, NotebookCardTitle, NotebookCardContent, NotebookButton, NotebookBadge } from "@/components/ui/notebook-card";
-
+import {
+  AddStudentModal,
+  AddStudentFromExcelModal,
+} from "@/components/student-management-modals";
+import {
+  NotebookCard,
+  NotebookCardHeader,
+  NotebookCardTitle,
+  NotebookCardContent,
+  NotebookButton,
+  NotebookBadge,
+} from "@/components/ui/notebook-card";
 
 interface StudentData {
   student_id: string;
@@ -60,28 +70,7 @@ interface StudentData {
 export default function ClassStudentsPage() {
   const { classId } = useParams();
   const { user } = useAuthStore();
-  const [classData, setClassData] = useState<{
-    id: number;
-    name: string;
-    grade: number;
-    school_year: string;
-    class_code: string;
-    status: string;
-    created_at: string;
-    updated_at: string;
-    homeroom_teacher: {
-      id: string;
-      full_name: string | null;
-      subjects: Array<{ id: number; name: string }>;
-    } | null;
-    subject_teachers: Array<{
-      teacher: { id: string; full_name: string | null };
-      subject: { id: number; name: string };
-    }>;
-    students: Array<StudentData>;
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { classData, loading, error, fetchClassData } = useClassStore();
 
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -91,53 +80,118 @@ export default function ClassStudentsPage() {
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
+  const [codeCopied, setCodeCopied] = useState(false);
+  const itemsPerPage = 10;
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
 
   // Magic code states
-  const [generatingCodeFor, setGeneratingCodeFor] = useState<string | null>(null);
+  const [generatingCodeFor, setGeneratingCodeFor] = useState<string | null>(
+    null,
+  );
   const [magicCodeResult, setMagicCodeResult] = useState<{
     code: string;
     studentName: string;
   } | null>(null);
-  const [codeCopied, setCodeCopied] = useState(false);
 
-  const fetchClassData = async () => {
-    if (!classId || !user?.id) return;
+  // Filter and sort students
+  const filteredAndSortedStudents = useMemo(() => {
+    if (!classData?.students) return [];
 
-    try {
-      setLoading(true);
-      const classResult = await getClassDetail(Number(classId));
-      if (classResult.error) {
-        setError(classResult.error);
-        return;
-      }
-      setClassData(classResult.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Lỗi tải dữ liệu");
-    } finally {
-      setLoading(false);
-    }
-  };
+    return [...classData.students]
+      .filter((student: StudentData) => {
+        // Search filter
+        const matchesSearch =
+          searchTerm === "" ||
+          student.profile.full_name
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          student.profile.username
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          student.profile.total_xp.toString().includes(searchTerm);
+
+        // Grade filter
+        const matchesGrade =
+          filterGrade === 0 || student.profile.grade === filterGrade;
+
+        return matchesSearch && matchesGrade;
+      })
+      .sort((a: StudentData, b: StudentData) => {
+        let comparison = 0;
+
+        switch (sortBy) {
+          case "name":
+            comparison = (
+              a.profile.full_name ||
+              a.profile.username ||
+              ""
+            ).localeCompare(b.profile.full_name || b.profile.username || "");
+            break;
+          case "xp":
+            comparison = a.profile.total_xp - b.profile.total_xp;
+            break;
+          case "grade":
+            comparison = (a.profile.grade || 0) - (b.profile.grade || 0);
+            break;
+          case "joined":
+            comparison =
+              new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime();
+            break;
+          default:
+            return 0;
+        }
+
+        return sortOrder === "asc" ? comparison : -comparison;
+      });
+  }, [classData?.students, searchTerm, filterGrade, sortBy, sortOrder]);
+
+  // Pagination calculations
+  const totalPages = useMemo(() => {
+    return Math.max(
+      1,
+      Math.ceil(filteredAndSortedStudents.length / itemsPerPage),
+    );
+  }, [filteredAndSortedStudents.length]);
+
+  const currentStudents = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredAndSortedStudents.slice(
+      startIndex,
+      startIndex + itemsPerPage,
+    );
+  }, [filteredAndSortedStudents, currentPage]);
 
   useEffect(() => {
-    fetchClassData();
-  }, [classId, user?.id]);
+    if (classId && user?.id) {
+      fetchClassData(Number(classId));
+    }
+  }, [classId, user?.id, fetchClassData]);
 
   const handleGenerateCode = async (studentId: string, studentName: string) => {
     if (!user?.id) return;
     setGeneratingCodeFor(studentId);
     setMagicCodeResult(null);
     try {
+      const { getSupabaseBrowserClient } = await import("@/lib/supabase");
+      const {
+        data: { session },
+      } = await getSupabaseBrowserClient().auth.getSession();
+
       const res = await fetch("/api/auth/magic-login/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ student_id: studentId, teacher_id: user.id }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
+        body: JSON.stringify({ student_id: studentId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -158,7 +212,6 @@ export default function ClassStudentsPage() {
     setCodeCopied(true);
     setTimeout(() => setCodeCopied(false), 2000);
   };
-
 
   if (loading) {
     return (
@@ -218,60 +271,6 @@ export default function ClassStudentsPage() {
     );
   }
 
-  // Filter and sort students
-  const filteredAndSortedStudents = classData.students
-    .filter((student) => {
-      // Search filter
-      const matchesSearch =
-        searchTerm === "" ||
-        student.profile.full_name
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        student.profile.username
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        student.profile.total_xp.toString().includes(searchTerm);
-
-      // Grade filter
-      const matchesGrade =
-        filterGrade === 0 || student.profile.grade === filterGrade;
-
-      return matchesSearch && matchesGrade;
-    })
-    .sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortBy) {
-        case "name":
-          comparison = (
-            a.profile.full_name ||
-            a.profile.username ||
-            ""
-          ).localeCompare(b.profile.full_name || b.profile.username || "");
-          break;
-        case "xp":
-          comparison = a.profile.total_xp - b.profile.total_xp;
-          break;
-        case "grade":
-          comparison = (a.profile.grade || 0) - (b.profile.grade || 0);
-          break;
-        case "joined":
-          comparison =
-            new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime();
-          break;
-        default:
-          return 0;
-      }
-
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredAndSortedStudents.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentStudents = filteredAndSortedStudents.slice(startIndex, endIndex);
-
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
@@ -283,9 +282,7 @@ export default function ClassStudentsPage() {
         <div className="mb-8 p-6 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem] border-b-2 border-dashed border-gray-300">
           <div className="flex items-center gap-4 mb-4">
             <Link href={`/teacher/classes`}>
-              <NotebookButton
-                className="bg-gray-100 text-gray-800 border-gray-800 text-base py-1 px-4"
-              >
+              <NotebookButton className="bg-gray-100 text-gray-800 border-gray-800 text-base py-1 px-4">
                 <ChevronLeft className="w-5 h-5 mr-1" />
                 Về lớp
               </NotebookButton>
@@ -300,11 +297,17 @@ export default function ClassStudentsPage() {
             </div>
             {/* Quick Actions at the top */}
             <div className="hidden sm:flex gap-3">
-              <NotebookButton onClick={() => setIsAddModalOpen(true)} className="bg-emerald-100 text-emerald-900 border-emerald-900 py-2">
+              <NotebookButton
+                onClick={() => setIsAddModalOpen(true)}
+                className="bg-emerald-100 text-emerald-900 border-emerald-900 py-2"
+              >
                 <UserPlus className="w-5 h-5 mr-2" />
                 Thủ công
               </NotebookButton>
-              <NotebookButton onClick={() => setIsExcelModalOpen(true)} className="bg-blue-100 text-blue-900 border-blue-900 py-2">
+              <NotebookButton
+                onClick={() => setIsExcelModalOpen(true)}
+                className="bg-blue-100 text-blue-900 border-blue-900 py-2"
+              >
                 <Users className="w-5 h-5 mr-2" />
                 Từ Excel
               </NotebookButton>
@@ -314,67 +317,93 @@ export default function ClassStudentsPage() {
 
         {/* Mobile Quick Actions */}
         <div className="flex sm:hidden gap-3 mb-6">
-          <NotebookButton onClick={() => setIsAddModalOpen(true)} className="flex-1 bg-emerald-100 text-emerald-900 border-emerald-900 py-2 text-sm">
+          <NotebookButton
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex-1 bg-emerald-100 text-emerald-900 border-emerald-900 py-2 text-sm"
+          >
             <UserPlus className="w-4 h-4 mr-1" /> Thêm
           </NotebookButton>
-          <NotebookButton onClick={() => setIsExcelModalOpen(true)} className="flex-1 bg-blue-100 text-blue-900 border-blue-900 py-2 text-sm">
+          <NotebookButton
+            onClick={() => setIsExcelModalOpen(true)}
+            className="flex-1 bg-blue-100 text-blue-900 border-blue-900 py-2 text-sm"
+          >
             <Users className="w-4 h-4 mr-1" /> Excel
           </NotebookButton>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-           <NotebookCard className="bg-blue-50">
-             <NotebookCardContent className="pt-6">
-               <div className="flex justify-between items-center mb-2">
-                 <span className="font-bold text-gray-600 uppercase text-sm">Sĩ số</span>
-                 <Users className="w-6 h-6 text-blue-900" />
-               </div>
-               <div className="text-4xl font-black text-blue-900">{classData.students.length}</div>
-             </NotebookCardContent>
-           </NotebookCard>
-           
-           <NotebookCard className="bg-green-50">
-             <NotebookCardContent className="pt-6">
-               <div className="flex justify-between items-center mb-2">
-                 <span className="font-bold text-gray-600 uppercase text-sm">XP TB</span>
-                 <GraduationCap className="w-6 h-6 text-green-900" />
-               </div>
-               <div className="text-4xl font-black text-green-900">
-                  {Math.round(
-                    classData.students.reduce((acc, s) => acc + s.profile.total_xp, 0) / (classData.students.length || 1)
-                  )}
-               </div>
-             </NotebookCardContent>
-           </NotebookCard>
-           
-           <NotebookCard className="bg-purple-50">
-             <NotebookCardContent className="pt-6">
-               <div className="flex justify-between items-center mb-2">
-                 <span className="font-bold text-gray-600 uppercase text-sm">Khối</span>
-                 <Users className="w-6 h-6 text-purple-900" />
-               </div>
-               <div className="text-4xl font-black text-purple-900">
-                 {Math.max(0, ...classData.students.map((s) => s.profile.grade || 0))}
-               </div>
-             </NotebookCardContent>
-           </NotebookCard>
-           
-           <NotebookCard className="bg-yellow-50">
-             <NotebookCardContent className="pt-6">
-               <div className="flex justify-between items-center mb-2">
-                 <span className="font-bold text-gray-600 uppercase text-sm">Mới nhất</span>
-                 <Plus className="w-6 h-6 text-yellow-900" />
-               </div>
-               <div className="text-2xl font-black text-yellow-900 mt-2">
-                 {classData.students.length > 0
-                   ? new Date(
-                       Math.max(...classData.students.map((s) => new Date(s.joined_at).getTime()))
-                     ).toLocaleDateString("vi-VN")
-                   : "N/A"}
-               </div>
-             </NotebookCardContent>
-           </NotebookCard>
+          <NotebookCard className="bg-blue-50">
+            <NotebookCardContent className="pt-6">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-bold text-gray-600 uppercase text-sm">
+                  Sĩ số
+                </span>
+                <Users className="w-6 h-6 text-blue-900" />
+              </div>
+              <div className="text-4xl font-black text-blue-900">
+                {classData.students.length}
+              </div>
+            </NotebookCardContent>
+          </NotebookCard>
+
+          <NotebookCard className="bg-green-50">
+            <NotebookCardContent className="pt-6">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-bold text-gray-600 uppercase text-sm">
+                  XP TB
+                </span>
+                <GraduationCap className="w-6 h-6 text-green-900" />
+              </div>
+              <div className="text-4xl font-black text-green-900">
+                {Math.round(
+                  classData.students.reduce(
+                    (acc: number, s: any) => acc + s.profile.total_xp,
+                    0,
+                  ) / (classData.students.length || 1),
+                )}
+              </div>
+            </NotebookCardContent>
+          </NotebookCard>
+
+          <NotebookCard className="bg-purple-50">
+            <NotebookCardContent className="pt-6">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-bold text-gray-600 uppercase text-sm">
+                  Khối
+                </span>
+                <Users className="w-6 h-6 text-purple-900" />
+              </div>
+              <div className="text-4xl font-black text-purple-900">
+                {Math.max(
+                  0,
+                  ...classData.students.map((s: any) => s.profile.grade || 0),
+                )}
+              </div>
+            </NotebookCardContent>
+          </NotebookCard>
+
+          <NotebookCard className="bg-yellow-50">
+            <NotebookCardContent className="pt-6">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-bold text-gray-600 uppercase text-sm">
+                  Mới nhất
+                </span>
+                <Plus className="w-6 h-6 text-yellow-900" />
+              </div>
+              <div className="text-2xl font-black text-yellow-900 mt-2">
+                {classData.students.length > 0
+                  ? new Date(
+                      Math.max(
+                        ...classData.students.map((s: any) =>
+                          new Date(s.joined_at).getTime(),
+                        ),
+                      ),
+                    ).toLocaleDateString("vi-VN")
+                  : "N/A"}
+              </div>
+            </NotebookCardContent>
+          </NotebookCard>
         </div>
 
         {/* Search and Filter Controls */}
@@ -411,27 +440,36 @@ export default function ClassStudentsPage() {
                 <option value={5}>Khối 5</option>
               </select>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 border-t-2 border-dashed border-gray-400 pt-6">
-               <div className="text-lg font-bold text-gray-700 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem]">
-                 {filteredAndSortedStudents.length} học sinh trong danh sách.
-               </div>
-               <div className="flex items-center gap-2 mt-4 sm:mt-0">
-                 <span className="font-bold">Sắp xếp:</span>
-                 <select
-                   value={sortBy}
-                   onChange={(e) => setSortBy(e.target.value as "name" | "xp" | "grade" | "joined")}
-                   className="px-3 py-1 border-2 border-black rounded-md focus:ring-0 text-base font-bold bg-white"
-                 >
-                   <option value="name">Tên</option>
-                   <option value="xp">XP</option>
-                   <option value="grade">Khối</option>
-                   <option value="joined">Ngày</option>
-                 </select>
-                 <button onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")} className="border-2 border-black bg-white p-1 rounded-md hover:bg-gray-200">
-                   {sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />}
-                 </button>
-               </div>
+              <div className="text-lg font-bold text-gray-700 bg-[linear-gradient(transparent_95%,#ffcccb_95%)] bg-[length:100%_2rem]">
+                {filteredAndSortedStudents.length} học sinh trong danh sách.
+              </div>
+              <div className="flex items-center gap-2 mt-4 sm:mt-0">
+                <span className="font-bold">Sắp xếp:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) =>
+                    setSortBy(
+                      e.target.value as "name" | "xp" | "grade" | "joined",
+                    )
+                  }
+                  className="px-3 py-1 border-2 border-black rounded-md focus:ring-0 text-base font-bold bg-white"
+                >
+                  <option value="name">Tên</option>
+                  <option value="xp">XP</option>
+                  <option value="grade">Khối</option>
+                  <option value="joined">Ngày</option>
+                </select>
+                <button
+                  onClick={() =>
+                    setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                  }
+                  className="border-2 border-black bg-white p-1 rounded-md hover:bg-gray-200"
+                >
+                  {sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />}
+                </button>
+              </div>
             </div>
           </NotebookCardContent>
         </NotebookCard>
@@ -439,64 +477,90 @@ export default function ClassStudentsPage() {
         {/* Students Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {filteredAndSortedStudents.length === 0 ? (
-             <div className="col-span-full py-12 text-center text-gray-500 font-bold border-4 border-dashed border-gray-400 bg-white/50 rounded-2xl text-xl">
-                Không có học sinh nào.
-             </div>
+            <div className="col-span-full py-12 text-center text-gray-500 font-bold border-4 border-dashed border-gray-400 bg-white/50 rounded-2xl text-xl">
+              Không có học sinh nào.
+            </div>
           ) : (
-            currentStudents.map((student) => (
-              <NotebookCard key={student.student_id} className="group hover:-translate-y-1 transition-transform bg-white">
+            currentStudents.map((student: any) => (
+              <NotebookCard
+                key={student.student_id}
+                className="group hover:-translate-y-1 transition-transform bg-white"
+              >
                 <NotebookCardContent className="pt-6 relative">
                   {/* Decorative Pin/Tape */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-4 bg-red-200/50 -translate-y-2 rotate-[-2deg] border border-red-300"></div>
-                  
+
                   <div className="flex items-center gap-4 mb-4">
-                     <div className="w-16 h-16 bg-blue-100 border-2 border-black rounded-full flex items-center justify-center text-2xl font-black text-blue-900 shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex-shrink-0">
-                       {student.profile.full_name?.charAt(0) || student.profile.username?.charAt(0) || "?"}
-                     </div>
-                     <div className="min-w-0">
-                       <h3 className="text-xl font-bold text-gray-900 truncate" title={student.profile.full_name || student.profile.username || "Học sinh"}>
-                         {student.profile.full_name || student.profile.username || "Học sinh"}
-                       </h3>
-                       <p className="text-sm font-bold text-gray-500 uppercase">
-                         {student.profile.full_name ? student.profile.username : "N/A"}
-                       </p>
-                     </div>
+                    <div className="w-16 h-16 bg-blue-100 border-2 border-black rounded-full flex items-center justify-center text-2xl font-black text-blue-900 shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex-shrink-0">
+                      {student.profile.full_name?.charAt(0) ||
+                        student.profile.username?.charAt(0) ||
+                        "?"}
+                    </div>
+                    <div className="min-w-0">
+                      <h3
+                        className="text-xl font-bold text-gray-900 truncate"
+                        title={
+                          student.profile.full_name ||
+                          student.profile.username ||
+                          "Học sinh"
+                        }
+                      >
+                        {student.profile.full_name ||
+                          student.profile.username ||
+                          "Học sinh"}
+                      </h3>
+                      <p className="text-sm font-bold text-gray-500 uppercase">
+                        {student.profile.full_name
+                          ? student.profile.username
+                          : "N/A"}
+                      </p>
+                    </div>
                   </div>
-                  
+
                   <div className="space-y-3 pt-4 border-t-2 border-dashed border-gray-200">
                     <div className="flex justify-between items-center text-sm">
                       <span className="font-bold text-gray-600">Khối</span>
-                      <NotebookBadge className="py-0 px-2 text-sm">{student.profile.grade || "N/A"}</NotebookBadge>
+                      <NotebookBadge className="py-0 px-2 text-sm">
+                        {student.profile.grade || "N/A"}
+                      </NotebookBadge>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="font-bold text-gray-600">XP</span>
-                      <span className="font-black text-amber-600">{student.profile.total_xp}</span>
+                      <span className="font-black text-amber-600">
+                        {student.profile.total_xp}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="font-bold text-gray-600">Đang học</span>
-                      <span className="font-bold text-blue-600 truncate max-w-[120px] text-right" title={student.profile.latest_progress?.nodes?.title}>
-                        {student.profile.latest_progress?.nodes?.title || "Chưa có"}
+                      <span
+                        className="font-bold text-blue-600 truncate max-w-[120px] text-right"
+                        title={student.profile.latest_progress?.nodes?.title}
+                      >
+                        {student.profile.latest_progress?.nodes?.title ||
+                          "Chưa có"}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex gap-2 mt-6">
                     <Link
-                       href={`/teacher/classes/${classId}/students/${student.student_id}`}
-                       className="flex-1"
+                      href={`/teacher/classes/${classId}/students/${student.student_id}`}
+                      className="flex-1"
                     >
                       <NotebookButton className="w-full text-base py-1 bg-gray-100 border-gray-800 hover:bg-gray-200">
                         <Eye className="w-4 h-4 mr-1" /> Xem
                       </NotebookButton>
                     </Link>
                     <NotebookButton className="aspect-square p-2 bg-yellow-100 border-yellow-800 text-yellow-900 hover:bg-yellow-200">
-                       <Edit3 className="w-4 h-4" />
+                      <Edit3 className="w-4 h-4" />
                     </NotebookButton>
                     <NotebookButton
                       onClick={() =>
                         handleGenerateCode(
                           student.student_id,
-                          student.profile.full_name || student.profile.username || "Học sinh"
+                          student.profile.full_name ||
+                            student.profile.username ||
+                            "Học sinh",
                         )
                       }
                       disabled={generatingCodeFor === student.student_id}
@@ -526,15 +590,15 @@ export default function ClassStudentsPage() {
             >
               <ChevronLeft className="w-6 h-6" />
             </NotebookButton>
-            
+
             <div className="text-xl font-black text-gray-800 bg-white border-2 border-black px-6 py-2 rounded-md shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
               {currentPage} / {totalPages}
             </div>
-            
+
             <NotebookButton
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-               className="px-4 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-gray-400"
+              className="px-4 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-gray-400"
             >
               <ChevronRight className="w-6 h-6" />
             </NotebookButton>
@@ -547,7 +611,7 @@ export default function ClassStudentsPage() {
         onClose={() => setIsAddModalOpen(false)}
         classId={Number(classId)}
         onSuccess={() => {
-          fetchClassData();
+          fetchClassData(Number(classId), true);
           setCurrentPage(1);
         }}
       />
@@ -556,7 +620,7 @@ export default function ClassStudentsPage() {
         onClose={() => setIsExcelModalOpen(false)}
         classId={Number(classId)}
         onSuccess={() => {
-          fetchClassData();
+          fetchClassData(Number(classId), true);
           setCurrentPage(1);
         }}
       />
@@ -566,7 +630,10 @@ export default function ClassStudentsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl shadow-2xl border-2 border-black p-8 max-w-sm w-full relative">
             <button
-              onClick={() => { setMagicCodeResult(null); setCodeCopied(false); }}
+              onClick={() => {
+                setMagicCodeResult(null);
+                setCodeCopied(false);
+              }}
               className="absolute top-4 right-4 p-1 hover:bg-gray-100 rounded-lg"
             >
               <X className="w-5 h-5 text-gray-500" />
@@ -578,7 +645,11 @@ export default function ClassStudentsPage() {
                 Mã đăng nhập nhanh
               </h2>
               <p className="text-sm text-gray-500 mb-6">
-                Cho <span className="font-bold text-gray-800">{magicCodeResult.studentName}</span> nhập mã này
+                Cho{" "}
+                <span className="font-bold text-gray-800">
+                  {magicCodeResult.studentName}
+                </span>{" "}
+                nhập mã này
               </p>
 
               {/* Code display */}
@@ -589,7 +660,9 @@ export default function ClassStudentsPage() {
               </div>
 
               <p className="text-xs text-gray-400 mb-5">
-                Mã có hiệu lực trong <span className="font-bold text-orange-500">5 phút</span> và chỉ dùng được 1 lần
+                Mã có hiệu lực trong{" "}
+                <span className="font-bold text-orange-500">5 phút</span> và chỉ
+                dùng được 1 lần
               </p>
 
               <button
@@ -610,7 +683,8 @@ export default function ClassStudentsPage() {
               </button>
 
               <p className="text-xs text-gray-400 mt-4 leading-relaxed">
-                Học sinh vào trang <strong>Đăng nhập</strong> → <strong>Quên mật khẩu?</strong> → nhập tên đăng nhập và mã này
+                Học sinh vào trang <strong>Đăng nhập</strong> →{" "}
+                <strong>Quên mật khẩu?</strong> → nhập tên đăng nhập và mã này
               </p>
             </div>
           </div>

@@ -65,6 +65,7 @@ export default function HomePage() {
           <Link href="/" className="flex items-center gap-3">
             <Image
               src="/school-logo.svg"
+              loading="eager"
               alt="Logo"
               width={64}
               height={64}
@@ -87,12 +88,10 @@ export default function HomePage() {
                 href="/login"
                 className="flex items-center gap-2 bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white rounded-2xl px-5 py-2.5 text-sm sm:text-base font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
               >
-                <span>Học sinh</span>
+                <span>Đăng nhập</span>
                 <Rocket className="w-4 h-4 hidden sm:block" />
               </Link>
             </div>
-
-
           </div>
         </div>
       </header>
@@ -345,7 +344,9 @@ export default function HomePage() {
         <div className="absolute top-0 inset-x-0 h-24 md:h-40 bg-gradient-to-b from-slate-50 to-transparent z-0 pointer-events-none"></div>
 
         <div className="absolute inset-0 opacity-[0.03] outline-none z-0">
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">            <defs>
+          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+            {" "}
+            <defs>
               <pattern
                 id="smallGrid"
                 width="40"
@@ -487,7 +488,8 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                 <Link href="/login">
                   <button className="w-full sm:w-auto px-10 py-5 bg-white text-slate-900 text-xl font-bold rounded-2xl shadow-xl hover:shadow-indigo-500/20 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 group">
-                    Trải nghiệm ngay                    <ArrowRight className="w-6 h-6 text-indigo-600 group-hover:translate-x-1 transition-transform" />
+                    Trải nghiệm ngay{" "}
+                    <ArrowRight className="w-6 h-6 text-indigo-600 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </Link>
               </div>

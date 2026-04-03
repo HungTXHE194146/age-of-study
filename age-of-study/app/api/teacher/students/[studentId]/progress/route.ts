@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { verifyTeacher } from "@/lib/adminAuth";
+
 
 // Init Supabase Admin to bypass RLS
 const supabaseAdmin = createClient(
@@ -16,6 +18,14 @@ export async function GET(
 ) {
   try {
     const { studentId } = await params;
+
+    // Verify teacher authentication
+    const authResult = await verifyTeacher(request);
+    if (authResult instanceof NextResponse) {
+      return authResult; // Return error response
+    }
+    const teacherId = authResult.userId;
+
     const searchParams = request.nextUrl.searchParams;
     const classId = searchParams.get("classId");
 
@@ -26,32 +36,49 @@ export async function GET(
       );
     }
 
-    // 1. Fetch Profile
-    const { data: profile, error: profileErr } = await supabaseAdmin
-      .from("profiles")
-      .select("full_name, username, total_xp, current_streak, last_study_date")
-      .eq("id", studentId)
-      .single();
+    // Parallelize independent initial fetches
+    const [profileRes, activitiesRes, teacherClassesRes] = await Promise.all([
+      supabaseAdmin
+        .from("profiles")
+        .select("full_name, username, total_xp, current_streak, last_study_date")
+        .eq("id", studentId)
+        .single(),
+      supabaseAdmin
+        .from("activity_logs")
+        .select("*")
+        .eq("student_id", studentId)
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabaseAdmin
+        .from("class_teachers")
+        .select("class_id")
+        .eq("teacher_id", teacherId)
+    ]);
 
-    if (profileErr || !profile) {
+    if (profileRes.error || !profileRes.data) {
       return NextResponse.json(
         { error: "Không tìm thấy thông tin học sinh" },
         { status: 404 }
       );
     }
 
-    // 2. Fetch Timeline (Activity Logs)
-    const { data: activitiesData, error: activitiesErr } = await supabaseAdmin
-      .from("activity_logs")
-      .select("*")
+    const classIds = teacherClassesRes.data?.map(c => c.class_id) || [];
+    
+    // Verify Resource Scope & Fetch extra data in parallel
+    const associationCheckPromise = supabaseAdmin
+      .from("class_students")
+      .select("class_id")
       .eq("student_id", studentId)
-      .order("created_at", { ascending: false })
-      .limit(10);
+      .in("class_id", classIds)
+      .limit(1)
+      .single();
 
+    // 2. Process Timeline (Activity Logs) if available
     let activities: any[] = [];
-    if (!activitiesErr && activitiesData) {
-      // Collect unique test IDs from metadata for generic "completed" activities
-      const testIdsToFetch = activitiesData
+    let testsDataPromise: Promise<{ data: any[] | null }> = Promise.resolve({ data: null });
+
+    if (!activitiesRes.error && activitiesRes.data) {
+      const testIdsToFetch = activitiesRes.data
         .filter((act: any) => 
           act.activity_type === 'test_completed' && 
           act.metadata?.test_id && 
@@ -59,20 +86,64 @@ export async function GET(
         )
         .map((act: any) => act.metadata.test_id);
 
-      let testTitleMap = new Map();
       if (testIdsToFetch.length > 0) {
-        const { data: testsData } = await supabaseAdmin
+        testsDataPromise = supabaseAdmin
           .from("tests")
           .select("id, title")
-          .in("id", testIdsToFetch);
-        
-        if (testsData) {
-          testsData.forEach((t: any) => testTitleMap.set(t.id, t.title));
-        }
+          .in("id", testIdsToFetch) as any;
       }
+    }
 
-      activities = activitiesData.map((act: any) => {
-        // Format relative time (e.g. "Hôm nay", "Hôm qua", or specific date)
+    // 3. Fetch nodes and progress if classId is provided
+    let nodesPromise: Promise<{ data: any[] | null }> = Promise.resolve({ data: null });
+    let studentProgressPromise: Promise<{ data: any[] | null }> = Promise.resolve({ data: null });
+
+    if (classId) {
+      // Get subject IDs first to then fetch nodes
+      const { data: classTeachers } = await supabaseAdmin
+        .from("class_teachers")
+        .select("subject_id")
+        .eq("class_id", classId);
+      
+      const subjectIds = classTeachers?.filter(c => c.subject_id).map(c => c.subject_id) || [];
+      
+      if (subjectIds.length > 0) {
+        nodesPromise = supabaseAdmin
+          .from("nodes")
+          .select("id, title, node_type")
+          .in("subject_id", subjectIds)
+          .order("order_index", { ascending: true }) as any;
+        
+        studentProgressPromise = supabaseAdmin
+          .from("student_node_progress")
+          .select("node_id, status, score")
+          .eq("student_id", studentId) as any;
+      }
+    }
+
+    // Wait for all remaining queries
+    const [associationRes, testsDataRes, nodesRes, studentProgressRes] = await Promise.all([
+      associationCheckPromise,
+      testsDataPromise,
+      nodesPromise,
+      studentProgressPromise
+    ]);
+
+    if (associationRes.error || !associationRes.data) {
+      return NextResponse.json(
+        { error: "Bạn không có quyền truy cập thông tin học sinh này." },
+        { status: 403 }
+      );
+    }
+
+    // Process activities
+    const testTitleMap = new Map();
+    if (testsDataRes.data) {
+      (testsDataRes.data as any[]).forEach(t => testTitleMap.set(t.id, t.title));
+    }
+
+    if (activitiesRes.data) {
+      activities = (activitiesRes.data as any[]).map((act: any) => {
         const date = new Date(act.created_at);
         const today = new Date();
         const isToday = date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
@@ -82,8 +153,6 @@ export async function GET(
           : date.toLocaleDateString('vi-VN');
 
         let displayDesc = act.description;
-
-        // Enhance generic description with test title if available
         if (act.activity_type === 'test_completed' && act.metadata?.test_id) {
           const title = testTitleMap.get(act.metadata.test_id);
           if (title && (displayDesc === "Hoàn thành bài tập" || displayDesc?.startsWith("Hoàn thành bài tập với điểm số"))) {
@@ -91,81 +160,42 @@ export async function GET(
             displayDesc = `Hoàn thành bài tập: ${title}${scorePart}`;
           }
         }
-
-        return {
-          id: act.id,
-          time: timeStr,
-          type: act.activity_type,
-          desc: displayDesc,
-        };
+        return { id: act.id, time: timeStr, type: act.activity_type, desc: displayDesc };
       });
     }
 
-    // 3. Fetch Skill Tree Progress
+    // Process progress
     let progress: any[] = [];
-    
-    // If classId is provided, we try to find the subject(s) for this class to get the full node tree
-    if (classId) {
-      // Find subjects for this class
-      const { data: classTeachers } = await supabaseAdmin
-        .from("class_teachers")
-        .select("subject_id")
-        .eq("class_id", classId);
-
-      if (classTeachers && classTeachers.length > 0) {
-        // Assuming we take the first subject for simplicity or we can fetch all nodes for all subjects
-        const subjectIds = classTeachers.filter((c: any) => c.subject_id).map((c: any) => c.subject_id);
-        
-        if (subjectIds.length > 0) {
-          // Fetch all nodes for these subjects
-          const { data: nodes } = await supabaseAdmin
-            .from("nodes")
-            .select("id, title, node_type")
-            .in("subject_id", subjectIds)
-            .order("order_index", { ascending: true });
-
-          if (nodes && nodes.length > 0) {
-            // Fetch student progress for these nodes
-            const { data: studentProgress } = await supabaseAdmin
-              .from("student_node_progress")
-              .select("node_id, status, score")
-              .eq("student_id", studentId);
-
-            const progressMap = new Map();
-            if (studentProgress) {
-              studentProgress.forEach((p: any) => progressMap.set(p.node_id, p));
-            }
-
-            progress = nodes.filter((n: any) => n.node_type === 'lesson' || n.node_type === 'content').map((node: any) => {
-              const p = progressMap.get(node.id);
-              return {
-                id: `node-${node.id}`,
-                title: node.title,
-                status: p ? p.status : "not_started",
-                score: p && p.score ? p.score : "-",
-              };
-            });
-          }
-        }
+    if (nodesRes.data) {
+      const progressMap = new Map();
+      if (studentProgressRes.data) {
+        (studentProgressRes.data as any[]).forEach(p => progressMap.set(p.node_id, p));
       }
+
+      progress = (nodesRes.data as any[])
+        .filter((n: any) => n.node_type === 'lesson' || n.node_type === 'content')
+        .map((node: any) => {
+          const p = progressMap.get(node.id);
+          return {
+            id: `node-${node.id}`,
+            title: node.title,
+            status: p ? p.status : "not_started",
+            score: p && p.score ? p.score : "-",
+          };
+        });
     }
 
-    // If no progress found (e.g. no subject linked or no nodes), fallback to just joined progress
+    // Final fallback for progress if empty
     if (progress.length === 0) {
       const { data: rawProgress } = await supabaseAdmin
          .from("student_node_progress")
-         .select(`
-           node_id,
-           status,
-           score,
-           nodes ( title )
-         `)
+         .select(`node_id, status, score, nodes ( title )`)
          .eq("student_id", studentId);
 
       if (rawProgress) {
         progress = rawProgress.map((p: any) => ({
           id: `node-${p.node_id}`,
-          title: p.nodes?.title || "Bài học không tên",
+          title: (p as any).nodes?.title || "Bài học không tên",
           status: p.status,
           score: p.score || "-",
         }));
@@ -173,7 +203,7 @@ export async function GET(
     }
 
     return NextResponse.json({
-      profile,
+      profile: profileRes.data,
       activities: activities.length > 0 ? activities : [
         // Dummy default if empty so the UI doesn't look totally blank for new students
         {

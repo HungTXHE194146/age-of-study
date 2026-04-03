@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getTeacherLeaderboardData } from "@/lib/leaderboardService";
+import { useDebounce } from "@/hooks/useDebounce";
+import React from "react";
 import UserAvatar from "@/components/admin/UserAvatar";
 import Loading, { LoadingInline } from "@/components/ui/loading";
 import { Search, Filter, Download, TrendingUp } from "lucide-react";
@@ -23,7 +25,6 @@ export default function TeacherLeaderboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuthStore();
   const [students, setStudents] = useState<StudentData[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<StudentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [gradeFilter, setGradeFilter] = useState<number | "all">("all");
@@ -40,34 +41,17 @@ export default function TeacherLeaderboardPage() {
     }
   }, [isLoading, isAuthenticated, user]);
 
-  useEffect(() => {
-    filterStudents();
-  }, [searchTerm, gradeFilter, students]);
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const data = await getTeacherLeaderboardData();
-      setStudents(data);
-      setFilteredStudents(data);
-    } catch (error) {
-      console.error("Error loading teacher leaderboard:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterStudents = () => {
+  const filteredStudents = React.useMemo(() => {
     let filtered = students;
 
-    // Grade filter
     if (gradeFilter !== "all") {
       filtered = filtered.filter((s) => s.grade === gradeFilter);
     }
 
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
+    if (debouncedSearchTerm) {
+      const term = debouncedSearchTerm.toLowerCase();
       filtered = filtered.filter(
         (s) =>
           s.full_name?.toLowerCase().includes(term) ||
@@ -75,7 +59,19 @@ export default function TeacherLeaderboardPage() {
       );
     }
 
-    setFilteredStudents(filtered);
+    return filtered;
+  }, [students, gradeFilter, debouncedSearchTerm]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const data = await getTeacherLeaderboardData({ teacherId: user?.id });
+      setStudents(data);
+    } catch (error) {
+      console.error("Error loading teacher leaderboard:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const exportToExcel = async () => {
@@ -140,9 +136,9 @@ export default function TeacherLeaderboardPage() {
   const avgXP =
     filteredStudents.length > 0
       ? Math.round(
-        filteredStudents.reduce((acc, s) => acc + s.total_xp, 0) /
-        filteredStudents.length,
-      )
+          filteredStudents.reduce((acc, s) => acc + s.total_xp, 0) /
+            filteredStudents.length,
+        )
       : 0;
 
   const topStudent = filteredStudents[0];

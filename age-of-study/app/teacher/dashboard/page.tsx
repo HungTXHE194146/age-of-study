@@ -2,7 +2,7 @@
 
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import Loading from "@/components/ui/loading";
 import {
   ClipboardList,
@@ -39,6 +39,21 @@ export default function TeacherDashboard() {
   const router = useRouter();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(true);
+
+  const todayLabel = useMemo(() => {
+    return new Date().toLocaleDateString("vi-VN", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+  }, []);
+
+  const handleNavigate = useCallback(
+    (path: string) => {
+      router.push(path);
+    },
+    [router],
+  );
 
   // No need to call checkAuth() here - the layout already does it
   useEffect(() => {
@@ -90,17 +105,6 @@ export default function TeacherDashboard() {
     return null;
   }
 
-  const todayLabel = (() => {
-    return new Date().toLocaleDateString("vi-VN", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    });
-  })();
-
-  const handleNavigate = (path: string) => {
-    router.push(path);
-  };
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-12">
       {/* Top Decoration Bar */}
@@ -225,13 +229,19 @@ export default function TeacherDashboard() {
                             {summary.homeroomDetails.className}
                           </h3>
                           <p className="text-indigo-600 font-bold flex items-center gap-2">
-                            <Users className="w-4 h-4" /> {summary.homeroomDetails.students.length} học sinh đang theo dõi
+                            <Users className="w-4 h-4" />{" "}
+                            {summary.homeroomDetails.students.length} học sinh
+                            đang theo dõi
                           </p>
                         </div>
                       </div>
                       <div className="flex gap-2">
                         <NotebookButton
-                          onClick={() => handleNavigate(`/teacher/classes/${summary.homeroomDetails?.classId}`)}
+                          onClick={() =>
+                            handleNavigate(
+                              `/teacher/classes/${summary.homeroomDetails?.classId}`,
+                            )
+                          }
                           className="bg-white border-indigo-600 text-indigo-600"
                         >
                           Xem chi tiết
@@ -246,7 +256,9 @@ export default function TeacherDashboard() {
                       <div className="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-3xl border-2 border-indigo-100 shadow-sm">
                         <div className="flex items-center gap-3 mb-2">
                           <BarChart3 className="w-6 h-6 text-indigo-600" />
-                          <span className="font-bold text-gray-500 uppercase tracking-wider text-xs">Điểm trung bình</span>
+                          <span className="font-bold text-gray-500 uppercase tracking-wider text-xs">
+                            Điểm trung bình
+                          </span>
                         </div>
                         <div className="text-4xl font-black text-indigo-900">
                           {summary.homeroomDetails.averageScore.toFixed(1)}
@@ -259,7 +271,9 @@ export default function TeacherDashboard() {
                       <div className="bg-gradient-to-br from-emerald-50 to-white p-6 rounded-3xl border-2 border-emerald-100 shadow-sm">
                         <div className="flex items-center gap-3 mb-2">
                           <ClipboardList className="w-6 h-6 text-emerald-600" />
-                          <span className="font-bold text-gray-500 uppercase tracking-wider text-xs">Hoàn thành bài</span>
+                          <span className="font-bold text-gray-500 uppercase tracking-wider text-xs">
+                            Hoàn thành bài
+                          </span>
                         </div>
                         <div className="text-4xl font-black text-emerald-700">
                           {summary.homeroomDetails.completionRate.toFixed(0)}%
@@ -267,7 +281,9 @@ export default function TeacherDashboard() {
                         <div className="w-full bg-emerald-100 h-2 rounded-full mt-3 overflow-hidden border border-emerald-200">
                           <div
                             className="bg-emerald-500 h-full transition-all duration-1000"
-                            style={{ width: `${summary.homeroomDetails.completionRate}%` }}
+                            style={{
+                              width: `${summary.homeroomDetails.completionRate}%`,
+                            }}
                           />
                         </div>
                       </div>
@@ -275,45 +291,72 @@ export default function TeacherDashboard() {
                       <div className="bg-gradient-to-br from-orange-50 to-white p-6 rounded-3xl border-2 border-orange-100 shadow-sm">
                         <div className="flex items-center gap-3 mb-2">
                           <TrendingUp className="w-6 h-6 text-orange-600" />
-                          <span className="font-bold text-gray-500 uppercase tracking-wider text-xs">Hoạt động tuần này</span>
+                          <span className="font-bold text-gray-500 uppercase tracking-wider text-xs">
+                            Hoạt động tuần này
+                          </span>
                         </div>
                         <div className="text-4xl font-black text-orange-700">
                           {summary.homeroomDetails.activityLogs.length}
                         </div>
-                        <p className="text-xs font-medium text-orange-400 mt-2">Sự kiện mới trong lớp</p>
+                        <p className="text-xs font-medium text-orange-400 mt-2">
+                          Sự kiện mới trong lớp
+                        </p>
                       </div>
                     </div>
 
                     {/* Quick Student Grid (Mini) */}
                     <div>
                       <h4 className="font-black text-gray-800 mb-4 flex items-center gap-2">
-                        <Users className="w-5 h-5" /> Danh sách học sinh ({summary.homeroomDetails.students.length})
+                        <Users className="w-5 h-5" /> Danh sách học sinh (
+                        {summary.homeroomDetails.students.length})
                       </h4>
                       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
-                        {summary.homeroomDetails.students.slice(0, 10).map((s: any) => (
-                          <div
-                            key={s.student_id}
-                            onClick={() => handleNavigate(`/teacher/classes/${summary.homeroomDetails?.classId}/students/${s.student_id}`)}
-                            className="flex flex-col items-center p-3 rounded-2xl hover:bg-gray-50 border-2 border-transparent hover:border-gray-200 cursor-pointer transition-all"
-                          >
-                            <div className="w-12 h-12 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-indigo-700 font-black mb-2 shadow-sm overflow-hidden">
-                              {s.profile.avatar_url ? (
-                                <img src={s.profile.avatar_url} alt={s.profile.full_name} className="w-full h-full object-cover" />
-                              ) : (
-                                s.profile.full_name?.[0] || '?'
-                              )}
+                        {summary.homeroomDetails.students
+                          .slice(0, 10)
+                          .map((s: any) => (
+                            <div
+                              key={s.student_id}
+                              onClick={() =>
+                                handleNavigate(
+                                  `/teacher/classes/${summary.homeroomDetails?.classId}/students/${s.student_id}`,
+                                )
+                              }
+                              className="flex flex-col items-center p-3 rounded-2xl hover:bg-gray-50 border-2 border-transparent hover:border-gray-200 cursor-pointer transition-all"
+                            >
+                              <div className="w-12 h-12 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-indigo-700 font-black mb-2 shadow-sm overflow-hidden">
+                                {s.profile.avatar_url ? (
+                                  <img
+                                    src={s.profile.avatar_url}
+                                    alt={s.profile.full_name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  s.profile.full_name?.[0] || "?"
+                                )}
+                              </div>
+                              <span className="text-[10px] font-black text-gray-700 text-center line-clamp-1">
+                                {s.profile.full_name}
+                              </span>
+                              <span className="text-[8px] font-bold text-indigo-400 uppercase">
+                                {s.profile.total_xp} XP
+                              </span>
                             </div>
-                            <span className="text-[10px] font-black text-gray-700 text-center line-clamp-1">{s.profile.full_name}</span>
-                            <span className="text-[8px] font-bold text-indigo-400 uppercase">{s.profile.total_xp} XP</span>
-                          </div>
-                        ))}
+                          ))}
                         {summary.homeroomDetails.students.length > 10 && (
                           <div
-                            onClick={() => handleNavigate(`/teacher/classes/${summary.homeroomDetails?.classId}`)}
+                            onClick={() =>
+                              handleNavigate(
+                                `/teacher/classes/${summary.homeroomDetails?.classId}`,
+                              )
+                            }
                             className="flex flex-col items-center justify-center p-3 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-300 cursor-pointer hover:bg-gray-100 transition-all"
                           >
-                            <span className="text-xs font-black text-gray-400">+{summary.homeroomDetails.students.length - 10}</span>
-                            <span className="text-[8px] font-bold text-gray-400 uppercase">Xem thêm</span>
+                            <span className="text-xs font-black text-gray-400">
+                              +{summary.homeroomDetails.students.length - 10}
+                            </span>
+                            <span className="text-[8px] font-bold text-gray-400 uppercase">
+                              Xem thêm
+                            </span>
                           </div>
                         )}
                       </div>
@@ -323,7 +366,8 @@ export default function TeacherDashboard() {
               </div>
             ) : (
               // Fallback for non-homeroom teachers but who might have subject classes
-              summary?.homeroomClasses && summary.homeroomClasses.length > 0 && (
+              summary?.homeroomClasses &&
+              summary.homeroomClasses.length > 0 && (
                 <div className="space-y-6 text-center py-10 opacity-50">
                   <p>Lớp chủ nhiệm đang tải...</p>
                 </div>
@@ -368,7 +412,9 @@ export default function TeacherDashboard() {
                       </NotebookButton>
                       <NotebookButton
                         onClick={() =>
-                          handleNavigate(`/teacher/tests/create?classId=${cls.id}`)
+                          handleNavigate(
+                            `/teacher/tests/create?classId=${cls.id}`,
+                          )
                         }
                         className="flex-1 py-1 text-sm bg-emerald-50 text-emerald-700 border-emerald-200"
                       >
@@ -378,11 +424,13 @@ export default function TeacherDashboard() {
                   </NotebookCard>
                 ))}
 
-                {summary?.subjectClasses.length === 0 && (!summary?.homeroomClasses || summary.homeroomClasses.length === 0) && (
-                  <div className="col-span-full py-12 text-center text-gray-400 font-bold border-4 border-dashed border-gray-100 rounded-3xl">
-                    Chưa có lớp học nào được gán cho thầy cô.
-                  </div>
-                )}
+                {summary?.subjectClasses.length === 0 &&
+                  (!summary?.homeroomClasses ||
+                    summary.homeroomClasses.length === 0) && (
+                    <div className="col-span-full py-12 text-center text-gray-400 font-bold border-4 border-dashed border-gray-100 rounded-3xl">
+                      Chưa có lớp học nào được gán cho thầy cô.
+                    </div>
+                  )}
               </div>
             </div>
           </div>
@@ -393,7 +441,11 @@ export default function TeacherDashboard() {
 
             <NotebookCard className="border-indigo-200 shadow-none">
               <NotebookCardContent className="p-4 space-y-4 pt-4">
-                {(summary?.homeroomDetails?.activityLogs || summary?.recentActivities || []).map((activity: any, idx: number) => (
+                {(
+                  summary?.homeroomDetails?.activityLogs ||
+                  summary?.recentActivities ||
+                  []
+                ).map((activity: any, idx: number) => (
                   <div
                     key={idx}
                     className="flex gap-3 pb-3 border-b-2 border-dashed border-gray-100 last:border-0 last:pb-0"
@@ -404,14 +456,14 @@ export default function TeacherDashboard() {
                     <div>
                       <p className="font-bold text-indigo-900 border-b border-indigo-50 inline-block mb-1">
                         {activity.student?.full_name ||
-                          activity.student?.username || "Ẩn danh"}
+                          activity.student?.username ||
+                          "Ẩn danh"}
                       </p>
                       <p className="text-sm text-gray-500 font-medium leading-tight">
-                        {activity.description || (
-                          activity.activity_type === "node_complete"
+                        {activity.description ||
+                          (activity.activity_type === "node_complete"
                             ? "✅ Hoàn thành bài học"
-                            : "📝 Đang học tập"
-                        )}
+                            : "📝 Đang học tập")}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[10px] text-indigo-400 font-black uppercase">
@@ -430,11 +482,12 @@ export default function TeacherDashboard() {
                   </div>
                 ))}
 
-                {(!summary?.homeroomDetails?.activityLogs?.length && !summary?.recentActivities?.length) && (
-                  <p className="text-center py-8 text-gray-400 font-bold italic">
-                    Chưa có hoạt động mới nào.
-                  </p>
-                )}
+                {!summary?.homeroomDetails?.activityLogs?.length &&
+                  !summary?.recentActivities?.length && (
+                    <p className="text-center py-8 text-gray-400 font-bold italic">
+                      Chưa có hoạt động mới nào.
+                    </p>
+                  )}
               </NotebookCardContent>
             </NotebookCard>
 
@@ -443,7 +496,9 @@ export default function TeacherDashboard() {
               <h3 className="text-2xl font-black mb-4">Hành động nhanh</h3>
               <div className="space-y-4">
                 <button
-                  onClick={() => handleNavigate("/teacher/tests/create?type=homework")}
+                  onClick={() =>
+                    handleNavigate("/teacher/tests/create?type=homework")
+                  }
                   className="w-full py-3 bg-emerald-500 text-white rounded-2xl font-black hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2 border-2 border-emerald-700"
                 >
                   <PlusCircle className="w-5 h-5" />

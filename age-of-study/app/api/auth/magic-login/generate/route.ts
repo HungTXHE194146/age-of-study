@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { verifyTeacher } from "@/lib/adminAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,25 +14,41 @@ function generateCode(): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const { student_id, teacher_id } = await request.json();
+    // Authenticate teacher from token — do NOT trust teacher_id from body
+    const authResult = await verifyTeacher(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const teacherId = authResult.userId;
 
-    if (!student_id || !teacher_id) {
+    const { student_id } = await request.json();
+
+    if (!student_id) {
       return NextResponse.json(
         { error: "Thiếu thông tin bắt buộc." },
         { status: 400 }
       );
     }
 
-    // Verify the requester is a teacher
-    const { data: teacherProfile, error: teacherError } = await supabaseAdmin
-      .from("profiles")
-      .select("id, role")
-      .eq("id", teacher_id)
+    // Verify student belongs to a class taught by this teacher (resource-level scope)
+    const { data: teacherClasses } = await supabaseAdmin
+      .from("class_teachers")
+      .select("class_id")
+      .eq("teacher_id", teacherId);
+
+    const classIds = teacherClasses?.map((c) => c.class_id) || [];
+
+    const { data: isAssociated, error: scopeError } = await supabaseAdmin
+      .from("class_students")
+      .select("class_id")
+      .eq("student_id", student_id)
+      .in("class_id", classIds)
+      .limit(1)
       .single();
 
-    if (teacherError || !teacherProfile || teacherProfile.role !== "teacher") {
+    if (scopeError || !isAssociated) {
       return NextResponse.json(
-        { error: "Không có quyền thực hiện thao tác này." },
+        { error: "Bạn không có quyền tạo mã cho học sinh này. (Unauthorized for this student scope)" },
         { status: 403 }
       );
     }
@@ -54,13 +71,13 @@ export async function POST(request: NextRequest) {
     const code = generateCode();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-    // Store the code
+    // Store the code — use verified teacherId, not one from body
     const { error: insertError } = await supabaseAdmin
       .from("magic_login_codes")
       .insert({
         student_id,
         code,
-        created_by: teacher_id,
+        created_by: teacherId,
         expires_at: expiresAt,
       });
 
@@ -87,3 +104,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

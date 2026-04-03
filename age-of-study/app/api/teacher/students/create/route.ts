@@ -35,6 +35,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verify Resource Scope (Teacher must be assigned to this class)
+    const { data: isAssigned, error: assignmentError } = await supabaseAdmin
+      .from("class_teachers")
+      .select("class_id")
+      .eq("class_id", class_id)
+      .eq("teacher_id", teacherId)
+      .single();
+
+    if (assignmentError || !isAssigned) {
+      return NextResponse.json(
+        { error: "Bạn không có quyền thêm học sinh vào lớp này. (Unauthorized for this class scope)" },
+        { status: 403 }
+      );
+    }
+
+
     // 1. Create Auth User using Admin API
     // We use a dummy email because Supabase Auth requires an email.
     // Students will login via username/password custom logic.

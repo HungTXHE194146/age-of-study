@@ -21,8 +21,8 @@ import MatchingRenderer from "../student/QuestionRenderers/MatchingRenderer";
 import FillInBlanksRenderer from "../student/QuestionRenderers/FillInBlanksRenderer";
 import CategorizationRenderer from "../student/QuestionRenderers/CategorizationRenderer";
 import FindErrorRenderer from "../student/QuestionRenderers/FindErrorRenderer";
-import confetti from 'canvas-confetti';
-
+import confetti from "canvas-confetti";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface PaginatedQuestionPreviewProps {
   questions: Question[];
@@ -49,9 +49,11 @@ export function PaginatedQuestionPreview({
 }: PaginatedQuestionPreviewProps) {
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string } | null>(null);
+  const [feedback, setFeedback] = useState<{
+    isCorrect: boolean;
+    message: string;
+  } | null>(null);
   const [interactionKey, setInteractionKey] = useState(0); // Dùng để reset renderer khi chuyển câu
-
 
   const currentQuestion = questions[currentQuestionIndex];
   const totalQuestions = questions.length;
@@ -60,7 +62,7 @@ export function PaginatedQuestionPreview({
     if (currentQuestionIndex < totalQuestions - 1) {
       onQuestionChange(currentQuestionIndex + 1);
       setFeedback(null);
-      setInteractionKey(prev => prev + 1);
+      setInteractionKey((prev) => prev + 1);
       setShowCorrectAnswers(false);
     }
   };
@@ -69,11 +71,10 @@ export function PaginatedQuestionPreview({
     if (currentQuestionIndex > 0) {
       onQuestionChange(currentQuestionIndex - 1);
       setFeedback(null);
-      setInteractionKey(prev => prev + 1);
+      setInteractionKey((prev) => prev + 1);
       setShowCorrectAnswers(false);
     }
   };
-
 
   const getPointsForQuestion = (questionId: string) => {
     return points[questionId] || 10;
@@ -83,8 +84,12 @@ export function PaginatedQuestionPreview({
     return (
       <div className="bg-[#fffdf8] border-2 border-black rounded-xl p-8 shadow-[4px_4px_0_0_rgba(0,0,0,1)] mt-4">
         <div className="text-center py-12 border-4 border-dashed border-gray-300 rounded-xl bg-gray-50/50 cursor-not-allowed">
-          <div className="text-2xl font-black text-gray-500 mb-4 font-handwritten">Chưa có câu hỏi nào</div>
-          <p className="text-lg font-bold text-gray-400">Hãy thêm câu hỏi từ kho hoặc tạo mới bằng AI để xem trước</p>
+          <div className="text-2xl font-black text-gray-500 mb-4 font-handwritten">
+            Chưa có câu hỏi nào
+          </div>
+          <p className="text-lg font-bold text-gray-400">
+            Hãy thêm câu hỏi từ kho hoặc tạo mới bằng AI để xem trước
+          </p>
         </div>
       </div>
     );
@@ -109,7 +114,9 @@ export function PaginatedQuestionPreview({
             <span className="text-2xl font-black text-blue-700 font-handwritten">
               {getPointsForQuestion(currentQuestion.id)}
             </span>
-            <span className="text-sm font-bold text-gray-800 uppercase">pts</span>
+            <span className="text-sm font-bold text-gray-800 uppercase">
+              pts
+            </span>
           </div>
           <div className="flex gap-2">
             <button
@@ -144,7 +151,11 @@ export function PaginatedQuestionPreview({
                 className={`flex items-center gap-2 px-3 py-1.5 bg-blue-100 border-2 border-black text-blue-900 font-bold rounded-lg hover:bg-blue-200 transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,1)] disabled:opacity-50`}
                 title="AI sẽ đổi sang câu hỏi khác cùng dạng"
               >
-                {isReplacing ? <Loading size="sm" /> : <RefreshCw className="w-4 h-4" />}
+                {isReplacing ? (
+                  <Loading size="sm" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
                 <span className="hidden sm:inline">Đổi câu</span>
               </button>
             )}
@@ -193,14 +204,19 @@ export function PaginatedQuestionPreview({
                   Câu {currentQuestion.number}
                 </span>
                 <span
-                  className={`border-2 border-black px-3 py-1 rounded-full text-sm font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)] ${currentQuestion.difficulty === "Easy"
-                    ? "bg-green-200 text-green-900"
-                    : currentQuestion.difficulty === "Medium"
-                      ? "bg-yellow-200 text-yellow-900"
-                      : "bg-red-200 text-red-900"
-                    }`}
+                  className={`border-2 border-black px-3 py-1 rounded-full text-sm font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)] ${
+                    currentQuestion.difficulty === "Easy"
+                      ? "bg-green-200 text-green-900"
+                      : currentQuestion.difficulty === "Medium"
+                        ? "bg-yellow-200 text-yellow-900"
+                        : "bg-red-200 text-red-900"
+                  }`}
                 >
-                  {currentQuestion.difficulty === "Easy" ? "Dễ" : currentQuestion.difficulty === "Medium" ? "Trung bình" : "Khó"}
+                  {currentQuestion.difficulty === "Easy"
+                    ? "Dễ"
+                    : currentQuestion.difficulty === "Medium"
+                      ? "Trung bình"
+                      : "Khó"}
                 </span>
                 <span className="bg-purple-200 border-2 border-black text-purple-900 text-sm font-bold px-4 py-1 rounded-full shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex items-center gap-2">
                   <span className="text-lg">🎯</span>
@@ -228,8 +244,12 @@ export function PaginatedQuestionPreview({
                 <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl flex items-start gap-3">
                   <div className="text-xl">💡</div>
                   <div>
-                    <p className="text-xs font-black text-blue-700 uppercase tracking-wider mb-1">Gợi ý cho học sinh:</p>
-                    <p className="text-sm font-bold text-blue-800 italic">{currentQuestion.hint}</p>
+                    <p className="text-xs font-black text-blue-700 uppercase tracking-wider mb-1">
+                      Gợi ý cho học sinh:
+                    </p>
+                    <p className="text-sm font-bold text-blue-800 italic">
+                      {currentQuestion.hint}
+                    </p>
                   </div>
                 </div>
               )}
@@ -245,25 +265,46 @@ export function PaginatedQuestionPreview({
                   disabled={feedback?.isCorrect}
                   onClick={() => {
                     if (option.isCorrect) {
-                      setFeedback({ isCorrect: true, message: "Tuyệt vời! Hiệp sĩ đã chọn đúng đáp án rồi!" });
-                      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                      setFeedback({
+                        isCorrect: true,
+                        message: "Tuyệt vời! Hiệp sĩ đã chọn đúng đáp án rồi!",
+                      });
+                      confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                      });
                     } else {
-                      setFeedback({ isCorrect: false, message: "Ối, chưa chính xác rồi. Hiệp sĩ thử lại xem sao nhé!" });
+                      setFeedback({
+                        isCorrect: false,
+                        message:
+                          "Ối, chưa chính xác rồi. Hiệp sĩ thử lại xem sao nhé!",
+                      });
                     }
                   }}
-                  className={`w-full p-4 rounded-xl border-2 transition-all shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex gap-4 items-center text-left ${showCorrectAnswers && option.isCorrect
-                    ? "border-green-600 bg-green-50 ring-2 ring-green-600 ring-offset-2"
-                    : feedback?.isCorrect === false && !option.isCorrect && !showCorrectAnswers
-                      ? "border-red-400 bg-red-50"
-                      : "border-black bg-white hover:border-blue-500 hover:bg-blue-50"
-                    }`}
+                  className={`w-full p-4 rounded-xl border-2 transition-all shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex gap-4 items-center text-left ${
+                    showCorrectAnswers && option.isCorrect
+                      ? "border-green-600 bg-green-50 ring-2 ring-green-600 ring-offset-2"
+                      : feedback?.isCorrect === false &&
+                          !option.isCorrect &&
+                          !showCorrectAnswers
+                        ? "border-red-400 bg-red-50"
+                        : "border-black bg-white hover:border-blue-500 hover:bg-blue-50"
+                  }`}
                 >
-                  <div className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full border-2 font-black text-lg ${showCorrectAnswers && option.isCorrect ? "bg-green-500 text-white border-green-700" : "bg-gray-100 text-gray-800 border-black"
-                    }`}>
+                  <div
+                    className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full border-2 font-black text-lg ${
+                      showCorrectAnswers && option.isCorrect
+                        ? "bg-green-500 text-white border-green-700"
+                        : "bg-gray-100 text-gray-800 border-black"
+                    }`}
+                  >
                     {option.label}
                   </div>
                   <div className="flex-1 flex items-center justify-between">
-                    <span className="text-xl font-bold text-gray-900">{option.text}</span>
+                    <span className="text-xl font-bold text-gray-900">
+                      {option.text}
+                    </span>
                     {showCorrectAnswers && option.isCorrect && (
                       <div className="flex items-center gap-2 text-green-700 font-black uppercase text-sm bg-green-200 border-2 border-green-700 px-3 py-1 rounded-full">
                         <Check className="w-4 h-4" />
@@ -275,7 +316,6 @@ export function PaginatedQuestionPreview({
               ))}
             </div>
           )}
-
 
           {/* True/False */}
           {currentQuestion.type === "TRUE_FALSE" && (
@@ -286,25 +326,45 @@ export function PaginatedQuestionPreview({
                   disabled={feedback?.isCorrect}
                   onClick={() => {
                     if (option.isCorrect) {
-                      setFeedback({ isCorrect: true, message: "Chính xác tuyệt đối! Hiệp sĩ giỏi quá!" });
-                      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                      setFeedback({
+                        isCorrect: true,
+                        message: "Chính xác tuyệt đối! Hiệp sĩ giỏi quá!",
+                      });
+                      confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                      });
                     } else {
-                      setFeedback({ isCorrect: false, message: "Opps! Hãy suy nghĩ thêm một chút nhé!" });
+                      setFeedback({
+                        isCorrect: false,
+                        message: "Opps! Hãy suy nghĩ thêm một chút nhé!",
+                      });
                     }
                   }}
-                  className={`w-full p-4 rounded-xl border-2 transition-all shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex gap-4 items-center text-left ${showCorrectAnswers && option.isCorrect
-                    ? "border-green-600 bg-green-50 ring-2 ring-green-600 ring-offset-2"
-                    : feedback?.isCorrect === false && !option.isCorrect && !showCorrectAnswers
-                      ? "border-red-400 bg-red-50"
-                      : "border-black bg-white hover:border-blue-500 hover:bg-blue-50"
-                    }`}
+                  className={`w-full p-4 rounded-xl border-2 transition-all shadow-[2px_2px_0_0_rgba(0,0,0,1)] flex gap-4 items-center text-left ${
+                    showCorrectAnswers && option.isCorrect
+                      ? "border-green-600 bg-green-50 ring-2 ring-green-600 ring-offset-2"
+                      : feedback?.isCorrect === false &&
+                          !option.isCorrect &&
+                          !showCorrectAnswers
+                        ? "border-red-400 bg-red-50"
+                        : "border-black bg-white hover:border-blue-500 hover:bg-blue-50"
+                  }`}
                 >
-                  <div className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full border-2 font-black text-lg ${showCorrectAnswers && option.isCorrect ? "bg-green-500 text-white border-green-700" : "bg-gray-100 text-gray-800 border-black"
-                    }`}>
+                  <div
+                    className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full border-2 font-black text-lg ${
+                      showCorrectAnswers && option.isCorrect
+                        ? "bg-green-500 text-white border-green-700"
+                        : "bg-gray-100 text-gray-800 border-black"
+                    }`}
+                  >
                     {option.label}
                   </div>
                   <div className="flex-1 flex items-center justify-between">
-                    <span className="text-xl font-bold text-gray-900">{option.text}</span>
+                    <span className="text-xl font-bold text-gray-900">
+                      {option.text}
+                    </span>
                     {showCorrectAnswers && option.isCorrect && (
                       <div className="flex items-center gap-2 text-green-700 font-black uppercase text-sm bg-green-200 border-2 border-green-700 px-3 py-1 rounded-full">
                         <Check className="w-4 h-4" />
@@ -317,20 +377,24 @@ export function PaginatedQuestionPreview({
             </div>
           )}
 
-
           {/* Essay */}
           {currentQuestion.type === "ESSAY" && (
             <div className="space-y-6">
               {showCorrectAnswers && (
                 <div className="p-6 rounded-xl border-2 border-black bg-yellow-50 shadow-[2px_2px_0_0_rgba(0,0,0,1)] relative">
-                  <div className="absolute top-0 right-4 -translate-y-1/2 bg-yellow-400 border-2 border-black font-black uppercase px-3 py-1 text-sm shadow-[2px_2px_0_0_rgba(0,0,0,1)] rotate-[2deg]">Gợi ý đáp án</div>
+                  <div className="absolute top-0 right-4 -translate-y-1/2 bg-yellow-400 border-2 border-black font-black uppercase px-3 py-1 text-sm shadow-[2px_2px_0_0_rgba(0,0,0,1)] rotate-[2deg]">
+                    Gợi ý đáp án
+                  </div>
                   <p className="text-xl font-medium text-gray-800">
-                    {currentQuestion.options[0]?.text || "Chưa có gợi ý trả lời"}
+                    {currentQuestion.options[0]?.text ||
+                      "Chưa có gợi ý trả lời"}
                   </p>
                 </div>
               )}
               <div className="p-6 rounded-xl border-4 border-dashed border-gray-400 bg-white min-h-[200px] flex items-center justify-center">
-                <span className="text-2xl font-black font-handwritten text-gray-400">Khu vực trả lời của học sinh</span>
+                <span className="text-2xl font-black font-handwritten text-gray-400">
+                  Khu vực trả lời của học sinh
+                </span>
               </div>
             </div>
           )}
@@ -344,17 +408,32 @@ export function PaginatedQuestionPreview({
                   orderedWords={currentQuestion.metadata?.orderedWords || []}
                   onComplete={(isCorrect) => {
                     if (isCorrect) {
-                      setFeedback({ isCorrect: true, message: "Tuyệt vời! Hiệp sĩ đã sắp xếp rất chính xác!" });
-                      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                      setFeedback({
+                        isCorrect: true,
+                        message: "Tuyệt vời! Hiệp sĩ đã sắp xếp rất chính xác!",
+                      });
+                      confetti({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                      });
                     }
                   }}
                   hint={currentQuestion.hint}
                   showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 border-2 border-green-600 rounded-xl">
-                    <p className="font-black text-green-800 uppercase text-sm mb-2">Đáp án đúng:</p>
-                    <p className="text-lg font-bold">{currentQuestion.metadata?.orderedWords?.join(" ")}</p>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="p-4 bg-green-50 border-2 border-green-600 rounded-xl"
+                  >
+                    <p className="font-black text-green-800 uppercase text-sm mb-2">
+                      Đáp án đúng:
+                    </p>
+                    <p className="text-lg font-bold">
+                      {currentQuestion.metadata?.orderedWords?.join(" ")}
+                    </p>
                   </motion.div>
                 )}
               </div>
@@ -366,22 +445,40 @@ export function PaginatedQuestionPreview({
                   matchingPairs={currentQuestion.metadata?.matchingPairs || []}
                   onComplete={(isCorrect) => {
                     if (isCorrect) {
-                      setFeedback({ isCorrect: true, message: "Đỉnh quá! Các cặp đôi đã tìm thấy nhau rồi!" });
-                      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                      setFeedback({
+                        isCorrect: true,
+                        message: "Đỉnh quá! Các cặp đôi đã tìm thấy nhau rồi!",
+                      });
+                      confetti({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                      });
                     }
                   }}
                   hint={currentQuestion.hint}
                   showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 border-2 border-green-600 rounded-xl">
-                    <p className="font-black text-green-800 uppercase text-sm mb-2">Các cặp nối đúng:</p>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="p-4 bg-green-50 border-2 border-green-600 rounded-xl"
+                  >
+                    <p className="font-black text-green-800 uppercase text-sm mb-2">
+                      Các cặp nối đúng:
+                    </p>
                     <div className="grid grid-cols-2 gap-4">
-                      {currentQuestion.metadata?.matchingPairs?.map((pair, i) => (
-                        <div key={i} className="text-sm font-bold bg-white p-2 border border-green-200 rounded-lg">
-                          {pair.left} ↔ {pair.right}
-                        </div>
-                      ))}
+                      {currentQuestion.metadata?.matchingPairs?.map(
+                        (pair, i) => (
+                          <div
+                            key={i}
+                            className="text-sm font-bold bg-white p-2 border border-green-200 rounded-lg"
+                          >
+                            {pair.left} ↔ {pair.right}
+                          </div>
+                        ),
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -391,24 +488,45 @@ export function PaginatedQuestionPreview({
             {currentQuestion.type === "FILL_IN_BLANKS" && (
               <div className="space-y-6">
                 <FillInBlanksRenderer
-                  questionText={(currentQuestion.metadata as any)?.sentence || currentQuestion.questionText}
+                  questionText={
+                    (currentQuestion.metadata as any)?.sentence ||
+                    currentQuestion.questionText
+                  }
                   blanks={currentQuestion.metadata?.blanks || []}
                   onComplete={(isCorrect) => {
                     if (isCorrect) {
-                      setFeedback({ isCorrect: true, message: "Hoàn hảo! Các ô trống đã được lấp đầy kiến thức!" });
-                      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                      setFeedback({
+                        isCorrect: true,
+                        message:
+                          "Hoàn hảo! Các ô trống đã được lấp đầy kiến thức!",
+                      });
+                      confetti({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                      });
                     }
                   }}
                   hint={currentQuestion.hint}
                   showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 border-2 border-green-600 rounded-xl">
-                    <p className="font-black text-green-800 uppercase text-sm mb-2">Nội dung điền đúng:</p>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="p-4 bg-green-50 border-2 border-green-600 rounded-xl"
+                  >
+                    <p className="font-black text-green-800 uppercase text-sm mb-2">
+                      Nội dung điền đúng:
+                    </p>
                     <div className="flex flex-wrap gap-4">
                       {currentQuestion.metadata?.blanks?.map((blank, i) => (
-                        <div key={i} className="text-sm font-bold bg-white p-2 border border-green-200 rounded-lg">
-                          Ô {blank.index + 1}: <span className="text-green-700">{blank.answer}</span>
+                        <div
+                          key={i}
+                          className="text-sm font-bold bg-white p-2 border border-green-200 rounded-lg"
+                        >
+                          Ô {blank.index + 1}:{" "}
+                          <span className="text-green-700">{blank.answer}</span>
                         </div>
                       ))}
                     </div>
@@ -423,19 +541,38 @@ export function PaginatedQuestionPreview({
                   categoriesData={currentQuestion.metadata?.categories || []}
                   onComplete={(isCorrect) => {
                     if (isCorrect) {
-                      setFeedback({ isCorrect: true, message: "Nhà thông thái ơi, bạn phân loại cực chuẩn luôn!" });
-                      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                      setFeedback({
+                        isCorrect: true,
+                        message:
+                          "Nhà thông thái ơi, bạn phân loại cực chuẩn luôn!",
+                      });
+                      confetti({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                      });
                     }
                   }}
                   hint={currentQuestion.hint}
                   showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 gap-4">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="grid grid-cols-2 gap-4"
+                  >
                     {currentQuestion.metadata?.categories?.map((cat, i) => (
-                      <div key={i} className="p-3 bg-green-50 border-2 border-green-600 rounded-xl">
-                        <p className="font-black text-green-800 uppercase text-xs mb-1">{cat.name}</p>
-                        <p className="text-sm font-bold">{cat.items.join(", ")}</p>
+                      <div
+                        key={i}
+                        className="p-3 bg-green-50 border-2 border-green-600 rounded-xl"
+                      >
+                        <p className="font-black text-green-800 uppercase text-xs mb-1">
+                          {cat.name}
+                        </p>
+                        <p className="text-sm font-bold">
+                          {cat.items.join(", ")}
+                        </p>
                       </div>
                     ))}
                   </motion.div>
@@ -446,34 +583,76 @@ export function PaginatedQuestionPreview({
             {currentQuestion.type === "FIND_ERROR" && (
               <div className="space-y-6">
                 <FindErrorRenderer
-                  questionText={(currentQuestion.metadata as any)?.sentence || currentQuestion.questionText}
-                  errorPosition={currentQuestion.metadata?.errorPosition || { startIndex: 0, endIndex: 0, correctText: "" }}
+                  questionText={
+                    (currentQuestion.metadata as any)?.sentence ||
+                    currentQuestion.questionText
+                  }
+                  errorPosition={
+                    currentQuestion.metadata?.errorPosition || {
+                      startIndex: 0,
+                      endIndex: 0,
+                      correctText: "",
+                    }
+                  }
                   onComplete={(isCorrect) => {
                     if (isCorrect) {
-                      setFeedback({ isCorrect: true, message: "Thám tử nhí đã tìm ra lỗi sai rồi! Giỏi quá!" });
-                      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                      setFeedback({
+                        isCorrect: true,
+                        message: "Thám tử nhí đã tìm ra lỗi sai rồi! Giỏi quá!",
+                      });
+                      confetti({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                      });
                     }
                   }}
                   hint={currentQuestion.hint}
                   showHintsSetting={true}
                 />
                 {showCorrectAnswers && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-green-50 border-2 border-green-600 rounded-xl">
-                    <p className="font-black text-green-800 uppercase text-sm mb-2">Thông tin lỗi sai:</p>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="p-4 bg-green-50 border-2 border-green-600 rounded-xl"
+                  >
+                    <p className="font-black text-green-800 uppercase text-sm mb-2">
+                      Thông tin lỗi sai:
+                    </p>
                     <p className="text-lg font-bold">
-                      Lỗi: <span className="text-red-600 underline">
+                      Lỗi:{" "}
+                      <span className="text-red-600 underline">
                         {(() => {
-                          const text = (currentQuestion.metadata as any)?.sentence || currentQuestion.questionText;
-                          const { startIndex, endIndex } = currentQuestion.metadata?.errorPosition || { startIndex: 0, endIndex: 0 };
+                          const text =
+                            (currentQuestion.metadata as any)?.sentence ||
+                            currentQuestion.questionText;
+                          const { startIndex, endIndex } = currentQuestion
+                            .metadata?.errorPosition || {
+                            startIndex: 0,
+                            endIndex: 0,
+                          };
                           let s = startIndex;
-                          while (s > 0 && text[s - 1] !== ' ' && text[s - 1] !== '\n') s--;
+                          while (
+                            s > 0 &&
+                            text[s - 1] !== " " &&
+                            text[s - 1] !== "\n"
+                          )
+                            s--;
                           let e = endIndex;
-                          while (e < text.length - 1 && text[e + 1] !== ' ' && text[e + 1] !== '\n') e++;
+                          while (
+                            e < text.length - 1 &&
+                            text[e + 1] !== " " &&
+                            text[e + 1] !== "\n"
+                          )
+                            e++;
                           return text.substring(s, e + 1);
                         })()}
                       </span>
                       {" → "}
-                      Sửa thành: <span className="text-green-700">{currentQuestion.metadata?.errorPosition?.correctText}</span>
+                      Sửa thành:{" "}
+                      <span className="text-green-700">
+                        {currentQuestion.metadata?.errorPosition?.correctText}
+                      </span>
                     </p>
                   </motion.div>
                 )}
@@ -486,18 +665,17 @@ export function PaginatedQuestionPreview({
             <div className="mt-8 p-6 bg-yellow-50 border-2 border-yellow-200 rounded-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-400/10 rounded-full -mr-8 -mt-8 group-hover:scale-110 transition-transform"></div>
               <h5 className="flex items-center gap-2 text-lg font-black text-yellow-800 mb-3 uppercase tracking-tight">
-                <span className="text-2xl animate-pulse">💡</span> Giải thích từ Giáo sư Cú:
+                <span className="text-2xl animate-pulse">💡</span> Giải thích từ
+                Giáo sư Cú:
               </h5>
               <div
                 className="text-yellow-900 font-bold leading-relaxed italic pr-4"
                 dangerouslySetInnerHTML={{
-                  __html: currentQuestion.explanation || "",
+                  __html: sanitizeHtml(currentQuestion.explanation || ""),
                 }}
               />
             </div>
           )}
-
-
         </div>
       </div>
 
@@ -505,28 +683,33 @@ export function PaginatedQuestionPreview({
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: -20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          className={`mb-6 p-4 rounded-xl border-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-4 ${feedback.isCorrect ? "bg-green-100 border-green-600 text-green-800" : "bg-red-100 border-red-600 text-red-800"
-            }`}
+          className={`mb-6 p-4 rounded-xl border-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center gap-4 ${
+            feedback.isCorrect
+              ? "bg-green-100 border-green-600 text-green-800"
+              : "bg-red-100 border-red-600 text-red-800"
+          }`}
         >
           <div className="text-3xl">{feedback.isCorrect ? "🌟" : "💡"}</div>
           <div className="font-black text-lg">{feedback.message}</div>
         </motion.div>
       )}
 
-
       {/* Navigation */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-6 border-t-2 border-dashed border-gray-300">
         <div className="flex items-center gap-4 w-full md:w-auto overflow-x-auto pb-4 md:pb-0 custom-scrollbar">
-          <span className="font-bold text-gray-700 whitespace-nowrap hidden lg:inline">Chuyển đến:</span>
+          <span className="font-bold text-gray-700 whitespace-nowrap hidden lg:inline">
+            Chuyển đến:
+          </span>
           <div className="flex gap-2 min-w-max">
             {questions.map((q, index) => (
               <button
                 key={`question-nav-${q.id}`}
                 onClick={() => onQuestionChange(index)}
-                className={`w-10 h-10 rounded-lg border-2 font-black flex items-center justify-center transition-all shadow-[2px_2px_0_0_rgba(0,0,0,1)] ${currentQuestionIndex === index
-                  ? "bg-[#ffde59] border-black text-black scale-110 -translate-y-1"
-                  : "bg-white border-black text-gray-600 hover:bg-gray-100"
-                  }`}
+                className={`w-10 h-10 rounded-lg border-2 font-black flex items-center justify-center transition-all shadow-[2px_2px_0_0_rgba(0,0,0,1)] ${
+                  currentQuestionIndex === index
+                    ? "bg-[#ffde59] border-black text-black scale-110 -translate-y-1"
+                    : "bg-white border-black text-gray-600 hover:bg-gray-100"
+                }`}
               >
                 {q.number}
               </button>

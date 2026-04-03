@@ -56,6 +56,13 @@ export default function StudentTestPage() {
     unansweredCount,
     wrongAttempts,
     handleWrongAttempt,
+    evaluatedQuestions,
+    setEvaluatedQuestions,
+    retryQueue,
+    setRetryQueue,
+    isRetryMode,
+    correctlyAnswered,
+    setCorrectlyAnswered,
   } = useStudentTest(testId);
 
   // ── Auth guard ───────────────────────────────────────────────────────────
@@ -213,6 +220,13 @@ export default function StudentTestPage() {
             handleNextQuestion={handleNextQuestion}
             wrongAttempts={wrongAttempts}
             handleWrongAttempt={handleWrongAttempt}
+            evaluatedQuestions={evaluatedQuestions}
+            setEvaluatedQuestions={setEvaluatedQuestions}
+            retryQueue={retryQueue}
+            setRetryQueue={setRetryQueue}
+            isRetryMode={isRetryMode}
+            correctlyAnswered={correctlyAnswered}
+            setCorrectlyAnswered={setCorrectlyAnswered}
           />
         )}
       </div>

@@ -1,12 +1,16 @@
 "use client";
 
+import { lazy, Suspense, useEffect } from "react";
 import GameHeader from "@/components/GameHeader";
-import FloatingChatbot from "@/components/student/FloatingChatbot";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect } from "react";
 import { checkRoutePermission } from "@/lib/routeMiddleware";
 import { useBlockedCheck } from "@/hooks/useBlockedCheck";
+
+// Lazy-load chatbot so it doesn't initialize WebSocket/subscriptions on layout mount
+const FloatingChatbot = lazy(
+  () => import("@/components/student/FloatingChatbot"),
+);
 
 export default function DashboardLayout({
   children,
@@ -88,8 +92,12 @@ export default function DashboardLayout({
       <GameHeader />
       <main className="pb-20 md:pb-8">{children}</main>
 
-      {/* Floating Chatbot - only for students, not during tests */}
-      {showChatbot && <FloatingChatbot />}
+      {/* Floating Chatbot - lazy-loaded, only for students, not during tests */}
+      {showChatbot && (
+        <Suspense fallback={null}>
+          <FloatingChatbot />
+        </Suspense>
+      )}
     </div>
   );
 }

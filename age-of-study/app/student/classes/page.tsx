@@ -113,7 +113,7 @@ export default function StudentClassesPage() {
         const latestSub = testSubs[0];
         const bestScore =
           testSubs.length > 0
-            ? Math.max(...testSubs.map((s) => s.score ?? 0))
+            ? Math.max(...testSubs.map((s: any) => s.score ?? 0))
             : undefined;
         return {
           ...test,
